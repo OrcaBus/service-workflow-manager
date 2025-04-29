@@ -4,9 +4,9 @@ from django.test import TestCase
 import botocore.session
 from botocore.stub import Stubber
 from unittest.mock import patch
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
 
 class WorkflowManagerProcUnitTestCase(TestCase):
 
@@ -16,7 +16,6 @@ class WorkflowManagerProcUnitTestCase(TestCase):
         self.boto3_patcher = patch('workflow_manager_proc.services.emit_workflow_run_state_change.client', return_value=self.events_client)
         self.mock_boto3 = self.boto3_patcher.start()
         self.mock_events = self.mock_boto3.return_value
-
         self.events_client_stubber = Stubber(self.events_client)
         self.events_client_stubber.activate()
         super().setUp()

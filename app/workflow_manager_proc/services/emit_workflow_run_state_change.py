@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-client = boto3.client('events')
+client = boto3.client('events', region_name='ap-southeast-2')
 source = "orcabus.workflowmanager"
 event_bus_name = os.environ["EVENT_BUS_NAME"]
 
