@@ -1,7 +1,7 @@
 include:
   - path:
-      - ../shared/mock-aws.yml
-      - ../shared/mock-db.yml
+      - ./shared/mock-aws.yml
+      - ./shared/mock-db.yml
 #services:
 #
 #  myapp:
