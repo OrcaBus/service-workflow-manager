@@ -8,12 +8,15 @@ importers:
 
   .:
     dependencies:
+      '@aws-cdk/aws-lambda-python-alpha':
+        specifier: 2.192.0-alpha.0
+        version: 2.192.0-alpha.0(aws-cdk-lib@2.192.0(constructs@10.4.2))(constructs@10.4.2)
       '@orcabus/platform-cdk-constructs':
         specifier: 0.0.6
-        version: 0.0.6(aws-cdk-lib@2.188.0(constructs@10.4.2))(constructs@10.4.2)
+        version: 0.0.6(aws-cdk-lib@2.192.0(constructs@10.4.2))(constructs@10.4.2)
       aws-cdk-lib:
-        specifier: ^2.185.0
-        version: 2.188.0(constructs@10.4.2)
+        specifier: ^2.192.0
+        version: 2.192.0(constructs@10.4.2)
       constructs:
         specifier: ^10.4.2
         version: 10.4.2
@@ -32,7 +35,7 @@ importers:
         version: 2.1007.0
       cdk-nag:
         specifier: ^2.35.56
-        version: 2.35.66(aws-cdk-lib@2.188.0(constructs@10.4.2))(constructs@10.4.2)
+        version: 2.35.66(aws-cdk-lib@2.192.0(constructs@10.4.2))(constructs@10.4.2)
       eslint:
         specifier: ^9.23.0
         version: 9.24.0
@@ -72,6 +75,13 @@ packages:
 
   '@aws-cdk/asset-node-proxy-agent-v6@2.1.0':
     resolution: {integrity: sha512-7bY3J8GCVxLupn/kNmpPc5VJz8grx+4RKfnnJiO1LG+uxkZfANZG3RMHhE+qQxxwkyQ9/MfPtTpf748UhR425A==}
+
+  '@aws-cdk/aws-lambda-python-alpha@2.192.0-alpha.0':
+    resolution: {integrity: sha512-ezDCtT3dlIdSnJBGjwoaMJVojvk8wijmflqa0jlTspibtg1F32U/PAVdsAzlolG5gwIF1hNqiHtjW4wkyWQ3BA==}
+    engines: {node: '>= 14.15.0'}
+    peerDependencies:
+      aws-cdk-lib: ^2.192.0
+      constructs: ^10.0.0
 
   '@aws-cdk/cloud-assembly-schema@41.2.0':
     resolution: {integrity: sha512-JaulVS6z9y5+u4jNmoWbHZRs9uGOnmn/ktXygNWKNu1k6lF3ad4so3s18eRu15XCbUIomxN9WPYT6Ehh7hzONw==}
@@ -582,8 +592,8 @@ packages:
   async@3.2.6:
     resolution: {integrity: sha512-htCUDlxyyCLMgaM3xXg0C0LW2xqfuQ6p05pCEIsXuyQ+a1koYKTuBMzRNwmybfLgvJDMd0r1LTn4+E0Ti6C2AA==}
 
-  aws-cdk-lib@2.188.0:
-    resolution: {integrity: sha512-RiAkyKHUYcpI59IXP6VP1NvO0Ph5vlqIsrz6YE8KPuGfQ0LuE5ob4Ta2ibVs/fvaGyJIZkEPw54hDrytVWrk3g==}
+  aws-cdk-lib@2.192.0:
+    resolution: {integrity: sha512-Y9BAlr9a4QsEsamKc2cOGzX8DpVSOh94wsrMSGRXT0bZaqmixhhmT7WYCrT1KX4MU3gYk3OiwY2BbNyWaNE8Fg==}
     engines: {node: '>= 14.15.0'}
     peerDependencies:
       constructs: ^10.0.0
@@ -1690,6 +1700,11 @@ snapshots:
 
   '@aws-cdk/asset-node-proxy-agent-v6@2.1.0': {}
 
+  '@aws-cdk/aws-lambda-python-alpha@2.192.0-alpha.0(aws-cdk-lib@2.192.0(constructs@10.4.2))(constructs@10.4.2)':
+    dependencies:
+      aws-cdk-lib: 2.192.0(constructs@10.4.2)
+      constructs: 10.4.2
+
   '@aws-cdk/cloud-assembly-schema@41.2.0': {}
 
   '@babel/code-frame@7.26.2':
@@ -2150,9 +2165,9 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.19.1
 
-  '@orcabus/platform-cdk-constructs@0.0.6(aws-cdk-lib@2.188.0(constructs@10.4.2))(constructs@10.4.2)':
+  '@orcabus/platform-cdk-constructs@0.0.6(aws-cdk-lib@2.192.0(constructs@10.4.2))(constructs@10.4.2)':
     dependencies:
-      aws-cdk-lib: 2.188.0(constructs@10.4.2)
+      aws-cdk-lib: 2.192.0(constructs@10.4.2)
       constructs: 10.4.2
 
   '@sinclair/typebox@0.27.8': {}
@@ -2350,7 +2365,7 @@ snapshots:
 
   async@3.2.6: {}
 
-  aws-cdk-lib@2.188.0(constructs@10.4.2):
+  aws-cdk-lib@2.192.0(constructs@10.4.2):
     dependencies:
       '@aws-cdk/asset-awscli-v1': 2.2.231
       '@aws-cdk/asset-node-proxy-agent-v6': 2.1.0
@@ -2456,9 +2471,9 @@ snapshots:
 
   caniuse-lite@1.0.30001712: {}
 
-  cdk-nag@2.35.66(aws-cdk-lib@2.188.0(constructs@10.4.2))(constructs@10.4.2):
+  cdk-nag@2.35.66(aws-cdk-lib@2.192.0(constructs@10.4.2))(constructs@10.4.2):
     dependencies:
-      aws-cdk-lib: 2.188.0(constructs@10.4.2)
+      aws-cdk-lib: 2.192.0(constructs@10.4.2)
       constructs: 10.4.2
 
   chalk@4.1.2:
