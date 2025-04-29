@@ -51,4 +51,12 @@ function applyNagSuppression(stack: Stack) {
     [{ id: 'AwsSolutions-S10', reason: 'not require requests to use SSL' }],
     true
   );
+
+  // FIXME one day we should remove this `AwsSolutions-IAM4` suppression and tackle any use of AWS managed policies
+  //  in all our stacks. See https://github.com/umccr/orcabus/issues/174
+  NagSuppressions.addStackSuppressions(
+    stack,
+    [{ id: 'AwsSolutions-IAM4', reason: 'allow to use AWS managed policy' }],
+    true
+  );
 }
