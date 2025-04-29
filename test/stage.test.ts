@@ -59,4 +59,43 @@ function applyNagSuppression(stack: Stack) {
     [{ id: 'AwsSolutions-IAM4', reason: 'allow to use AWS managed policy' }],
     true
   );
+
+  NagSuppressions.addStackSuppressions(
+    stack,
+    [
+      {
+        id: 'AwsSolutions-APIG1',
+        reason: 'See https://github.com/aws/aws-cdk/issues/11100',
+      },
+    ],
+    true
+  );
+
+  NagSuppressions.addStackSuppressions(
+    stack,
+    [
+      {
+        id: 'AwsSolutions-APIG4',
+        reason: 'We have the default Cognito UserPool authorizer',
+      },
+    ],
+    true
+  );
+
+  // NOTE
+  // This `AwsSolutions-L1` is tricky. Typically, it is okay to have one version less of the latest runtime
+  // version. Not every dependency (including transitive packages) aren't upto speed with latest runtime.
+  NagSuppressions.addStackSuppressions(
+    stack,
+    [
+      {
+        id: 'AwsSolutions-L1',
+        reason:
+          'Use the latest available runtime for the targeted language to avoid technical debt. ' +
+          'Runtimes specific to a language or framework version are deprecated when the version ' +
+          'reaches end of life. This rule only applies to non-container Lambda functions.',
+      },
+    ],
+    true
+  );
 }
