@@ -58,7 +58,12 @@ OrcaBusStatelessWorkflowManagerStack/DeploymentPipeline/OrcaBusGamma/WorkflowMan
 OrcaBusStatelessWorkflowManagerStack/DeploymentPipeline/OrcaBusProd/WorkflowManagerStack (OrcaBusProd-WorkflowManagerStack)
 ```
 
-To test deplot to dev (example)
+To build the CICD pipeline for workflow manager
+```sh
+pnpm cdk deploy -e OrcaBusStatelessWorkflowManagerStack
+```
+
+To build (test) in the dev account
 ```sh
 pnpm cdk synth -e OrcaBusStatelessWorkflowManagerStack/DeploymentPipeline/OrcaBusBeta/WorkflowManagerStack
 pnpm cdk diff -e OrcaBusStatelessWorkflowManagerStack/DeploymentPipeline/OrcaBusBeta/WorkflowManagerStack

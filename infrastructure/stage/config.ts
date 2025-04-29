@@ -24,7 +24,7 @@ export const getWorkflowManagerStackProps = (stage: StageName): WorkflowManagerS
     apiGatewayCognitoProps: {
       ...getDefaultApiGatewayConfiguration(stage),
       apiName: 'WorkflowManager',
-      customDomainNamePrefix: 'workflow',
+      customDomainNamePrefix: 'workflow-dev-deploy',
     },
   };
 };
