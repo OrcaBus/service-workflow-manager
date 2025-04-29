@@ -1,8 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { DeploymentStackPipeline } from '@orcabus/platform-cdk-constructs/deployment-stack-pipeline';
-import { DeployStack } from '../stage/deployment-stack';
-import { getStackProps } from '../stage/config';
+import { WorkflowManagerStack } from '../stage/stack';
+import { getWorkflowManagerStackProps } from '../stage/config';
 
 export class StatelessStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -10,15 +10,15 @@ export class StatelessStack extends cdk.Stack {
 
     new DeploymentStackPipeline(this, 'DeploymentPipeline', {
       githubBranch: 'main',
-      githubRepo: 'template-service-base',
-      stack: DeployStack,
-      stackName: 'DeployStack',
+      githubRepo: 'service-workflow-manager',
+      stack: WorkflowManagerStack,
+      stackName: 'WorkflowManagerStack',
       stackConfig: {
-        beta: getStackProps('BETA'),
-        gamma: getStackProps('GAMMA'),
-        prod: getStackProps('PROD'),
+        beta: getWorkflowManagerStackProps('BETA'),
+        gamma: getWorkflowManagerStackProps('GAMMA'),
+        prod: getWorkflowManagerStackProps('PROD'),
       },
-      pipelineName: 'OrcaBus-StatelessMicroservice',
+      pipelineName: 'OrcaBus-StatelessWorkflowManager',
       cdkSynthCmd: ['pnpm install --frozen-lockfile --ignore-scripts', 'pnpm cdk synth'],
     });
   }
