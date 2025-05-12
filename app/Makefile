@@ -36,10 +36,10 @@ mock:
 run-mock: reset-db migrate mock start
 
 openapi:
-	@python manage.py generateschema > orcabus.hlo.openapi.yaml
+	@python manage.py spectacular --format openapi > orcabus.workflowmanager.openapi.yaml
 
 validate: openapi
-	@python -m openapi_spec_validator orcabus.hlo.openapi.yaml
+	@python -m openapi_spec_validator orcabus.workflowmanager.openapi.yaml
 
 coverage: install up migrate
 	@echo $$DJANGO_SETTINGS_MODULE
@@ -65,8 +65,8 @@ psql:
 
 # database operation
 reset-db:
-	@docker exec -e PGPASSWORD=orcabus -it orcabus_db psql -h $(DB_HOSTNAME) -U orcabus -d orcabus -c "DROP DATABASE IF EXISTS workflow_manager;"
-	@docker exec -e PGPASSWORD=orcabus -it orcabus_db psql -h $(DB_HOSTNAME) -U orcabus -d orcabus -c "CREATE DATABASE workflow_manager;"
+	@docker exec -e PGPASSWORD=orcabus -it orcabus_db psql -h $(DB_HOSTNAME) -U orcabus -d postgres -c "DROP DATABASE IF EXISTS workflow_manager;"
+	@docker exec -e PGPASSWORD=orcabus -it orcabus_db psql -h $(DB_HOSTNAME) -U orcabus -d postgres -c "CREATE DATABASE workflow_manager;"
 
 s3-dump-download:
 	@aws s3 cp s3://orcabus-test-data-843407916570-ap-southeast-2/workflow-manager/wfm_dump.sql.gz data/wfm_dump.sql.gz
