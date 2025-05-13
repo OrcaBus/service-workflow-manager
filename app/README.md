@@ -1,7 +1,7 @@
 # Workflow Manager Service
 
 ```
-Namespace: orcabus.wfm
+Namespace: orcabus.workflowmanager
 ```
 
 ## CDK
@@ -12,13 +12,13 @@ See [README.md](../README.md)
 
 ### Ready Check
 
-- Go to Django project root
+- Go to the Django project root
 
 ```
-cd lib/workload/stateless/stacks/workflow-manager
+cd app
 ```
 
-_\*If you are PyCharm-er and opening the whole `orcabus` project then annotate this level as "source" directory in the project structure dialog._
+_If you use PyCharm then annotate this `app/` directory as "source" directory in the project structure dialog._
 
 ### Python
 
@@ -60,7 +60,7 @@ python manage.py help generate_mock_workflow_run
 ```
 
 ```
-python manage.py generate_mock_data
+python manage.py generate_mock_workflow_run
 ```
 
 #### Generate Hello Event
@@ -81,25 +81,36 @@ python manage.py runserver_plus
 curl -s http://localhost:8000/api/v1/workflow | jq
 ```
 
-```
-curl -s http://localhost:8000/api/v1/workflow/1 | jq
-```
-
 Or visit in browser:
 
 - http://localhost:8000/api/v1
-- http://localhost:8000/api/v1/workflow
-- http://localhost:8000/api/v1/workflow/1
 
 ### API Doc
 
 #### Swagger
 
-- http://localhost:8000/swagger-ui/
+- http://localhost:8000/schema/swagger-ui/
 
 #### OpenAPI v3
 
 - http://localhost:8000/schema/openapi.json
+
+## Local DB
+
+```
+make psql
+```
+
+```
+workflow_manager# \l
+workflow_manager# \c workflow_manager
+workflow_manager# \dt
+workflow_manager# \d
+workflow_manager# \d workflow_manager_workflowrun
+workflow_manager# select count(1) from workflow_manager_workflowrun;
+workflow_manager# select * from workflow_manager_workflowrun;
+workflow_manager# \q
+```
 
 ## Testing
 
@@ -109,12 +120,12 @@ Or visit in browser:
 make coverage report
 ```
 
-_The html report is in `htmlcov/index.html`._
+_The HTML report is in `htmlcov/index.html`._
 
 ### Run test suite
 
 ```
-python manage.py test
+make suite
 ```
 
 ### Unit test
