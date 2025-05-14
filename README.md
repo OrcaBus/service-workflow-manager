@@ -71,8 +71,9 @@ pnpm cdk diff -e OrcaBusStatelessWorkflowManagerStack/DeploymentPipeline/OrcaBus
 pnpm cdk deploy -e OrcaBusStatelessWorkflowManagerStack/DeploymentPipeline/OrcaBusBeta/WorkflowManagerStack
 ```
 
-> NOTE:
-> While directly pushing to the AWS DEV account is possible, however, we encourage you to make use of automated CICD CodePipeline for most cases. Pushing direct to the AWS PROD account is discouraged as it will bypass necessary test harness and other safety measures. Please check with the team on this in `#orcabus` if a need arises.
+## Deploy
+
+It is recommended to use the automated CI/CD CodePipeline for all cases. Creating a Pull Request (PR) and successful merging will trigger the automated continuous integration (CI) testing pipeline. Once passed, it will continuously deploy (CD) to the target environment.
 
 ## Linting and Formatting
 
