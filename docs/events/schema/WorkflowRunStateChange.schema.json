@@ -1,0 +1,162 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/workflowmanager/WorkflowRunStateChange.schema.json",
+  "description": "EventBridge custom event schema for orcabus.workflowmanager@WorkflowRunStateChange",
+  "title": "AWSEvent",
+  "type": "object",
+  "required": [
+    "detail-type",
+    "detail",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "region": {
+      "type": "string"
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source": {
+      "type": "string"
+    },
+    "time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "version": {
+      "type": "string"
+    },
+    "account": {
+      "type": "string"
+    },
+    "detail-type": {
+      "type": "string"
+    },
+    "detail": {
+      "$ref": "#/definitions/WorkflowRunStateChange"
+    }
+  },
+  "definitions": {
+    "WorkflowRunStateChange": {
+      "type": "object",
+      "required": [
+        "portalRunId",
+        "timestamp",
+        "status",
+        "workflowName",
+        "workflowVersion",
+        "workflowRunName"
+      ],
+      "properties": {
+        "orcabusId": {
+          "type": "string"
+        },
+        "portalRunId": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string"
+        },
+        "workflow": {
+          "$ref": "#/definitions/Workflow"
+        },
+        "workflowName": {
+          "type": "string"
+        },
+        "workflowVersion": {
+          "type": "string"
+        },
+        "workflowRunName": {
+          "type": "string"
+        },
+        "analysisRun": {
+          "$ref": "#/definitions/Analysis"
+        },
+        "linkedLibraries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LibraryRecord"
+          }
+        },
+        "payload": {
+          "$ref": "#/definitions/Payload"
+        }
+      }
+    },
+    "LibraryRecord": {
+      "type": "object",
+      "required": [
+        "libraryId",
+        "orcabusId"
+      ],
+      "properties": {
+        "libraryId": {
+          "type": "string"
+        },
+        "orcabusId": {
+          "type": "string"
+        }
+      }
+    },
+    "AnalysisRun": {
+      "type": "object",
+      "required": [
+        "orcabusId"
+      ],
+      "properties": {
+        "orcabusId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "Workflow": {
+      "type": "object",
+      "required": [
+        "orcabusId"
+      ],
+      "properties": {
+        "orcabusId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    },
+    "Payload": {
+      "type": "object",
+      "required": [
+        "refId",
+        "version",
+        "data"
+      ],
+      "properties": {
+        "refId": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

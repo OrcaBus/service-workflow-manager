@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/workflowmanager/AnalysisRunStateChange.schema.json",
+  "description": "EventBridge custom event schema for orcabus.workflowmanager@AnalysisRunStateChange",
+  "title": "AWSEvent",
+  "type": "object",
+  "required": [
+    "detail-type",
+    "detail",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "region": {
+      "type": "string"
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source": {
+      "type": "string"
+    },
+    "time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "version": {
+      "type": "string"
+    },
+    "account": {
+      "type": "string"
+    },
+    "detail-type": {
+      "type": "string"
+    },
+    "detail": {
+      "$ref": "#/definitions/AnalysisRunInitiated"
+    }
+  },
+  "definitions": {
+    "AnalysisRunInitiated": {
+      "type": "object",
+      "required": [
+        "timestamp",
+        "analysis",
+        "analysisRunName",
+        "libraries"
+      ],
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "analysisRunName": {
+          "type": "string"
+        },
+        "analysis": {
+          "$ref": "#/definitions/Analysis"
+        },
+        "libraries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Library"
+          }
+        },
+        "readsets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Readset"
+          }
+        }
+      }
+    },
+    "Library": {
+      "type": "object",
+      "required": [
+        "libraryId",
+        "orcabusId"
+      ],
+      "properties": {
+        "libraryId": {
+          "type": "string"
+        },
+        "orcabusId": {
+          "type": "string"
+        }
+      }
+    },
+    "Readset": {
+      "type": "object",
+      "required": [
+        "orcabusId"
+      ],
+      "properties": {
+        "orcabusId": {
+          "type": "string"
+        },
+        "rgid": {
+          "type": "string"
+        },
+        "phenotype": {
+          "type": "string"
+        }
+      }
+    },
+    "Analysis": {
+      "type": "object",
+      "required": [
+        "orcabusId"
+      ],
+      "properties": {
+        "orcabusId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

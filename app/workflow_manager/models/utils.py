@@ -88,6 +88,7 @@ class WorkflowRunUtil:
         # Allowed transitions from DRAFT state
         if self.is_draft():
             if new_state.is_draft():  # allow "updates" of the DRAFT state
+                # FIXME: check if new state is same as current one (i.e. limit updates to actual data changes)
                 self.persist_state(new_state)
                 return True
             elif new_state.is_ready():  # allow transition from DRAFT to READY state

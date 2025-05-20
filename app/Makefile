@@ -83,3 +83,14 @@ s3-dump-download-if-not-exists:
 		fi
 
 s3-load: s3-dump-download-if-not-exists db-load-data
+
+schema-gen: schema-gen-wrsc schema-gen-arsc schema-gen-arr
+
+schema-gen-arsc:
+	@datamodel-codegen --input ../docs/events/schema/WorkflowRunStateChange.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/wrsc.py
+
+schema-gen-wrsc:
+	@datamodel-codegen --input ../docs/events/schema/AnalysisRunStateChange.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/arsc.py
+
+schema-gen-arr:
+	@datamodel-codegen --input ../docs/events/schema/AnalysisRunInitiated.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/ari.py
