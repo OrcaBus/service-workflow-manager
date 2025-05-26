@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 class Readset(BaseModel):
     orcabusId: str
-    libraryId: Optional[str] = None
+    libraryId: Optional[str] = None  # TODO: this should no longer be needed
     rgid: Optional[str] = None
 
 
