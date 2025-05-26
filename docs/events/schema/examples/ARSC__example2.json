@@ -26,6 +26,19 @@
         "libraryId": "L000002",
         "orcabusId": "lib.01J5M2JFE1JPYV62RYQEG99CP5"
       }
-    ]
+    ],
+    "readsets": [
+      {
+        "orcabusId": "<readset id> fqr.76J5N2J83RED7387G9374NGDBE",
+		    "rgid??": "",
+        "phenotype??": "normal"
+      },
+      {
+        "orcabusId": "<readset id> fqr.76J5N2J83RED7387G9374NGDBF",
+        "phenotype??": "tumor"
+      }
+    ],
+    "storageEnv": "<storage env code>, e.g. production",
+    "computeEnv": "<compute env code>, e.g. production"
   }
 }

@@ -1,17 +1,15 @@
 {
   "version": "0",
   "id": "f71bbbbb-5b36-40c2-f7dc-804ca6270cd6",
-  "detail-type": "AnalysisRunStateChange",
-  "source": "orcabus.workflowmanager",
+  "detail-type": "AnalysisRunInitiated",
+  "source": "<some glue service>",
   "account": "123456789012",
   "time": "2024-05-01T09:25:44Z",
   "region": "ap-southeast-2",
   "resources": [],
   "detail": {
-    "orcabusId": "anr.76J5N2J83RED7387G9374NGDBB",
-    "analysisRunName": "<unique analysis name>",
     "timestamp": "2025-05-01T09:25:44Z",
-    "status": "DRAFT",
+    "analysisRunName": "<unique analysis run name>",
     "analysis": {
       "orcabusId": "ana.76J5N2J83RED7387G9374NGDBA",
       "name": "<analysis name>, e.g. oncoanalyser-dna",
@@ -20,11 +18,11 @@
     "libraries": [
       {
         "libraryId": "L000001",
-        "orcabusId": "lib.01J5M2J44HFJ9424G7074NKTGN"
+        "orcabusId": "lib.01J5M2J44HFJ9424G707NORMAL"
       },
       {
         "libraryId": "L000002",
-        "orcabusId": "lib.01J5M2JFE1JPYV62RYQEG99CP5"
+        "orcabusId": "lib.01J5M2JFE1JPYV62RYQEGTUMOR"
       }
     ]
   }

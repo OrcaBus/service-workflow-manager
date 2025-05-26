@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/workflowmanager/AnalysisRunStateChange.schema.json",
-  "description": "EventBridge custom event schema for orcabus.workflowmanager@AnalysisRunStateChange",
+  "description": "EventBridge custom event schema for AnalysisRunFinalised events",
   "title": "AWSEvent",
   "type": "object",
   "required": [
@@ -39,31 +39,30 @@
       "type": "string"
     },
     "detail": {
-      "$ref": "#/definitions/AnalysisRunStateChange"
+      "$ref": "#/definitions/AnalysisRunFinalised"
     }
   },
   "definitions": {
-    "AnalysisRunStateChange": {
+    "AnalysisRunFinalised": {
       "type": "object",
       "required": [
-        "orcabusId",
         "timestamp",
-        "status",
-        "analysis",
-        "analysisRunName"
+        "analysisRunId",
+        "analysisRunName",
+        "libraries",
+        "readsets",
+        "storageEnv",
+        "computeEnv"
       ],
       "properties": {
-        "orcabusId": {
-          "type": "string"
-        },
         "timestamp": {
           "type": "string",
           "format": "date-time"
         },
-        "status": {
+        "analysisRunName": {
           "type": "string"
         },
-        "analysisRunName": {
+        "analysisRunId": {
           "type": "string"
         },
         "analysis": {
@@ -73,12 +72,6 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/Library"
-          }
-        },
-        "readsets": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Readset"
           }
         },
         "computeEnv": {
@@ -93,7 +86,8 @@
       "type": "object",
       "required": [
         "libraryId",
-        "orcabusId"
+        "orcabusId",
+        "readsets"
       ],
       "properties": {
         "libraryId": {
@@ -101,6 +95,12 @@
         },
         "orcabusId": {
           "type": "string"
+        },
+        "readsets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Readset"
+          }
         }
       }
     },
@@ -113,10 +113,10 @@
         "orcabusId": {
           "type": "string"
         },
-        "rgid": {
+        "libraryId": {
           "type": "string"
         },
-        "phenotype": {
+        "rgid": {
           "type": "string"
         }
       }

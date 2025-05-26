@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/workflowmanager/AnalysisRunStateChange.schema.json",
-  "description": "EventBridge custom event schema for orcabus.workflowmanager@AnalysisRunStateChange",
+  "description": "EventBridge custom event schema for AnalysisRunInitiated events",
   "title": "AWSEvent",
   "type": "object",
   "required": [
@@ -68,11 +68,11 @@
             "$ref": "#/definitions/Library"
           }
         },
-        "readsets": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Readset"
-          }
+        "computeEnv": {
+          "type": "string"
+        },
+        "storageEnv": {
+          "type": "string"
         }
       }
     },
@@ -88,6 +88,12 @@
         },
         "orcabusId": {
           "type": "string"
+        },
+        "readsets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Readset"
+          }
         }
       }
     },
