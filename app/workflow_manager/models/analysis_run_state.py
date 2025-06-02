@@ -5,31 +5,27 @@ from django.db import models
 
 from workflow_manager.fields import OrcaBusIdField
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
-from workflow_manager.models.payload import Payload
-from workflow_manager.models.workflow_run import WorkflowRun
+from workflow_manager.models.analysis_run import AnalysisRun
 from workflow_manager.models.utils import Status
 
 
-
-class StateManager(OrcaBusBaseManager):
+class AnalysisRunStateManager(OrcaBusBaseManager):
     pass
 
 
-class State(OrcaBusBaseModel):
+class AnalysisRunState(OrcaBusBaseModel):
     class Meta:
-        unique_together = ["workflow_run", "status", "timestamp"]
+        unique_together = ["analysis_run", "status", "timestamp"]
 
     # --- mandatory fields
-    orcabus_id = OrcaBusIdField(primary_key=True, prefix='stt')
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix='ars')
     status = models.CharField(max_length=255)  # TODO: How and where to enforce conventions?
     timestamp = models.DateTimeField()
     comment = models.CharField(max_length=255, null=True, blank=True)
 
-    workflow_run = models.ForeignKey(WorkflowRun, related_name='states', on_delete=models.CASCADE)
-    # Link to workflow run payload data
-    payload = models.ForeignKey(Payload, null=True, blank=True, on_delete=models.SET_NULL)
+    analysis_run = models.ForeignKey(AnalysisRun, related_name='states', on_delete=models.CASCADE)
 
-    objects = StateManager()
+    objects = AnalysisRunStateManager()
 
     def __str__(self):
         return f"ID: {self.orcabus_id}, status: {self.status}"
