@@ -1,6 +1,9 @@
 import json
 
 from datetime import datetime, timezone
+
+from django.contrib.postgres.aggregates import StringAgg
+from django.db.models import F
 from rest_framework import status
 from rest_framework.viewsets import ViewSet
 from rest_framework.decorators import action
@@ -129,11 +132,16 @@ def construct_rnasum_rerun_payload(wfl_run: WorkflowRun, input_body: dict) -> di
     if not allow_rerun_duplication:
         # The duplication check is based on the dataset input at the READY state of the workflow run that has the same
         # linked libraries and Workflow entity. If the dataset has been run in the past, it will raise an error.
+        library_ids = wfl_run.libraries.values_list('library_id', flat=True)
+        sorted_library_ids = sorted(library_ids)
+        library_ids_string = ','.join(sorted_library_ids)
 
         # Find all workflowrun that has the same linked libraries and Workflow entity
-        wfl_runs = WorkflowRun.objects.filter(
-            libraries__in=wfl_run.libraries.all(),
-            workflow=wfl_run.workflow
+        wfl_runs = WorkflowRun.objects.annotate(
+            library_ids=StringAgg('libraries__library_id', delimiter=',', ordering=F('libraries__library_id').asc())
+        ).filter(
+            workflow=wfl_run.workflow,
+            library_ids=library_ids_string
         )
 
         past_dataset = set()
