@@ -1,69 +1,36 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/workflowmanager/AnalysisRunStateChange.schema.json",
-  "description": "EventBridge custom event schema for orcabus.workflowmanager@AnalysisRunStateChange",
+  "description": "EventBridge custom event schema for AnalysisRunFinalised events",
   "title": "AWSEvent",
-  "type": "object",
-  "required": [
-    "detail-type",
-    "detail",
-    "source"
-  ],
-  "properties": {
-    "id": {
-      "type": "string"
-    },
-    "region": {
-      "type": "string"
-    },
-    "resources": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "source": {
-      "type": "string"
-    },
-    "time": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "version": {
-      "type": "string"
-    },
-    "account": {
-      "type": "string"
-    },
-    "detail-type": {
-      "type": "string"
-    },
-    "detail": {
-      "$ref": "#/definitions/AnalysisRunStateChange"
-    }
-  },
   "definitions": {
-    "AnalysisRunStateChange": {
+    "AnalysisRunFinalised": {
       "type": "object",
       "required": [
-        "orcabusId",
+        "version",
+        "id",
         "timestamp",
-        "status",
-        "analysis",
-        "analysisRunName"
+        "analysisRunId",
+        "analysisRunName",
+        "libraries",
+        "storageEnv",
+        "computeEnv"
       ],
       "properties": {
-        "orcabusId": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
           "type": "string"
         },
         "timestamp": {
           "type": "string",
           "format": "date-time"
         },
-        "status": {
+        "analysisRunName": {
           "type": "string"
         },
-        "analysisRunName": {
+        "analysisRunId": {
           "type": "string"
         },
         "analysis": {
@@ -73,12 +40,6 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/Library"
-          }
-        },
-        "readsets": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Readset"
           }
         },
         "computeEnv": {
@@ -93,7 +54,8 @@
       "type": "object",
       "required": [
         "libraryId",
-        "orcabusId"
+        "orcabusId",
+        "readsets"
       ],
       "properties": {
         "libraryId": {
@@ -101,6 +63,12 @@
         },
         "orcabusId": {
           "type": "string"
+        },
+        "readsets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Readset"
+          }
         }
       }
     },
@@ -114,9 +82,6 @@
           "type": "string"
         },
         "rgid": {
-          "type": "string"
-        },
-        "phenotype": {
           "type": "string"
         }
       }
@@ -138,5 +103,44 @@
         }
       }
     }
-  }
+  },
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "region": {
+      "type": "string"
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source": {
+      "type": "string"
+    },
+    "time": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "account": {
+      "type": "string"
+    },
+    "detail-type": {
+      "type": "string"
+    },
+    "detail": {
+      "$ref": "#/definitions/AnalysisRunFinalised"
+    }
+  },
+  "required": [
+    "detail",
+    "detail-type",
+    "source"
+  ]
 }

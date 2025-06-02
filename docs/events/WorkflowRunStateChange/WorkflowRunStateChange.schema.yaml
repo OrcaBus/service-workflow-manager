@@ -1,0 +1,129 @@
+---
+"$schema": http://json-schema.org/draft-04/schema#
+"$id": https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/workflowmanager/WorkflowRunStateChange.schema.json
+description: EventBridge custom event schema for WorkflowRunStateChange events
+title: AWSEvent
+type: object
+required:
+  # TODO: could turn this into the new version of the WRSC and keep the legacy code binding for the current one
+  - source      # defines the event emitter: orcabus.workflowmanager
+  - detail-type # defines the event type: WorkflowRunStateChange
+  - detail      # actual event data
+properties:  # these properties are mainly controlled and managed by AWS EventBridge
+  id:
+    type: string
+  region:
+    type: string
+  resources:
+    type: array
+    items:
+      type: string
+  source:
+    type: string
+  time:
+    type: string
+    format: date-time
+  version:
+    type: string
+  account:
+    type: string
+  detail-type:
+    type: string
+  detail:
+    "$ref": "#/definitions/WorkflowRunStateChange"
+definitions:
+  WorkflowRunStateChange:  # the actual data event of the application
+    type: object
+    required:
+#      - version # optional for now as it's a breaking change
+#      - id # optional for now as it's a breaking change
+#      - orcabusId # optional for now as it's a breaking change
+      - portalRunId
+      - timestamp
+      - status
+#      - workflow # optional for now as it's a breaking change
+      - workflowName
+      - workflowVersion
+      - workflowRunName
+    properties:
+      id:
+        # unique id for the data event, e.g. a hashed event data, useful for deduplication, NOTE: independent of the AWS event id
+        type: string
+      version:
+        # the version associated with the event schema version (following semver)
+        type: string
+      timestamp:
+        # time of the state change (not the event emission time, which is already covered in the AWS wrapper)
+        type: string
+        format: date-time
+      orcabusId:
+        # the OrcaBus id of the WorkflowRun
+        type: string
+      portalRunId:
+        # the portal run id of the WorkflowRun
+        type: string
+      workflowRunName:
+        # name of the WorkflowRun this event relates to
+        type: string
+      workflowName:
+        # name of the parent Workflow for this WorkflowRun
+        type: string
+      workflowVersion:
+        # version of the parent Workflow for this WorkflowRun
+        type: string
+      workflow:
+        "$ref": "#/definitions/Workflow"
+      libraries:
+        # libraries associated with this WorkflowRun
+        type: array
+        items:
+          "$ref": "#/definitions/Library"
+      status:
+        # the current/new state of this WorkflowRun
+        type: string
+  Library:
+    type: object
+    required:
+      - libraryId
+      - orcabusId
+    properties:
+      libraryId:
+        # the lab assigned library id, e.g. L2500123
+        type: string
+      orcabusId:
+        # the OrcaBus internal library id, e.g. lib.001234EXAMPLE56789ABCDEFGH
+        type: string
+  Workflow:
+    type: object
+    required:
+      - orcabusId
+    properties:
+      orcabusId:
+        # the OrcaBus internal id of the Workflow, e.g. wfl.001234EXAMPLE56789ANALYSIS
+        type: string
+      name:
+        # the name of the Workflow (mainly for human readability)
+        type: string
+      version:
+        # the version of the Workflow (mainly for human readability)
+        type: string
+  Payload:
+    type: object
+    required:
+#      - orcabusId # optional for now as it's a breaking change
+      - refId   # a unique reference id by which the payload data can be retrieved
+      - version # the (ideally schema) version of the payload
+      - data    # no need to have a payload without any data
+    properties:
+      orcabusId:
+        # the OrcaBus internal id of the Payload, e.g. pld.001234EXAMPLE56789PAYLOAD1
+        type: string
+      refId:
+        # the legacy reference ID (OrcaBus ID) TODO: could re-use this as id assigned by source execution service
+        type: string
+      version:
+        # the version of the Payload (schema) defined by the execution service managing this Workflow
+        type: string
+      data:
+        # the actual data payload for this WorkflowRun defined and managed by the execution service managing this Workflow
+        type: object
