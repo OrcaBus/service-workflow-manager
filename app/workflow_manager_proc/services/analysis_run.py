@@ -161,7 +161,7 @@ def finalise_analysis_run(event: arf.AnalysisRunFinalised):
         was_updated = True
 
     # Libraries: are mandatory, but cannot be changed
-    # Readsets: are mandatory,, but Readsets can be added (if not present yet)
+    # Readsets: are mandatory, but Readsets can be added (if not present yet)
     assert len(event.libraries) == len(analysis_run_db.libraries.all()), "Libraries don't match!"
 
     for l in event.libraries:
@@ -173,11 +173,11 @@ def finalise_analysis_run(event: arf.AnalysisRunFinalised):
         rss = l.readsets
         rss_db = set(analysis_run_db.readsets.all())  # keep track of all Readsets that are already attached
         for rs in rss:
-            rs_db = analysis_run_db.readsets.get(rs.orcabusId, None)
+            rs_db: AnalysisRunReadset = analysis_run_db.readsets.get(rs.orcabusId, None)
             if rs_db:
                 # if the readset exists already, make sure it's for the same library
-                assert rs_db.library.orcabus_id == lod, "AnalysisRunReadset Library ID does not match!"
-                assert rs_db.library.library_id == lid, "AnalysisRunReadset Library ID does not match!"
+                assert rs_db.library_oid == lod, "AnalysisRunReadset Library ID does not match!"
+                assert rs_db.library_id == lid, "AnalysisRunReadset Library ID does not match!"
                 rss_db.remove(rs_db)  # remove the readset from the tracker
             else:
                 # create new AnalysisRunReadset
