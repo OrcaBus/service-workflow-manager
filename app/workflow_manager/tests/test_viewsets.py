@@ -4,11 +4,13 @@ from unittest import skip
 from unittest.mock import MagicMock
 
 from django.test import TestCase
+from django.utils.timezone import make_aware
 from libumccr.aws import libeb
+from datetime import datetime, timedelta
 
-from workflow_manager.models import WorkflowRun
+from workflow_manager.models import WorkflowRun, LibraryAssociation, Payload
 from workflow_manager.models.workflow import Workflow
-from workflow_manager.tests.factories import PrimaryTestData
+from workflow_manager.tests.factories import PrimaryTestData, WorkflowRunFactory, StateFactory
 from workflow_manager.urls.base import api_base
 
 logger = logging.getLogger()
@@ -58,7 +60,7 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
                 "dataset": "BRCA"
             },
             "engineParameters": {
-                "sourceUri": f"s3:/bucket/{wfl_run.portal_run_id}/",
+                "sourceUri": f"s3://bucket/{wfl_run.portal_run_id}/",
             }
         }
         payload.save()
@@ -85,3 +87,44 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
                                     data={"dataset": "BRCA", "allow_duplication": True})
         self.assertIn(response.status_code, [200],
                       'Rerun with same input allowed when `allow_duplication` is set to True')
+
+        # Unique Library Test - library IDs are treated as a unique set
+
+        # Create a PANCAN payload with a library so the rerun starts from this workflow run
+        wfr_new: WorkflowRun = WorkflowRunFactory(
+            workflow_run_name="AdditionalTestWorkflowRun",
+            portal_run_id="9876",
+            workflow=wfl
+        )
+        new_payload = Payload.objects.create(
+            version="1.0.0",
+            payload_ref_id="01H6GZ8X4YJ5V9Q2F7A3B6CDE8",
+            data={
+                "inputs": {
+                    "someUri": "s3://random/prefix/",
+                    "dataset": "PANCAN"
+                },
+                "engineParameters": {
+                    "sourceUri": f"s3://bucket/{wfr_new.portal_run_id}/",
+                }
+            }
+        )
+        for i, state in enumerate(["DRAFT", "READY", "RUNNING", "SUCCEEDED"]):
+            StateFactory(
+                workflow_run=wfr_new,
+                status=state,
+                payload=new_payload,
+                timestamp=make_aware(datetime.now() + timedelta(hours=i))
+            )
+        LibraryAssociation.objects.create(
+            workflow_run=wfr_new,
+            library=wfl_run.libraries.all().first(),
+            association_date=make_aware(datetime.now()),
+            status="ACTIVE",
+        )
+
+        # The BCRA has been run in the initial payload (before the Unique Library Test)
+        # This will trigger the rerun with different library set
+        response = self.client.post(f"{self.endpoint}/{wfr_new.orcabus_id}/rerun", data={"dataset": "BRCA"})
+        self.assertIn(response.status_code, [200],
+                      'Rerun with the same input is allowed when using a different library set')
