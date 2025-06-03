@@ -6,7 +6,7 @@ from django.db import models
 from workflow_manager.fields import OrcaBusIdField
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.analysis_run import AnalysisRun
-from workflow_manager.models.utils import Status
+from workflow_manager.models.common import Status
 
 
 class AnalysisRunStateManager(OrcaBusBaseManager):

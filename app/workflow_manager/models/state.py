@@ -1,13 +1,10 @@
-from enum import Enum
-from typing import List
-
 from django.db import models
 
 from workflow_manager.fields import OrcaBusIdField
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.payload import Payload
 from workflow_manager.models.workflow_run import WorkflowRun
-from workflow_manager.models.utils import Status
+from workflow_manager.models.common import Status
 
 
 
