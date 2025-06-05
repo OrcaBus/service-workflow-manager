@@ -56,10 +56,7 @@
     },
     "Library": {
       "type": "object",
-      "required": [
-        "libraryId",
-        "orcabusId"
-      ],
+      "required": ["libraryId", "orcabusId"],
       "properties": {
         "libraryId": {
           "type": "string"
@@ -71,9 +68,7 @@
     },
     "Workflow": {
       "type": "object",
-      "required": [
-        "orcabusId"
-      ],
+      "required": ["orcabusId"],
       "properties": {
         "orcabusId": {
           "type": "string"
@@ -88,11 +83,7 @@
     },
     "Payload": {
       "type": "object",
-      "required": [
-        "refId",
-        "version",
-        "data"
-      ],
+      "required": ["refId", "version", "data"],
       "properties": {
         "orcabusId": {
           "type": "string"
@@ -143,9 +134,5 @@
       "$ref": "#/definitions/WorkflowRunStateChange"
     }
   },
-  "required": [
-    "detail",
-    "detail-type",
-    "source"
-  ]
+  "required": ["detail", "detail-type", "source"]
 }

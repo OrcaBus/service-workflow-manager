@@ -47,10 +47,7 @@
     },
     "LibraryRecord": {
       "type": "object",
-      "required": [
-        "libraryId",
-        "orcabusId"
-      ],
+      "required": ["libraryId", "orcabusId"],
       "properties": {
         "libraryId": {
           "type": "string"
@@ -62,11 +59,7 @@
     },
     "Payload": {
       "type": "object",
-      "required": [
-        "refId",
-        "version",
-        "data"
-      ],
+      "required": ["refId", "version", "data"],
       "properties": {
         "refId": {
           "type": "string"
@@ -114,9 +107,5 @@
       "$ref": "#/definitions/WorkflowRunStateChange"
     }
   },
-  "required": [
-    "detail-type",
-    "detail",
-    "source"
-  ]
+  "required": ["detail-type", "detail", "source"]
 }

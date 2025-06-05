@@ -32,4 +32,3 @@ def handler(event, context):
     finalise_analysis_run(analysis_run_final)
 
     logger.info(f"{__name__} done.")
-
