@@ -6,14 +6,7 @@
   "definitions": {
     "AnalysisRunInitiated": {
       "type": "object",
-      "required": [
-        "version",
-        "id",
-        "timestamp",
-        "analysisRunName",
-        "analysis",
-        "libraries"
-      ],
+      "required": ["version", "id", "timestamp", "analysisRunName", "analysis", "libraries"],
       "properties": {
         "id": {
           "type": "string"
@@ -47,10 +40,7 @@
     },
     "Library": {
       "type": "object",
-      "required": [
-        "libraryId",
-        "orcabusId"
-      ],
+      "required": ["libraryId", "orcabusId"],
       "properties": {
         "libraryId": {
           "type": "string"
@@ -68,9 +58,7 @@
     },
     "Readset": {
       "type": "object",
-      "required": [
-        "orcabusId"
-      ],
+      "required": ["orcabusId"],
       "properties": {
         "orcabusId": {
           "type": "string"
@@ -82,9 +70,7 @@
     },
     "Analysis": {
       "type": "object",
-      "required": [
-        "orcabusId"
-      ],
+      "required": ["orcabusId"],
       "properties": {
         "orcabusId": {
           "type": "string"
@@ -132,9 +118,5 @@
       "$ref": "#/definitions/AnalysisRunInitiated"
     }
   },
-  "required": [
-    "detail",
-    "detail-type",
-    "source"
-  ]
+  "required": ["detail", "detail-type", "source"]
 }

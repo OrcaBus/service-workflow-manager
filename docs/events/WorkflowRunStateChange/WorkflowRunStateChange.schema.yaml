@@ -1,15 +1,15 @@
 ---
-"$schema": http://json-schema.org/draft-04/schema#
-"$id": https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/workflowmanager/WorkflowRunStateChange.schema.json
+'$schema': http://json-schema.org/draft-04/schema#
+'$id': https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/workflowmanager/WorkflowRunStateChange.schema.json
 description: EventBridge custom event schema for WorkflowRunStateChange events
 title: AWSEvent
 type: object
 required:
   # TODO: could turn this into the new version of the WRSC and keep the legacy code binding for the current one
-  - source      # defines the event emitter: orcabus.workflowmanager
+  - source # defines the event emitter: orcabus.workflowmanager
   - detail-type # defines the event type: WorkflowRunStateChange
-  - detail      # actual event data
-properties:  # these properties are mainly controlled and managed by AWS EventBridge
+  - detail # actual event data
+properties: # these properties are mainly controlled and managed by AWS EventBridge
   id:
     type: string
   region:
@@ -30,18 +30,18 @@ properties:  # these properties are mainly controlled and managed by AWS EventBr
   detail-type:
     type: string
   detail:
-    "$ref": "#/definitions/WorkflowRunStateChange"
+    '$ref': '#/definitions/WorkflowRunStateChange'
 definitions:
-  WorkflowRunStateChange:  # the actual data event of the application
+  WorkflowRunStateChange: # the actual data event of the application
     type: object
     required:
-#      - version # optional for now as it's a breaking change
-#      - id # optional for now as it's a breaking change
-#      - orcabusId # optional for now as it's a breaking change
+      #      - version # optional for now as it's a breaking change
+      #      - id # optional for now as it's a breaking change
+      #      - orcabusId # optional for now as it's a breaking change
       - portalRunId
       - timestamp
       - status
-#      - workflow # optional for now as it's a breaking change
+      #      - workflow # optional for now as it's a breaking change
       - workflowName
       - workflowVersion
       - workflowRunName
@@ -72,12 +72,12 @@ definitions:
         # version of the parent Workflow for this WorkflowRun
         type: string
       workflow:
-        "$ref": "#/definitions/Workflow"
+        '$ref': '#/definitions/Workflow'
       libraries:
         # libraries associated with this WorkflowRun
         type: array
         items:
-          "$ref": "#/definitions/Library"
+          '$ref': '#/definitions/Library'
       status:
         # the current/new state of this WorkflowRun
         type: string
@@ -110,10 +110,10 @@ definitions:
   Payload:
     type: object
     required:
-#      - orcabusId # optional for now as it's a breaking change
-      - refId   # a unique reference id by which the payload data can be retrieved
+      #      - orcabusId # optional for now as it's a breaking change
+      - refId # a unique reference id by which the payload data can be retrieved
       - version # the (ideally schema) version of the payload
-      - data    # no need to have a payload without any data
+      - data # no need to have a payload without any data
     properties:
       orcabusId:
         # the OrcaBus internal id of the Payload, e.g. pld.001234EXAMPLE56789PAYLOAD1

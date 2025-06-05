@@ -27,5 +27,3 @@ class AnalysisRunReadset(OrcaBusBaseModel):
 
     def __str__(self):
         return f"ID: {self.orcabus_id}"
-
-

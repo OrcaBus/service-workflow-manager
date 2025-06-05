@@ -1,14 +1,14 @@
 ---
-"$schema": http://json-schema.org/draft-04/schema#
-"$id": https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/workflowmanager/AnalysisRunStateChange.schema.json
+'$schema': http://json-schema.org/draft-04/schema#
+'$id': https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/workflowmanager/AnalysisRunStateChange.schema.json
 description: EventBridge custom event schema for AnalysisRunStateChange events
 title: AWSEvent
 type: object
 required:
-  - source      # defines the event emitter: orcabus.workflowmanager
+  - source # defines the event emitter: orcabus.workflowmanager
   - detail-type # defines the event type: AnalysisRunStateChange
-  - detail      # actual event data
-properties:  # these properties are mainly controlled and managed by AWS EventBridge
+  - detail # actual event data
+properties: # these properties are mainly controlled and managed by AWS EventBridge
   id:
     type: string
   region:
@@ -29,11 +29,11 @@ properties:  # these properties are mainly controlled and managed by AWS EventBr
   detail-type:
     type: string
   detail:
-    "$ref": "#/definitions/AnalysisRunStateChange"
+    '$ref': '#/definitions/AnalysisRunStateChange'
 definitions:
-  AnalysisRunStateChange:  # the actual data event of the application
+  AnalysisRunStateChange: # the actual data event of the application
     type: object
-    required:  # this is a initiation event, we expect pretty much all data
+    required: # this is a initiation event, we expect pretty much all data
       - version
       - id
       - timestamp
@@ -59,12 +59,12 @@ definitions:
         # name of the AnalysisRun this event relates to
         type: string
       analysis:
-        "$ref": "#/definitions/Analysis"
+        '$ref': '#/definitions/Analysis'
       libraries:
         # libraries associated with this AnalysisRun
         type: array
         items:
-          "$ref": "#/definitions/Library"
+          '$ref': '#/definitions/Library'
       computeEnv:
         # the storage configuration to apply to Workflows under this AnalysisRun
         type: string
@@ -90,7 +90,7 @@ definitions:
         # the readsets (fastq pairs) of this library that are to be used in the analysis (if already known)
         type: array
         items:
-          "$ref": "#/definitions/Readset"
+          '$ref': '#/definitions/Readset'
   Readset:
     type: object
     required:

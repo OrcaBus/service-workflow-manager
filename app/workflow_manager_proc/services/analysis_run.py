@@ -273,4 +273,3 @@ def get_arsc_hash(arsc: arsc.AnalysisRunStateChange) -> str:
         md5_object.update(key.encode("utf-8"))
 
     return md5_object.hexdigest()
-

@@ -52,11 +52,7 @@
     },
     "Library": {
       "type": "object",
-      "required": [
-        "libraryId",
-        "orcabusId",
-        "readsets"
-      ],
+      "required": ["libraryId", "orcabusId", "readsets"],
       "properties": {
         "libraryId": {
           "type": "string"
@@ -74,9 +70,7 @@
     },
     "Readset": {
       "type": "object",
-      "required": [
-        "orcabusId"
-      ],
+      "required": ["orcabusId"],
       "properties": {
         "orcabusId": {
           "type": "string"
@@ -88,9 +82,7 @@
     },
     "Analysis": {
       "type": "object",
-      "required": [
-        "orcabusId"
-      ],
+      "required": ["orcabusId"],
       "properties": {
         "orcabusId": {
           "type": "string"
@@ -138,9 +130,5 @@
       "$ref": "#/definitions/AnalysisRunFinalised"
     }
   },
-  "required": [
-    "detail",
-    "detail-type",
-    "source"
-  ]
+  "required": ["detail", "detail-type", "source"]
 }

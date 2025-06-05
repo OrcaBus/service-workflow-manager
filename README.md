@@ -34,7 +34,7 @@ Service Description
 ### Name & responsibility
 ### Description
 
-The Workflow Manager Service keeps track of all workflows executed within the OrcaBus platform. It's responsible for tracking and relaying state updates from execution services to OrcaBus platform services. 
+The Workflow Manager Service keeps track of all workflows executed within the OrcaBus platform. It's responsible for tracking and relaying state updates from execution services to OrcaBus platform services.
 Only events originating from the Workflow Manager should be consumed by other services and with that the service acts as a gatekeeper/mediator between workflow state emitters and corresponding consumers.
 
 ### API Endpoints
@@ -63,7 +63,7 @@ Endpoint: https://workflow.prod.umccr.org/schema/swagger-ui/
 ### Major Business Rules
 ### Permissions & Access Control
 
-Infrastructure & Deployment 
+Infrastructure & Deployment
 --------------------------------------------------------------------------------
 
 Short description with diagrams where appropriate.
@@ -182,7 +182,7 @@ make fix
 ### Testing
 
 
-Unit tests are available for most of the business logic. Test code is hosted alongside business in `/tests/` directories.  
+Unit tests are available for most of the business logic. Test code is hosted alongside business in `/tests/` directories.
 
 ```sh
 make test

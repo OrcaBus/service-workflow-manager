@@ -72,4 +72,3 @@ class Status(Enum):
         # enforce upper case convention
         status = status.upper()
         return status in Status.RESOLVED.aliases
-
