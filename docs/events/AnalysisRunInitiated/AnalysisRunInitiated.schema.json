@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/workflowmanager/AnalysisRunStateChange.schema.json",
+  "description": "EventBridge custom event schema for AnalysisRunInitiated events",
+  "title": "AWSEvent",
+  "definitions": {
+    "AnalysisRunInitiated": {
+      "type": "object",
+      "required": ["version", "id", "timestamp", "analysisRunName", "analysis", "libraries"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "analysisRunName": {
+          "type": "string"
+        },
+        "analysis": {
+          "$ref": "#/definitions/Analysis"
+        },
+        "libraries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Library"
+          }
+        },
+        "computeEnv": {
+          "type": "string"
+        },
+        "storageEnv": {
+          "type": "string"
+        }
+      }
+    },
+    "Library": {
+      "type": "object",
+      "required": ["libraryId", "orcabusId"],
+      "properties": {
+        "libraryId": {
+          "type": "string"
+        },
+        "orcabusId": {
+          "type": "string"
+        },
+        "readsets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Readset"
+          }
+        }
+      }
+    },
+    "Readset": {
+      "type": "object",
+      "required": ["orcabusId"],
+      "properties": {
+        "orcabusId": {
+          "type": "string"
+        },
+        "rgid": {
+          "type": "string"
+        }
+      }
+    },
+    "Analysis": {
+      "type": "object",
+      "required": ["orcabusId"],
+      "properties": {
+        "orcabusId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "region": {
+      "type": "string"
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source": {
+      "type": "string"
+    },
+    "time": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "account": {
+      "type": "string"
+    },
+    "detail-type": {
+      "type": "string"
+    },
+    "detail": {
+      "$ref": "#/definitions/AnalysisRunInitiated"
+    }
+  },
+  "required": ["detail", "detail-type", "source"]
+}

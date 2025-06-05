@@ -1,7 +1,13 @@
 from django.db import models
 
+from enum import Enum
 from workflow_manager.fields import OrcaBusIdField
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
+
+
+class ContextUseCase(Enum):
+    COMPUTE = "COMPUTE"
+    STORAGE = "STORAGE"
 
 
 class AnalysisContextManager(OrcaBusBaseManager):
