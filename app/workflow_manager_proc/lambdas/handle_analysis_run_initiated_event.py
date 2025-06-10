@@ -4,7 +4,6 @@ django.setup()
 
 # --- keep ^^^ at top of the module
 import logging
-from workflow_manager_proc.services import emit_analysis_run_state_change, create_analysis_run
 from workflow_manager_proc.domain.event import ari, arsc
 from workflow_manager_proc.services.analysis_run import create_analysis_run
 

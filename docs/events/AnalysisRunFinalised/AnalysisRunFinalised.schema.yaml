@@ -37,9 +37,9 @@ definitions:
       - version
       - id
       - timestamp
-      - analysisRunId
+      - orcabusId
       - analysisRunName
-      # - analysis  # not mandatory as it can be inferred from an existing AnalysisRun
+      - analysis
       - libraries
       - storageEnv
       - computeEnv
@@ -57,7 +57,7 @@ definitions:
       analysisRunName:
         # name of the AnalysisRun this event relates to
         type: string
-      analysisRunId:
+      orcabusId:
         # id of the AnalysisRun this event relates to
         type: string
       analysis:

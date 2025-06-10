@@ -10,8 +10,9 @@
         "version",
         "id",
         "timestamp",
-        "analysisRunId",
+        "orcabusId",
         "analysisRunName",
+        "analysis",
         "libraries",
         "storageEnv",
         "computeEnv"
@@ -30,7 +31,7 @@
         "analysisRunName": {
           "type": "string"
         },
-        "analysisRunId": {
+        "orcabusId": {
           "type": "string"
         },
         "analysis": {
