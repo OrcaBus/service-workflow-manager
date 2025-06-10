@@ -12,7 +12,7 @@ Workflow Manager
     * [(Internal) Data states & persistence model](#internal-data-states--persistence-model)
     * [Major Business Rules](#major-business-rules)
     * [Permissions & Access Control](#permissions--access-control)
-  * [Infrastructure & Deployment](#infrastructure--deployment-)
+  * [Infrastructure & Deployment](#infrastructure--deployment)
     * [Stateful](#stateful)
     * [Stateless](#stateless)
   * [Development](#development)
@@ -48,8 +48,8 @@ Endpoint: https://workflow.prod.umccr.org/schema/swagger-ui/
 | Name / DetailType        | Source                                 | Schema Link                                                     | Description                                                            |
 |--------------------------|----------------------------------------|-----------------------------------------------------------------|------------------------------------------------------------------------|
 | `WorkflowRunStateChange` | anything but `orcabus.workflowmanager` | <schema link>                                                   | Consumed to track workflow state changes emitted by execution services |
-| `AnalysisRunInitiated`   | ??                                     | [schema](docs/events/AnalysisRunInitiated/AnalysisRunInitiated.schema.json) | Consumed to track requests for AnalysisRun creation                    |
-| `AnalysisRunFinalised`   | ??                                     | [schema](docs/events/AnalysisRunFinalised/AnalysisRunFinalised.schema.json) | Consumed to track requests for finalisation of an AnalysisRun          |
+| `AnalysisRunInitiated`   | anything but `orcabus.workflowmanager` | [schema](docs/events/AnalysisRunInitiated/AnalysisRunInitiated.schema.json) | Consumed to track requests for AnalysisRun creation                    |
+| `AnalysisRunFinalised`   | anything but `orcabus.workflowmanager` | [schema](docs/events/AnalysisRunFinalised/AnalysisRunFinalised.schema.json) | Consumed to track requests for finalisation of an AnalysisRun          |
 
 ### Published Events
 
@@ -92,6 +92,8 @@ The root of the project is an AWS CDK project where the main application logic l
 Additional documentation can be found in the `./docs` folder.
 
 ### Setup
+
+See also the app specific [README](app/README.md)
 
 #### Requirements
 

@@ -4,7 +4,7 @@ from django.db import models
 
 ULID_REGEX_STR = r"[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}"
 ulid_validator = RegexValidator(regex=ULID_REGEX_STR,
-                                message='ULID is expected to be 26 characters long',
+                                message='ULID does not match expectations!',
                                 code='invalid_orcabus_id')
 
 

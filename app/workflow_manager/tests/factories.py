@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 import factory
 from django.utils.timezone import make_aware
 
-from workflow_manager.models import Workflow, WorkflowRun, Payload, Library, State, LibraryAssociation
+from workflow_manager.models import Workflow, WorkflowRun, Payload, Library, State, LibraryAssociation, AnalysisRun
 
 
 class TestConstant(Enum):
@@ -73,6 +73,10 @@ class StateFactory(factory.django.DjangoModelFactory):
     payload = None
     workflow_run = factory.SubFactory(WorkflowRunFactory)
 
+
+class AnalysisRunFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = AnalysisRun
 
 class PrimaryTestData():
     WORKFLOW_NAME = "TestWorkflow"

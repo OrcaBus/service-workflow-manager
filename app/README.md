@@ -63,6 +63,24 @@ python manage.py help generate_mock_workflow_run
 python manage.py generate_mock_workflow_run
 ```
 
+#### Generate domain model for event schema
+
+```
+# generate models for all schemas
+make schema-gen
+
+# generate model for a specific schema
+# AnalysisRunStateChange
+schema-gen-arsc
+# WorkflowRunStateChange
+schema-gen-wrsc
+# AnalysisRunInitiated
+schema-gen-ari
+# AnalysisRunFinalised
+schema-gen-arf
+
+```
+
 #### Generate Hello Event
 
 TODO

@@ -1,0 +1,40 @@
+{
+  "id": "test_id_001",
+  "version": "99.99.99",
+  "timestamp": "2025-05-01T09:25:44Z",
+  "analysisRunName": "TestAnalysisRunName_1",
+  "orcabusId": "anr.ANR123456789ABCDEFGHJKMNPQ",
+  "analysis": {
+    "orcabusId": "ana.76J5N2J83RED7387G9374NGDBA",
+    "name": "TestAnalysis1",
+    "version": "0.0.1"
+  },
+  "libraries": [
+    {
+      "libraryId": "L000001",
+      "orcabusId": "lib.123456789ABCDEFGHJKMNPQRST",
+      "readsets": [
+        {
+          "orcabusId": "fqr.READSET123456789ABCDEFGHJK"
+        },
+        {
+          "orcabusId": "fqr.READSET234567891ABCDEFGHJK"
+        }
+      ]
+    },
+    {
+      "libraryId": "L000002",
+      "orcabusId": "lib.223456789ABCDEFGHJKMNPQRST",
+      "readsets": [
+        {
+          "orcabusId": "fqr.READSET345678912ABCDEFGHJK"
+        },
+        {
+          "orcabusId": "fqr.READSET456789123ABCDEFGHJK"
+        }
+      ]
+    }
+  ],
+  "computeEnv": "research",
+  "storageEnv": "research"
+}

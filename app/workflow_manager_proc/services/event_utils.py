@@ -1,4 +1,3 @@
-import os
 import boto3
 import logging
 from enum import Enum
@@ -9,7 +8,6 @@ logger.setLevel(logging.INFO)
 
 client = boto3.client('events', region_name='ap-southeast-2')
 SOURCE = "orcabus.workflowmanager"
-EVENT_BUS_NAME = os.environ["EVENT_BUS_NAME"]
 
 
 class EventType(Enum):
@@ -17,10 +15,11 @@ class EventType(Enum):
     ARSC = "AnalysisRunStateChange"
 
 
-def emit_event(event_type: EventType, event_json):
+def emit_event(event_type: EventType, event_bus: str, event_json):
     """
     Parameters:
         event_type: the type of event to emit using EventType
+        event_bus: the name of the event bus to emit the message to
         event_json: the JSON string of the event
     """
 
@@ -39,12 +38,12 @@ def emit_event(event_type: EventType, event_json):
                 'Source': SOURCE,
                 'DetailType': event_type.value,
                 'Detail': event_json,
-                'EventBusName': EVENT_BUS_NAME,
+                'EventBusName': event_bus,
             },
         ],
     )
 
-    logger.info(f"Sent {event_type.value} event to event bus {EVENT_BUS_NAME}:")
+    logger.info(f"Sent {event_type.value} event to event bus {event_bus}:")
     logger.info(event_json)
     logger.info(f"{__name__} done.")
     return response
