@@ -3,14 +3,7 @@ import { Construct } from 'constructs';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { ISecurityGroup, IVpc, SecurityGroup, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 import { EventBus, IEventBus, Rule } from 'aws-cdk-lib/aws-events';
-import {
-  aws_events_targets,
-  aws_lambda,
-  aws_secretsmanager,
-  Duration,
-  Stack,
-  StackProps,
-} from 'aws-cdk-lib';
+import { aws_events_targets, aws_lambda, Duration, Stack, StackProps } from 'aws-cdk-lib';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import {
@@ -24,6 +17,13 @@ import {
   OrcaBusApiGateway,
   OrcaBusApiGatewayProps,
 } from '@orcabus/platform-cdk-constructs/api-gateway';
+import { DatabaseCluster } from 'aws-cdk-lib/aws-rds';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
+import {
+  DB_CLUSTER_ENDPOINT_HOST_PARAMETER_NAME,
+  DB_CLUSTER_IDENTIFIER,
+  DB_CLUSTER_RESOURCE_ID_PARAMETER_NAME,
+} from '@orcabus/platform-cdk-constructs/shared-config/database';
 
 export interface WorkflowManagerStackProps extends StackProps {
   lambdaSecurityGroupName: string;
@@ -41,6 +41,9 @@ export class WorkflowManagerStack extends Stack {
   private readonly lambdaSG: ISecurityGroup;
   private readonly mainBus: IEventBus;
   private readonly vpc: IVpc;
+
+  private readonly WORKFLOW_MANAGER_DB_NAME = 'workflow_manager';
+  private readonly WORKFLOW_MANAGER_DB_USER = 'workflow_manager';
 
   constructor(scope: Construct, id: string, props: WorkflowManagerStackProps) {
     super(scope, id, props);
@@ -73,14 +76,27 @@ export class WorkflowManagerStack extends Stack {
       ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMReadOnlyAccess')
     );
 
-    const secretId: string = this.formatDbSecretManagerName('workflow_manager');
-    const dbSecret = aws_secretsmanager.Secret.fromSecretNameV2(this, 'DbSecret', secretId);
-    dbSecret.grantRead(this.lambdaRole);
+    // Grab the database cluster
+    const clusterResourceIdentifier = StringParameter.valueForStringParameter(
+      this,
+      DB_CLUSTER_RESOURCE_ID_PARAMETER_NAME
+    );
+    const clusterHostEndpoint = StringParameter.valueForStringParameter(
+      this,
+      DB_CLUSTER_ENDPOINT_HOST_PARAMETER_NAME
+    );
+    const dbCluster = DatabaseCluster.fromDatabaseClusterAttributes(this, 'OrcabusDbCluster', {
+      clusterIdentifier: DB_CLUSTER_IDENTIFIER,
+      clusterResourceIdentifier: clusterResourceIdentifier,
+    });
+    dbCluster.grantConnect(this.lambdaRole, this.WORKFLOW_MANAGER_DB_USER);
 
     this.lambdaEnv = {
       DJANGO_SETTINGS_MODULE: 'workflow_manager.settings.aws',
       EVENT_BUS_NAME: this.mainBus.eventBusName,
-      SECRET_ID: secretId,
+      PG_HOST: clusterHostEndpoint,
+      PG_USER: this.WORKFLOW_MANAGER_DB_USER,
+      PG_DB_NAME: this.WORKFLOW_MANAGER_DB_NAME,
     };
 
     this.baseLayer = new PythonLayerVersion(this, 'BaseLayer', {
@@ -198,13 +214,5 @@ export class WorkflowManagerStack extends Stack {
       source: [{ 'anything-but': 'orcabus.workflowmanager' }],
       detailType: ['WorkflowRunStateChange'],
     });
-  }
-
-  /**
-   * Format the name of the secret manager used for microservice connection string
-   * @param microserviceName the name of the microservice
-   */
-  private formatDbSecretManagerName(microserviceName: string) {
-    return `orcabus/${microserviceName}/rds-login-credential`;
   }
 }
