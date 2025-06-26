@@ -1,18 +1,20 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/workflowmanager/WorkflowRunStateChange.schema.json",
+  "$id": "https://raw.githubusercontent.com/OrcaBus/service-workflow-manager/refs/heads/main/docs/events/WorkflowRunStateChange/WorkflowRunStateChange.schema.json",
   "description": "EventBridge custom event schema for WorkflowRunStateChange events",
   "title": "AWSEvent",
   "definitions": {
     "WorkflowRunStateChange": {
       "type": "object",
       "required": [
-        "portalRunId",
+        "id",
+        "version",
         "timestamp",
-        "status",
-        "workflowName",
-        "workflowVersion",
-        "workflowRunName"
+        "orcabusId",
+        "portalRunId",
+        "workflowRunName",
+        "workflow",
+        "status"
       ],
       "properties": {
         "id": {
@@ -34,14 +36,11 @@
         "workflowRunName": {
           "type": "string"
         },
-        "workflowName": {
-          "type": "string"
-        },
-        "workflowVersion": {
-          "type": "string"
-        },
         "workflow": {
           "$ref": "#/definitions/Workflow"
+        },
+        "analysisRun": {
+          "$ref": "#/definitions/AnalysisRun"
         },
         "libraries": {
           "type": "array",
@@ -68,7 +67,7 @@
     },
     "Workflow": {
       "type": "object",
-      "required": ["orcabusId"],
+      "required": ["orcabusId", "name", "version"],
       "properties": {
         "orcabusId": {
           "type": "string"
@@ -81,9 +80,21 @@
         }
       }
     },
+    "AnalysisRun": {
+      "type": "object",
+      "required": ["orcabusId", "name"],
+      "properties": {
+        "orcabusId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
     "Payload": {
       "type": "object",
-      "required": ["refId", "version", "data"],
+      "required": ["orcabusId", "refId", "version", "data"],
       "properties": {
         "orcabusId": {
           "type": "string"
