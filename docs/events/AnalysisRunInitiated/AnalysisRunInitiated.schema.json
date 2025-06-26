@@ -1,12 +1,12 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "$id": "https://raw.githubusercontent.com/umccr/orcabus/main/docs/schemas/events/workflowmanager/AnalysisRunStateChange.schema.json",
+  "$id": "https://raw.githubusercontent.com/OrcaBus/service-workflow-manager/refs/heads/main/docs/events/AnalysisRunInitiated/AnalysisRunInitiated.schema.json",
   "description": "EventBridge custom event schema for AnalysisRunInitiated events",
   "title": "AWSEvent",
   "definitions": {
     "AnalysisRunInitiated": {
       "type": "object",
-      "required": ["version", "id", "timestamp", "analysisRunName", "analysis", "libraries"],
+      "required": ["id", "version", "timestamp", "analysisRunName", "analysis", "libraries"],
       "properties": {
         "id": {
           "type": "string"
@@ -40,12 +40,12 @@
     },
     "Library": {
       "type": "object",
-      "required": ["libraryId", "orcabusId"],
+      "required": ["orcabusId", "libraryId"],
       "properties": {
-        "libraryId": {
+        "orcabusId": {
           "type": "string"
         },
-        "orcabusId": {
+        "libraryId": {
           "type": "string"
         },
         "readsets": {
@@ -58,7 +58,7 @@
     },
     "Readset": {
       "type": "object",
-      "required": ["orcabusId"],
+      "required": ["orcabusId", "rgid"],
       "properties": {
         "orcabusId": {
           "type": "string"
@@ -70,7 +70,7 @@
     },
     "Analysis": {
       "type": "object",
-      "required": ["orcabusId"],
+      "required": ["orcabusId", "name", "version"],
       "properties": {
         "orcabusId": {
           "type": "string"
