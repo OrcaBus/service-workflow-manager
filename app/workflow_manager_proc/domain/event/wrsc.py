@@ -44,6 +44,7 @@ class WorkflowRunStateChange(BaseModel):
     analysisRun: Optional[AnalysisRun] = None
     libraries: Optional[List[Library]] = None
     status: str
+    payload: Optional[Payload] = None
 
 
 class AWSEvent(BaseModel):
