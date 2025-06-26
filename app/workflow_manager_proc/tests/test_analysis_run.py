@@ -1,15 +1,12 @@
-import json
+import datetime
 import os
 import time
-import datetime
-
 from unittest import mock
 
-from workflow_manager.models import Library, Status, AnalysisContext, AnalysisRunState, State
+from workflow_manager.models import Library, Status, AnalysisContext, AnalysisRunState
 from workflow_manager.models.analysis import Analysis
 from workflow_manager.models.analysis_context import ContextUseCase
 from workflow_manager.models.analysis_run import AnalysisRun
-from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
 from workflow_manager_proc.domain.event import arsc, ari, arf
 from workflow_manager_proc.services.analysis_run import (
     _create_analysis_run,
@@ -17,10 +14,11 @@ from workflow_manager_proc.services.analysis_run import (
     _map_analysis_run_to_arsc,
     get_arsc_hash
 )
-
+from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
 
 ANALYSIS_1_NAME = "TestAnalysis1"
 ANALYSIS_1_OID = "ana.76J5N2J83RED7387G9374NGDBA"
+
 
 class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
 
@@ -29,12 +27,10 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         self.env_mock.start()
         super().setUp()
 
-
     def tearDown(self) -> None:
         self.env_mock.stop()
         # self.clean_base_entities()
         super().tearDown()
-
 
     def setup_base_entities(self) -> None:
         # prepare basic prerequisites that are expected to be preconfigured in a real DB
@@ -64,9 +60,8 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
             name="research",
             usecase=ContextUseCase.STORAGE.value,
             description="Test Storage Context - Research",
-            status = "ACTIVE"
+            status="ACTIVE"
         ).save()
-
 
     def setup_arf_case_1(self) -> None:
         self.setup_base_entities()
@@ -90,9 +85,8 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         AnalysisRunState(
             analysis_run=analysis_run,
             status=Status.DRAFT.convention,
-            timestamp=datetime.datetime.strptime("01/05/2025 6:00","%m/%d/%Y %H:%M")
+            timestamp=datetime.datetime.strptime("01/05/2025 6:00", "%m/%d/%Y %H:%M")
         ).save()
-
 
     def clean_base_entities(self) -> None:
         Analysis.objects.all().delete()
@@ -100,7 +94,6 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         AnalysisRun.objects.all().delete()
         AnalysisRunState.objects.all().delete()
         Library.objects.all().delete()
-
 
     def test_ari_case_1(self):
         """
@@ -140,7 +133,6 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
 
         logger.info("ARSC event created: ")
         logger.info(arsc.AnalysisRunStateChange.model_dump_json(arsc_event))
-
 
     def test_arf_case_1(self):
         """
@@ -182,7 +174,6 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
 
         logger.info("ARSC event created: ")
         logger.info(arsc.AnalysisRunStateChange.model_dump_json(arsc_event))
-
 
     def test_ari_arf_case_1(self):
         """
@@ -226,7 +217,6 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(db_analysis_run_ari.analysis_run_name, db_analysis_run_arf.analysis_run_name)
         self.assertEqual(db_analysis_run_ari.orcabus_id, db_analysis_run_arf.orcabus_id)
 
-
     def test_ari_arf_case_2(self):
         """
         python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_ari_arf_case_2
@@ -254,7 +244,6 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         with self.assertRaises(Exception) as err:
             _create_analysis_run(ari_event)
         self.assertEqual(str(err.exception), 'AnalysisRun record already exists!')
-
 
     def test_ari_arf_case_3(self):
         """
@@ -284,19 +273,20 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
             _create_analysis_run(arf_event)
         self.assertEqual(str(err.exception), 'AnalysisRun record already exists!')
 
-
     def test_get_arsc_hash(self):
         """
         python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_get_arsc_hash
         """
 
         test_analysis = arsc.Analysis(
-            orcabusId="SOME9ARSC9ANALYSIS9ID12345"
+            orcabusId="SOME9ARSC9ANALYSIS9ID12345",
+            name="TestAnalysis1",
+            version="0.0.1",
         )
         test_arsc = arsc.AnalysisRunStateChange(
             id="",
             version="0.0.1",
-            timestamp=datetime.datetime.strptime("01/05/2025 6:00","%m/%d/%Y %H:%M"),
+            timestamp=datetime.datetime.strptime("01/05/2025 6:00", "%m/%d/%Y %H:%M"),
             orcabusId="SOME9ARSC9ANALYSISRUN9ID12345",
             analysisRunName="testAnalysisRunName",
             analysis=test_analysis,
@@ -350,7 +340,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         assert hash_0 != hash_x, "Hash is the same!"
 
         # Change timestamp and expect a different hash
-        test_arsc.timestamp = datetime.datetime.strptime("01/05/2025 6:01","%m/%d/%Y %H:%M")
+        test_arsc.timestamp = datetime.datetime.strptime("01/05/2025 6:01", "%m/%d/%Y %H:%M")
         hash_x = get_arsc_hash(test_arsc)
         assert hash_0 != hash_x, "Hash is the same!"
 
@@ -377,15 +367,19 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         # add readsets to libs and expect hash to change
         readset_1 = arsc.Readset(
             orcabusId="SOME9ARSC9READSET9ID12345",
+            rgid="AAGCAGTC+ACGCCAAC.1.990101_A00130_0999_BH7TVMDSX7",
         )
         readset_2 = arsc.Readset(
             orcabusId="SOME9ARSC9READSET9ID12346",
+            rgid="AAGCAGTC+ACGCCAAC.2.990101_A00130_0999_BH7TVMDSX7",
         )
         readset_3 = arsc.Readset(
             orcabusId="SOME9ARSC9READSET9ID12347",
+            rgid="AAGCAGTC+ACGCCAAC.3.990101_A00130_0999_BH7TVMDSX7",
         )
         readset_4 = arsc.Readset(
             orcabusId="SOME9ARSC9READSET9ID12348",
+            rgid="AAGCAGTC+ACGCCAAC.4.990101_A00130_0999_BH7TVMDSX7",
         )
         lib_1.readsets = list()
         lib_1.readsets.append(readset_1)
@@ -407,4 +401,4 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         assert hash_2 != hash_2_1, "Hash is the same!"  # different to hash without readsets
         lib_2.readsets.append(readset_4)
         hash_2_2 = get_arsc_hash(test_arsc)
-        assert hash_2_1 != hash_2_2, "Hash is the same!" # different to has with less readsets
+        assert hash_2_1 != hash_2_2, "Hash is the same!"  # different to has with less readsets

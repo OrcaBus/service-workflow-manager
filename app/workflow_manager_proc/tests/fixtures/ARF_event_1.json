@@ -15,10 +15,12 @@
       "orcabusId": "lib.123456789ABCDEFGHJKMNPQRST",
       "readsets": [
         {
-          "orcabusId": "fqr.READSET123456789ABCDEFGHJK"
+          "orcabusId": "fqr.READSET123456789ABCDEFGHJK",
+          "rgid": "AAGCAGTC+ACGCCAAC.1.990101_A00130_0999_BH7TVMDSX7"
         },
         {
-          "orcabusId": "fqr.READSET234567891ABCDEFGHJK"
+          "orcabusId": "fqr.READSET234567891ABCDEFGHJK",
+          "rgid": "AAGCAGTC+ACGCCAAC.2.990101_A00130_0999_BH7TVMDSX7"
         }
       ]
     },
@@ -27,10 +29,12 @@
       "orcabusId": "lib.223456789ABCDEFGHJKMNPQRST",
       "readsets": [
         {
-          "orcabusId": "fqr.READSET345678912ABCDEFGHJK"
+          "orcabusId": "fqr.READSET345678912ABCDEFGHJK",
+          "rgid": "CCGCAGTC+TCGCCAAC.1.990101_A00130_0999_BH7TVMDSX7"
         },
         {
-          "orcabusId": "fqr.READSET456789123ABCDEFGHJK"
+          "orcabusId": "fqr.READSET456789123ABCDEFGHJK",
+          "rgid": "CCGCAGTC+TCGCCAAC.2.990101_A00130_0999_BH7TVMDSX7"
         }
       ]
     }

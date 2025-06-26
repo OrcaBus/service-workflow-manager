@@ -18,7 +18,7 @@ source .venv/bin/activate
 uv pip install -r requirements.txt
 ```
 
-Modify the schemal YAML file in the corresponding event directory if required.
+Modify the schema YAML file in the corresponding event directory if required.
 
 Run the JSON schema generation script:
 
