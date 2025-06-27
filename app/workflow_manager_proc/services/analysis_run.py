@@ -1,8 +1,3 @@
-# import django
-
-# django.setup()
-
-# # --- keep ^^^ at top of the module
 import logging
 import os
 import datetime

@@ -50,6 +50,9 @@
         },
         "status": {
           "type": "string"
+        },
+        "payload": {
+          "$ref": "#/definitions/Payload"
         }
       }
     },
