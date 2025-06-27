@@ -1,25 +1,36 @@
-import json
+import os
 from datetime import datetime, timedelta
 from typing import List
+from unittest import mock
 
 from django.db.models import QuerySet
 from django.utils.timezone import make_aware
 
-from workflow_manager.aws_event_bridge.workflowmanager.workflowrunstatechange import WorkflowRunStateChange
-from workflow_manager_proc.services import create_workflow_run_state
-from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
+import workflow_manager.aws_event_bridge.executionservice.workflowrunstatechange as srv
 from workflow_manager.models import WorkflowRun, State, WorkflowRunUtil, Library
 from workflow_manager.tests.factories import WorkflowRunFactory
+from workflow_manager_proc.domain.event import wrsc
+from workflow_manager_proc.services.workflow_run import create_workflow_run
+from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
 
 
 class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
+    def setUp(self) -> None:
+        self.env_mock = mock.patch.dict(os.environ, {"EVENT_BUS_NAME": "FooBus"})
+        self.env_mock.start()
+        super().setUp()
+
+    def tearDown(self) -> None:
+        self.env_mock.stop()
+        super().tearDown()
+
     def test_create_wrsc_no_library(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_create_workflow_run_state.WorkflowSrvUnitTests.test_create_wrsc_no_library
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowSrvUnitTests.test_create_wrsc_no_library
         """
 
-        test_event = {
+        test_event_d = {
             "portalRunId": "202405012397gatc",
             "executionId": "icav2.id.12345",
             "timestamp": "2025-05-01T09:25:44Z",
@@ -42,14 +53,16 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
                 }
             }
         }
+        test_event: srv.WorkflowRunStateChange = srv.Marshaller.unmarshall(test_event_d, srv.WorkflowRunStateChange)
 
         logger.info("Test the created WRSC event...")
-        result_wrsc: WorkflowRunStateChange = create_workflow_run_state.handler(test_event, None)
+        result_wrsc: wrsc.WorkflowRunStateChange = create_workflow_run(test_event)
         logger.info(result_wrsc)
         self.assertIsNotNone(result_wrsc)
         self.assertEqual("ctTSO500-L000002", result_wrsc.workflowRunName)
         # We don't expect any library associations here!
-        self.assertIsNone(result_wrsc.linkedLibraries)
+        self.assertIsNone(result_wrsc.libraries)
+        self.assertFalse(hasattr(result_wrsc, "linkedLibraries"))  # deprecated schema attribute name
 
         logger.info("Test the persisted DB record...")
         wfr_qs: QuerySet = WorkflowRun.objects.all()
@@ -59,13 +72,15 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         # We don't expect any library associations here!
         self.assertEqual(0, db_wfr.libraries.count())
 
+        # assert we can validate the emitting model
+        self.assertIsNotNone(wrsc.WorkflowRunStateChange.model_validate(result_wrsc))
 
     def test_create_wrsc_no_payload(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_create_workflow_run_state.WorkflowSrvUnitTests.test_create_wrsc_no_payload
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowSrvUnitTests.test_create_wrsc_no_payload
         """
 
-        test_event = {
+        test_event_d = {
             "portalRunId": "202405012397gatc",
             "executionId": "icav2.id.12345",
             "timestamp": "2025-05-01T09:25:44Z",
@@ -74,14 +89,15 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
             "workflowVersion": "4.2.7",
             "workflowRunName": "ctTSO500-L000002"
         }
+        test_event: srv.WorkflowRunStateChange = srv.Marshaller.unmarshall(test_event_d, srv.WorkflowRunStateChange)
 
         logger.info("Test the created WRSC event...")
-        result_wrsc: WorkflowRunStateChange = create_workflow_run_state.handler(test_event, None)
+        result_wrsc: wrsc.WorkflowRunStateChange = create_workflow_run(test_event)
         logger.info(result_wrsc)
         self.assertIsNotNone(result_wrsc)
         self.assertEqual("ctTSO500-L000002", result_wrsc.workflowRunName)
         # We don't expect any library associations here!
-        self.assertIsNone(result_wrsc.linkedLibraries)
+        self.assertIsNone(result_wrsc.libraries)
         self.assertIsNone(result_wrsc.payload)
 
         logger.info("Test the persisted DB record...")
@@ -92,10 +108,12 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         # We don't expect any library associations here!
         self.assertEqual(0, db_wfr.libraries.count())
 
+        # assert we can validate the emitting model
+        self.assertIsNotNone(wrsc.WorkflowRunStateChange.model_validate(result_wrsc))
 
     def test_create_wrsc_library(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_create_workflow_run_state.WorkflowSrvUnitTests.test_create_wrsc_library
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowSrvUnitTests.test_create_wrsc_library
         """
         # NOTE: orcabusId with and without prefix
         #       The DB records have to be generated without prefix
@@ -113,7 +131,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
             }
         ]
 
-        test_event = {
+        test_event_d = {
             "portalRunId": "202405012397gatc",
             "executionId": "icav2.id.12345",
             "timestamp": "2025-05-01T09:25:44Z",
@@ -137,9 +155,10 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
                 }
             }
         }
+        test_event: srv.WorkflowRunStateChange = srv.Marshaller.unmarshall(test_event_d, srv.WorkflowRunStateChange)
 
         logger.info("Test the created WRSC event...")
-        result_wrsc: WorkflowRunStateChange = create_workflow_run_state.handler(test_event, None)
+        result_wrsc: wrsc.WorkflowRunStateChange = create_workflow_run(test_event)
         logger.info(result_wrsc)
 
         # ensure that all library records have been created as proper ULIDs (without prefixes)
@@ -150,9 +169,9 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertIsNotNone(result_wrsc)
         self.assertEqual("ctTSO500-L000002", result_wrsc.workflowRunName)
         # We do expect 2 library associations here!
-        self.assertIsNotNone(result_wrsc.linkedLibraries)
-        self.assertEqual(2, len(result_wrsc.linkedLibraries))
-        for lib in result_wrsc.linkedLibraries:
+        self.assertIsNotNone(result_wrsc.libraries)
+        self.assertEqual(2, len(result_wrsc.libraries))
+        for lib in result_wrsc.libraries:
             self.assertTrue(lib.libraryId in library_ids)
             self.assertTrue(lib.orcabusId in orcabus_ids)
 
@@ -166,9 +185,12 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         for lib in db_wfr.libraries.all():
             self.assertTrue(lib.library_id in library_ids)
 
+        # assert we can validate the emitting model
+        self.assertIsNotNone(wrsc.WorkflowRunStateChange.model_validate(result_wrsc))
+
     def test_create_wrsc_library_exists(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_create_workflow_run_state.WorkflowSrvUnitTests.test_create_wrsc_library_exists
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowSrvUnitTests.test_create_wrsc_library_exists
         """
 
         # NOTE: orcabusId with and without prefix
@@ -197,7 +219,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         for l in db_libs:
             self.assertTrue(len(l.orcabus_id), 26)
 
-        test_event = {
+        test_event_d = {
             "portalRunId": "202405012397gatc",
             "executionId": "icav2.id.12345",
             "timestamp": "2025-05-01T09:25:44Z",
@@ -221,16 +243,17 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
                 }
             }
         }
+        test_event: srv.WorkflowRunStateChange = srv.Marshaller.unmarshall(test_event_d, srv.WorkflowRunStateChange)
 
         logger.info("Test the created WRSC event...")
-        result_wrsc: WorkflowRunStateChange = create_workflow_run_state.handler(test_event, None)
+        result_wrsc: wrsc.WorkflowRunStateChange = create_workflow_run(test_event)
         logger.info(result_wrsc)
         self.assertIsNotNone(result_wrsc)
         self.assertEqual("ctTSO500-L000002", result_wrsc.workflowRunName)
         # We do expect 2 library associations here!
-        self.assertIsNotNone(result_wrsc.linkedLibraries)
-        self.assertEqual(2, len(result_wrsc.linkedLibraries))
-        for lib in result_wrsc.linkedLibraries:
+        self.assertIsNotNone(result_wrsc.libraries)
+        self.assertEqual(2, len(result_wrsc.libraries))
+        for lib in result_wrsc.libraries:
             self.assertTrue(lib.libraryId in library_ids)
             self.assertTrue(lib.orcabusId in orcabus_ids)
 
@@ -244,9 +267,12 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         for lib in db_wfr.libraries.all():
             self.assertTrue(lib.library_id in library_ids)
 
+        # assert we can validate the emitting model
+        self.assertIsNotNone(wrsc.WorkflowRunStateChange.model_validate(result_wrsc))
+
     def test_get_last_state(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_create_workflow_run_state.WorkflowSrvUnitTests.test_get_last_state
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowSrvUnitTests.test_get_last_state
         """
 
         wfr: WorkflowRun = WorkflowRunFactory()

@@ -1,29 +1,30 @@
-# import django
-
-# django.setup()
-
-# # --- keep ^^^ at top of the module
 import datetime
+import hashlib
 import logging
+import os
 
 from django.db import transaction
+
 import workflow_manager.aws_event_bridge.executionservice.workflowrunstatechange as srv
-import workflow_manager.aws_event_bridge.workflowmanager.workflowrunstatechange as wfm
 from workflow_manager.models import (
     WorkflowRun,
     Workflow,
     Library,
     LibraryAssociation,
     State,
-    Status,
+    Status, Payload,
 )
 from workflow_manager.models.utils import WorkflowRunUtil
+from workflow_manager_proc.domain.event import wrsc
+from workflow_manager_proc.services.event_utils import emit_event, EventType
 from . import create_payload_stub_from_wrsc
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 ASSOCIATION_STATUS = "ACTIVE"
+EVENT_BUS_NAME = os.environ.get("EVENT_BUS_NAME")
+WRSC_SCHEMA_VERSION = "0.0.1"
 
 
 def sanitize_orcabus_id(orcabus_id: str) -> str:
@@ -32,11 +33,24 @@ def sanitize_orcabus_id(orcabus_id: str) -> str:
 
 
 @transaction.atomic
-def handler(event, context):
+def create_workflow_run(event: srv.WorkflowRunStateChange):
+    # check state list
+    out_wrsc = _create_workflow_run(event)
+    if out_wrsc:
+        # new state resulted in state transition, we can relay the WRSC
+        logger.info("Emitting WRSC.")
+        emit_event(event_type=EventType.WRSC, event_bus=EVENT_BUS_NAME, event_json=out_wrsc.model_dump_json())
+    else:
+        # ignore - state has not been updated
+        logger.info(f"WorkflowRun state not updated. No event to emit.")
+
+    return out_wrsc
+
+
+def _create_workflow_run(event: srv.WorkflowRunStateChange):
     """
     Parameters:
         event: JSON event conform to <executionservice>.WorkflowRunStateChange
-        context: ignored for now (only used to conform to Lambda handler conventions)
     Procedure:
         - check whether a corresponding Workflow record exists (it should according to the pre-planning approach)
             - if not exist, create (support on-the-fly approach)
@@ -50,8 +64,8 @@ def handler(event, context):
             - if we have new state, then persist it
             NOTE: all events that don't change any state value should be ignored
     """
-    logger.info(f"Start processing {event}, {context}...")
-    srv_wrsc: srv.WorkflowRunStateChange = srv.Marshaller.unmarshall(event, srv.WorkflowRunStateChange)
+    logger.info(f"Start processing {event}")
+    srv_wrsc: srv.WorkflowRunStateChange = event
 
     # We expect: a corresponding Workflow has to exist for each workflow run
     # NOTE: for now we allow dynamic workflow creation
@@ -131,33 +145,104 @@ def handler(event, context):
         logger.warning(f"Could not apply new state: {new_state}")
         return None
 
-    wfm_wrsc = map_srv_wrsc_to_wfm_wrsc(srv_wrsc, new_state)
+    wfm_wrsc = _map_srv_wrsc_to_wfm_wrsc(wfr, srv_wrsc, new_state)
 
     logger.info(f"{__name__} done.")
     return wfm_wrsc
 
 
-def map_srv_wrsc_to_wfm_wrsc(input_wrsc: srv.WorkflowRunStateChange, new_state: State) -> wfm.WorkflowRunStateChange:
-    out_wrsc = wfm.WorkflowRunStateChange(
-        portalRunId=input_wrsc.portalRunId,
+def _map_srv_wrsc_to_wfm_wrsc(wfr: WorkflowRun, input_wrsc: srv.WorkflowRunStateChange,
+                             new_state: State) -> wrsc.WorkflowRunStateChange:
+    lib_list = None
+    if input_wrsc.linkedLibraries:
+        lib_list = []
+        for in_lib in input_wrsc.linkedLibraries:
+            out_lib = wrsc.Library(
+                orcabusId=in_lib.orcabusId,
+                libraryId=in_lib.libraryId,
+            )
+            lib_list.append(out_lib)
+
+    wrsc_analysis_run = None
+    if wfr.analysis_run:
+        wrsc_analysis_run = wrsc.AnalysisRun(
+            orcabusId=wfr.analysis_run.orcabus_id,
+            name=wfr.analysis_run.analysis_run_name,
+        )
+
+    out_wrsc = wrsc.WorkflowRunStateChange(
+        id="",
+        version=WRSC_SCHEMA_VERSION,
         timestamp=input_wrsc.timestamp,
-        status=Status.get_convention(input_wrsc.status),  # ensure we follow conventions
-        workflowName=input_wrsc.workflowName,
-        workflowVersion=input_wrsc.workflowVersion,
+        orcabusId=wfr.orcabus_id,
+        portalRunId=input_wrsc.portalRunId,
         workflowRunName=input_wrsc.workflowRunName,
-        linkedLibraries=input_wrsc.linkedLibraries,
+        workflow=wrsc.Workflow(
+            orcabusId=wfr.workflow.orcabus_id,
+            name=wfr.workflow.workflow_name,
+            version=wfr.workflow.workflow_version,
+        ),
+        analysisRun=wrsc_analysis_run,
+        libraries=lib_list,
+        status=Status.get_convention(input_wrsc.status),  # ensure we follow conventions
     )
     # NOTE: the srv payload is not quite the same as the wfm payload (it's missing a payload ref id that's assigned by the wfm)
     # So, if the new state has a payload, we need to map the service payload to the wfm payload
     if new_state.payload:
-        out_wrsc.payload = map_srv_payload_to_wfm_payload(input_wrsc.payload, new_state.payload.payload_ref_id)
+        out_wrsc.payload = _map_srv_payload_to_wfm_payload(input_wrsc.payload, new_state.payload)
+
+    out_wrsc.id = get_wrsc_hash(out_wrsc)
     return out_wrsc
 
 
-def map_srv_payload_to_wfm_payload(input_payload: srv.Payload, ref_id: str) -> wfm.Payload:
-    out_payload = wfm.Payload(
-        refId=ref_id,
+def _map_srv_payload_to_wfm_payload(input_payload: srv.Payload, payload_db: Payload) -> wrsc.Payload:
+    out_payload = wrsc.Payload(
+        orcabusId=payload_db.orcabus_id,
+        refId=payload_db.payload_ref_id,
         version=input_payload.version,
         data=input_payload.data
     )
     return out_payload
+
+
+def get_wrsc_hash(out_wrsc: wrsc.WorkflowRunStateChange) -> str:
+    # if there is already a hash then we simply return that
+    # TODO: allow force creation
+    # TODO: include OrcaBus IDs or rely on entity values only?
+    if out_wrsc.id:
+        return out_wrsc.id
+
+    # extract valuable keys from out_wrsc
+    keywords = list()
+
+    # out_wrsc values
+    keywords.append(out_wrsc.version)
+    # keywords.append(out_wrsc.timestamp.isoformat())  # ignoring time changes for now
+    keywords.append(out_wrsc.orcabusId)
+    keywords.append(out_wrsc.portalRunId)
+    keywords.append(out_wrsc.workflowRunName)
+    keywords.append(out_wrsc.status)
+    keywords.append(out_wrsc.workflow.orcabusId)
+
+    if out_wrsc.payload:
+        keywords.append(out_wrsc.payload.orcabusId)
+
+    if out_wrsc.analysisRun:
+        keywords.append(out_wrsc.analysisRun.orcabusId)
+
+    # add libraries
+    if out_wrsc.libraries:
+        for lib in out_wrsc.libraries:
+            keywords.append(lib.orcabusId)
+
+    # filter out any None values
+    keywords = list(filter(None, keywords))
+    # sort the list of keywords to avoid issues with record order
+    keywords.sort()
+
+    # create hash value
+    md5_object = hashlib.md5()
+    for key in keywords:
+        md5_object.update(key.encode("utf-8"))
+
+    return md5_object.hexdigest()
