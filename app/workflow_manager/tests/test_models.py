@@ -1,6 +1,6 @@
 import logging
 import time
-from unittest import skip
+import uuid
 
 from django.test import TestCase
 
@@ -14,19 +14,23 @@ logger.setLevel(logging.INFO)
 
 class WorkflowModelTests(TestCase):
 
-    @skip
     def test_save_workflow(self):
         """
         python manage.py test workflow_manager.tests.test_models.WorkflowModelTests.test_save_workflow
         """
-        # TODO: implement
-        mock_wfl = Workflow()
-        mock_wfl.text = "Test Workflow"
+        mock_wfl = Workflow(
+            workflow_name="test_workflow",
+            workflow_version="0.0.1",
+            execution_engine="CIA",
+            execution_engine_pipeline_id=str(uuid.uuid4()),
+        )
         mock_wfl.save()
 
         logger.info(mock_wfl)
+        logger.info(mock_wfl.execution_engine_pipeline_id)
 
         self.assertEqual(1, Workflow.objects.count())
+        self.assertTrue(mock_wfl.orcabus_id.startswith("wfl."))
 
     def test_save_library(self):
         """
@@ -39,6 +43,7 @@ class WorkflowModelTests(TestCase):
         lib.save()
         logger.info(lib)
         self.assertEqual(1, Library.objects.count())
+        self.assertTrue(lib.orcabus_id.startswith("lib."))
 
     def test_save_library_with_orcabus_id(self):
         """
@@ -52,6 +57,7 @@ class WorkflowModelTests(TestCase):
         lib.save()
         logger.info(lib)
         self.assertEqual(1, Library.objects.count())
+        self.assertTrue(lib.orcabus_id.startswith("lib."))
 
     def test_create_portal_run_id(self):
         """

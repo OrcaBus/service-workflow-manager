@@ -4,9 +4,19 @@
 Namespace: orcabus.workflowmanager
 ```
 
-## CDK
+## CDK Deployment
 
 See [README.md](../README.md)
+
+## Event Schema
+
+See [README.md](../docs/events/README.md)
+
+You can generate code binding as follows.
+
+```bash
+make schema-gen
+```
 
 ## How to run Workflow Manager locally
 
@@ -14,7 +24,7 @@ See [README.md](../README.md)
 
 - Go to the Django project root
 
-```
+```bash
 cd app
 ```
 
@@ -22,9 +32,9 @@ _If you use PyCharm then annotate this `app/` directory as "source" directory in
 
 ### Python
 
-- Setup Python environment (conda or venv)
+- Setup Python environment
 
-```
+```bash
 conda create -n workflow-manager python=3.12
 conda activate workflow-manager
 ```
@@ -33,69 +43,42 @@ conda activate workflow-manager
 
 - At app root, perform
 
-```
+```bash
 make install
 make up
 make ps
 ```
 
-### Migration
+### Django Basic
 
-```
+Learn Django (plenty of online resources) if you are new to the framework. The following are a quick starter/refresher.
+
+```bash
 python manage.py help
 python manage.py showmigrations
 python manage.py makemigrations
 python manage.py migrate
-```
 
-### Mock Data
-
-_^^^ please make sure to run `python manage.py migrate` first! ^^^_
-
-#### Generate Workflow Record
-
-```
 python manage.py help generate_mock_workflow_run
     > Generate mock Workflow data into database for local development and testing
 ```
 
+We wrap these Django management commands into `Makefile` for local dev routine purpose.
+
+### Mock Data
+
+```bash
+make migrate
+make mock
 ```
-python manage.py generate_mock_workflow_run
-```
-
-#### Generate domain model for event schema
-
-```
-# generate models for all schemas
-make schema-gen
-
-# generate model for a specific schema
-# AnalysisRunStateChange
-schema-gen-arsc
-# WorkflowRunStateChange
-schema-gen-wrsc
-# AnalysisRunInitiated
-schema-gen-ari
-# AnalysisRunFinalised
-schema-gen-arf
-
-```
-
-#### Generate Hello Event
-
-TODO
-
-#### Generate Domain Event
-
-TODO
 
 ### Run API
 
-```
-python manage.py runserver_plus
+```bash
+make start
 ```
 
-```
+```bash
 curl -s http://localhost:8000/api/v1/workflow | jq
 ```
 
@@ -105,21 +88,16 @@ Or visit in browser:
 
 ### API Doc
 
-#### Swagger
-
 - http://localhost:8000/schema/swagger-ui/
-
-#### OpenAPI v3
-
 - http://localhost:8000/schema/openapi.json
 
 ## Local DB
 
-```
+```bash
 make psql
 ```
 
-```
+```bash
 workflow_manager# \l
 workflow_manager# \c workflow_manager
 workflow_manager# \dt
@@ -150,28 +128,6 @@ make suite
 
 ```
 python manage.py test workflow_manager.tests.test_viewsets.WorkflowViewSetTestCase.test_get_api
-```
-
-TODO
-
-```
-#python manage.py test workflow_manager_proc.tests.test_workflow_event.HelloEventUnitTests.test_sqs_handler
-```
-
-```
-#python manage.py test workflow_manager_proc.tests.test_workflow_domain.HelloDomainUnitTests.test_marshall
-```
-
-```
-#python manage.py test workflow_manager_proc.tests.test_workflow_domain.HelloDomainUnitTests.test_unmarshall
-```
-
-```
-#python manage.py test workflow_manager_proc.tests.test_workflow_domain.HelloDomainUnitTests.test_aws_event_serde
-```
-
-```
-#python manage.py test workflow_manager_proc.tests.test_workflow_domain.HelloDomainUnitTests.test_put_events_request_entry
 ```
 
 ## Tear Down
