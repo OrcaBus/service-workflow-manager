@@ -1,16 +1,16 @@
 import logging
 import os
-from unittest import skip
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock
 
 from django.test import TestCase
 from django.utils.timezone import make_aware
 from libumccr.aws import libeb
-from datetime import datetime, timedelta
 
 from workflow_manager.models import WorkflowRun, LibraryAssociation, Payload
 from workflow_manager.models.workflow import Workflow
-from workflow_manager.tests.factories import PrimaryTestData, WorkflowRunFactory, StateFactory
+from workflow_manager.tests.factories import WorkflowRunFactory, StateFactory, WorkflowFactory
+from workflow_manager.tests.fixtures.sim_workflow import TestData
 from workflow_manager.urls.base import api_base
 
 logger = logging.getLogger()
@@ -21,18 +21,14 @@ class WorkflowViewSetTestCase(TestCase):
     endpoint = f"/{api_base}workflow"
 
     def setUp(self):
-        Workflow.objects.create(
-            text="Bonjour le monde",
-        )
+        WorkflowFactory.create_batch(size=1)
 
-    @skip
     def test_get_api(self):
         """
         python manage.py test workflow_manager.tests.test_viewsets.WorkflowViewSetTestCase.test_get_api
         """
-        # TODO: implement
         response = self.client.get(f"{self.endpoint}/")
-        logger.info(response)
+        logger.info(response.content)
         self.assertEqual(response.status_code, 200, 'Ok status response is expected')
 
 
@@ -41,7 +37,11 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
 
     def setUp(self):
         os.environ["EVENT_BUS_NAME"] = "mock-bus"
-        PrimaryTestData().setup()
+
+        # create primary test data from workflow fixtures
+        TestData() \
+            .create_primary()
+
         self._real_emit_event = libeb.emit_event
         libeb.emit_events = MagicMock()
 
@@ -68,7 +68,7 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun")
         self.assertIn(response.status_code, [400], 'Workflow name associated with the workflow run is not allowed')
 
-        # Change the workflow name to 'rnasum' as this is the only allowed workflow name for rerrun
+        # Change the workflow name to 'rnasum' as this is the only allowed workflow name for rerun
         wfl = Workflow.objects.all().first()
         wfl.workflow_name = "rnasum"
         wfl.save()
@@ -91,7 +91,7 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         # Unique Library Test - library IDs are treated as a unique set
 
         # Create a PANCAN payload with a library so the rerun starts from this workflow run
-        wfr_new: WorkflowRun = WorkflowRunFactory(
+        wfr_new = WorkflowRunFactory(
             workflow_run_name="AdditionalTestWorkflowRun",
             portal_run_id="9876",
             workflow=wfl

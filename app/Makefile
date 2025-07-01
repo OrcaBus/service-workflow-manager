@@ -30,8 +30,11 @@ migrate:
 start: migrate
 	@python manage.py runserver_plus 0.0.0.0:8000
 
+clean:
+	@python manage.py clean_db
+
 mock:
-	@python manage.py generate_analysis_for_metadata
+	@python manage.py generate_mock_analysis_run
 
 run-mock: reset-db migrate mock start
 

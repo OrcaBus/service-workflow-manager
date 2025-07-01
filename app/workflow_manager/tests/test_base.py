@@ -1,5 +1,4 @@
 import logging
-from unittest import skip
 
 from django.db.models import Q
 from django.test import TestCase
@@ -15,7 +14,6 @@ class OrcaBusBaseManagerTestCase(TestCase):
     def setUp(self) -> None:
         pass
 
-    @skip
     def test_reduce_multi_values_qor(self):
         """
         python manage.py test workflow_manager.tests.test_base.OrcaBusBaseManagerTestCase.test_reduce_multi_values_qor
@@ -26,7 +24,6 @@ class OrcaBusBaseManagerTestCase(TestCase):
         self.assertIsInstance(q, Q)
         self.assertIn(Q.OR, str(q))
 
-    @skip
     def test_reduce_multi_values_qor_auto_pack(self):
         """
         python manage.py test workflow_manager.tests.test_base.OrcaBusBaseManagerTestCase.test_reduce_multi_values_qor_auto_pack
@@ -37,7 +34,6 @@ class OrcaBusBaseManagerTestCase(TestCase):
         self.assertIsInstance(q, Q)
         self.assertIn(Q.AND, str(q))
 
-    @skip
     def test_base_model_must_abstract(self):
         """
         python manage.py test workflow_manager.tests.test_base.OrcaBusBaseManagerTestCase.test_base_model_must_abstract
