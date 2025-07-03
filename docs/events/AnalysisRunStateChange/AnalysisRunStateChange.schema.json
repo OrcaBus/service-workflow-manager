@@ -13,7 +13,8 @@
         "orcabusId",
         "analysisRunName",
         "analysis",
-        "status"
+        "status",
+        "libraries"
       ],
       "properties": {
         "id": {
