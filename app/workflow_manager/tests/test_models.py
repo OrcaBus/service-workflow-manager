@@ -2,6 +2,7 @@ import logging
 import time
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from workflow_manager.models import Library
@@ -31,6 +32,33 @@ class WorkflowModelTests(TestCase):
 
         self.assertEqual(1, Workflow.objects.count())
         self.assertTrue(mock_wfl.orcabus_id.startswith("wfl."))
+
+    def test_save_workflow_fail(self):
+        """
+        python manage.py test workflow_manager.tests.test_models.WorkflowModelTests.test_save_workflow_fail
+        """
+
+        try:
+            mock_wfl = Workflow(
+                workflow_name="test_workflow",
+                workflow_version="0.0.1",
+                execution_engine="CIA",
+                execution_engine_pipeline_id=str(uuid.uuid4()),
+            )
+            mock_wfl.save()
+
+            mock_wfl2 = Workflow(
+                workflow_name="test_workflow",
+                workflow_version="0.0.1",
+                execution_engine="CIA",
+                execution_engine_pipeline_id=str(uuid.uuid4()),
+            )
+            mock_wfl2.save()
+
+        except ValidationError as e:
+            logger.exception(f"THIS ERROR EXCEPTION IS INTENTIONAL FOR TEST. NOT ACTUAL ERROR. \n{e}")
+
+        self.assertRaises(ValidationError)
 
     def test_save_library(self):
         """

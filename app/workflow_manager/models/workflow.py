@@ -11,7 +11,7 @@ class WorkflowManager(OrcaBusBaseManager):
 class Workflow(OrcaBusBaseModel):
     class Meta:
         # a combo of this gives us human-readable pipeline id
-        unique_together = ["workflow_name", "workflow_version"]
+        unique_together = ["workflow_name", "workflow_version", "execution_engine"]
 
     orcabus_id = OrcaBusIdField(primary_key=True, prefix='wfl')
     workflow_name = models.CharField(max_length=255)
