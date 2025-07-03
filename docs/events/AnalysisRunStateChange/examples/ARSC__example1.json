@@ -26,8 +26,7 @@
         "readsets": [
           {
             "orcabusId": "<readset id> fqr.76J5N2J83RED7387G9374NGDBE",
-            "rgid": "CAGCAGTC+ACGCCAAC.4.990720_A00130_0266_BH7TVMDSX7",
-            "phenotype??": "normal"
+            "rgid": "CAGCAGTC+ACGCCAAC.4.990720_A00130_0266_BH7TVMDSX7"
           }
         ]
       },
@@ -37,8 +36,7 @@
         "readsets": [
           {
             "orcabusId": "<readset id> fqr.76J5N2J83RED7387G9374NGDBF",
-            "rgid": "CAGCAGTC+ACGCCTTC.3.990720_A00130_0266_BH7TVMDSX7",
-            "phenotype??": "tumor"
+            "rgid": "CAGCAGTC+ACGCCTTC.3.990720_A00130_0266_BH7TVMDSX7"
           }
         ]
       }

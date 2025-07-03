@@ -18,6 +18,12 @@
       "orcabusId": "ana.76J5N2J83RED7387G9374NGDBA",
       "name": "<analysis name>, e.g. oncoanalyser-dna",
       "version": "<analysis version>, e.g. 1.0.4"
-    }
+    },
+    "libraries": [
+      {
+        "libraryId": "L000001",
+        "orcabusId": "lib.01J5M2J44HFJ9424G7074NKTGN"
+      }
+    ]
   }
 }
