@@ -17,7 +17,8 @@
     "workflow": {
       "orcabusId": "wfl.01J5M2JFE1JPYV62RYQEG99CPW",
       "name": "<fill-by-workflow-manager> e.g. bssh_icav2_fastq_copy",
-      "version": "<fill-by-workflow-manager> e.g. 1.2.3"
+      "version": "<fill-by-workflow-manager> e.g. 1.2.3",
+      "executionEngine": "<fill-by-workflow-manager> e.g. ICAv2"
     },
     "analysisRun": {
       "orcabusId": "anr.01J5M2JFE1JPYV62RYQEG99RUN",
