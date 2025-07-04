@@ -41,6 +41,7 @@ definitions:
       - analysisRunName
       - analysis
       - status
+      - libraries
     properties:
       id:
         # unique id for the data event, e.g. the hashed event data, useful for deduplication.
