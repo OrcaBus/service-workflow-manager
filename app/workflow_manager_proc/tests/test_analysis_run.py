@@ -292,7 +292,13 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
             analysis=test_analysis,
             computeEnv="ENV1",
             storageEnv="ENV2",
-            status="TESTING"
+            status="TESTING",
+            libraries=[
+                arsc.Library(
+                    orcabusId="SOME9ARSC9LIBRARY9ID12345",
+                    libraryId="L9900999"
+                )
+            ]
         )
         hash_0 = get_arsc_hash(test_arsc)
         time.sleep(2)
