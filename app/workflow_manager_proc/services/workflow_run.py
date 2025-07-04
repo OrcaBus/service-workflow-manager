@@ -181,6 +181,7 @@ def _map_srv_wrsc_to_wfm_wrsc(wfr: WorkflowRun, input_wrsc: srv.WorkflowRunState
             orcabusId=wfr.workflow.orcabus_id,
             name=wfr.workflow.workflow_name,
             version=wfr.workflow.workflow_version,
+            executionEngine=wfr.workflow.execution_engine,
         ),
         analysisRun=wrsc_analysis_run,
         libraries=lib_list,
