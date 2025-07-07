@@ -18,8 +18,8 @@ lint:
 lint-fix:
 	@black -t py312 . --exclude .venv
 
-# full mock suite test pipeline - install deps, bring up compose stack, run suite, bring down compose stack
-test: install up suite down
+# alias to test suite
+test: suite
 
 suite:
 	@python manage.py test
