@@ -23,11 +23,22 @@ def handler(event, context):
     """
     logger.info(f"Processing {event}, {context}")
 
-    # TODO handle both old and new WRSC event with next PR
-
     # remove the AWSEvent wrapper from our WRSC event
     input_event: srv.AWSEvent = srv.Marshaller.unmarshall(event, srv.AWSEvent)
     input_wrsc: srv.WorkflowRunStateChange = input_event.detail
-    create_workflow_run(input_wrsc)
+
+    _create_workflow_run_with_legacy_adapter(input_wrsc)
 
     logger.info(f"{__name__} done.")
+
+
+def _create_workflow_run_with_legacy_adapter(legacy_wrsc_event: srv.WorkflowRunStateChange):
+
+    # defensive about the incoming as an WRSC legacy event
+    if legacy_wrsc_event.workflowName is None or legacy_wrsc_event.workflowVersion is None:
+        raise ValueError("WRSC legacy schema error. The workflowName and workflowVersion must be defined.")
+
+    # FIXME map legacy to new WRSC event with next PR
+    adapted_wrsc_event = legacy_wrsc_event
+
+    create_workflow_run(adapted_wrsc_event)
