@@ -2,6 +2,7 @@ import datetime
 import hashlib
 import logging
 import os
+import uuid
 
 from django.db import transaction
 
@@ -17,7 +18,6 @@ from workflow_manager.models import (
 from workflow_manager.models.utils import WorkflowRunUtil
 from workflow_manager_proc.domain.event import wrsc
 from workflow_manager_proc.services.event_utils import emit_event, EventType
-from . import create_payload_stub_from_wrsc
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -137,7 +137,11 @@ def _create_workflow_run(event: srv.WorkflowRunStateChange):
     )
     if srv_wrsc.payload:
         # handle the payload
-        new_state.payload = create_payload_stub_from_wrsc(srv_wrsc)
+        new_state.payload = Payload(
+            payload_ref_id=str(uuid.uuid4()),
+            version=srv_wrsc.payload.version,
+            data=srv_wrsc.payload.data,
+        )
 
     # attempt to transition to new state (will persist new state if successful)
     success = wfr_util.transition_to(new_state)
@@ -145,65 +149,64 @@ def _create_workflow_run(event: srv.WorkflowRunStateChange):
         logger.warning(f"Could not apply new state: {new_state}")
         return None
 
-    wfm_wrsc = _map_srv_wrsc_to_wfm_wrsc(wfr, srv_wrsc, new_state)
+    wfm_wrsc = _map_srv_wrsc_to_wfm_wrsc(wfr, new_state, srv_wrsc)
 
     logger.info(f"{__name__} done.")
     return wfm_wrsc
 
 
-def _map_srv_wrsc_to_wfm_wrsc(wfr: WorkflowRun, input_wrsc: srv.WorkflowRunStateChange,
-                             new_state: State) -> wrsc.WorkflowRunStateChange:
-    lib_list = None
-    if input_wrsc.linkedLibraries:
-        lib_list = []
-        for in_lib in input_wrsc.linkedLibraries:
-            out_lib = wrsc.Library(
-                orcabusId=in_lib.orcabusId,
-                libraryId=in_lib.libraryId,
-            )
-            lib_list.append(out_lib)
-
-    wrsc_analysis_run = None
-    if wfr.analysis_run:
-        wrsc_analysis_run = wrsc.AnalysisRun(
-            orcabusId=wfr.analysis_run.orcabus_id,
-            name=wfr.analysis_run.analysis_run_name,
-        )
-
+def _map_srv_wrsc_to_wfm_wrsc(wfr: WorkflowRun, new_state: State, srv_wrsc) -> wrsc.WorkflowRunStateChange:
     out_wrsc = wrsc.WorkflowRunStateChange(
         id="",
         version=WRSC_SCHEMA_VERSION,
-        timestamp=input_wrsc.timestamp,
+        timestamp=new_state.timestamp,
         orcabusId=wfr.orcabus_id,
-        portalRunId=input_wrsc.portalRunId,
-        workflowRunName=input_wrsc.workflowRunName,
+        portalRunId=wfr.portal_run_id,
+        workflowRunName=wfr.workflow_run_name,
         workflow=wrsc.Workflow(
             orcabusId=wfr.workflow.orcabus_id,
             name=wfr.workflow.workflow_name,
             version=wfr.workflow.workflow_version,
             executionEngine=wfr.workflow.execution_engine,
         ),
-        analysisRun=wrsc_analysis_run,
-        libraries=lib_list,
-        status=Status.get_convention(input_wrsc.status),  # ensure we follow conventions
+        status=Status.get_convention(new_state.status),  # ensure we follow conventions
     )
+
+    # Set libraries as-is input event
+    if srv_wrsc.linkedLibraries:
+        lib_list = []
+        for in_lib in srv_wrsc.linkedLibraries:
+            out_lib = wrsc.Library(
+                orcabusId=in_lib.orcabusId,
+                libraryId=in_lib.libraryId,
+            )
+            lib_list.append(out_lib)
+        if lib_list:
+            out_wrsc.libraries = lib_list
+
+    # Set AnalysisRun
+    if wfr.analysis_run:
+        wrsc_analysis_run = wrsc.AnalysisRun(
+            orcabusId=wfr.analysis_run.orcabus_id,
+            name=wfr.analysis_run.analysis_run_name,
+        )
+        out_wrsc.analysis_run = wrsc_analysis_run
+
+    # Set Payload
     # NOTE: the srv payload is not quite the same as the wfm payload (it's missing a payload ref id that's assigned by the wfm)
     # So, if the new state has a payload, we need to map the service payload to the wfm payload
     if new_state.payload:
-        out_wrsc.payload = _map_srv_payload_to_wfm_payload(input_wrsc.payload, new_state.payload)
+        out_wrsc.payload = wrsc.Payload(
+            orcabusId=new_state.payload.orcabus_id,
+            refId=new_state.payload.payload_ref_id,
+            version=new_state.payload.version,
+            data=new_state.payload.data
+        )
 
+    # Set ID by applying hash function
     out_wrsc.id = get_wrsc_hash(out_wrsc)
+
     return out_wrsc
-
-
-def _map_srv_payload_to_wfm_payload(input_payload: srv.Payload, payload_db: Payload) -> wrsc.Payload:
-    out_payload = wrsc.Payload(
-        orcabusId=payload_db.orcabus_id,
-        refId=payload_db.payload_ref_id,
-        version=input_payload.version,
-        data=input_payload.data
-    )
-    return out_payload
 
 
 def get_wrsc_hash(out_wrsc: wrsc.WorkflowRunStateChange) -> str:

@@ -10,7 +10,7 @@ import workflow_manager.aws_event_bridge.executionservice.workflowrunstatechange
 from workflow_manager.models import WorkflowRun, State, WorkflowRunUtil, Library
 from workflow_manager.tests.factories import WorkflowRunFactory
 from workflow_manager_proc.domain.event import wrsc
-from workflow_manager_proc.services.workflow_run import create_workflow_run
+from workflow_manager_proc.services.workflow_run_legacy import create_workflow_run
 from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
 
 
@@ -27,7 +27,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
     def test_create_wrsc_no_library(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowSrvUnitTests.test_create_wrsc_no_library
+        python manage.py test workflow_manager_proc.tests.test_workflow_run_legacy.WorkflowSrvUnitTests.test_create_wrsc_no_library
         """
 
         test_event_d = {
@@ -77,7 +77,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
     def test_create_wrsc_no_payload(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowSrvUnitTests.test_create_wrsc_no_payload
+        python manage.py test workflow_manager_proc.tests.test_workflow_run_legacy.WorkflowSrvUnitTests.test_create_wrsc_no_payload
         """
 
         test_event_d = {
@@ -113,7 +113,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
     def test_create_wrsc_library(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowSrvUnitTests.test_create_wrsc_library
+        python manage.py test workflow_manager_proc.tests.test_workflow_run_legacy.WorkflowSrvUnitTests.test_create_wrsc_library
         """
         # NOTE: orcabusId with and without prefix
         #       The DB records have to be generated without prefix
@@ -190,7 +190,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
     def test_create_wrsc_library_exists(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowSrvUnitTests.test_create_wrsc_library_exists
+        python manage.py test workflow_manager_proc.tests.test_workflow_run_legacy.WorkflowSrvUnitTests.test_create_wrsc_library_exists
         """
 
         # NOTE: orcabusId with and without prefix
@@ -272,7 +272,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
     def test_get_last_state(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowSrvUnitTests.test_get_last_state
+        python manage.py test workflow_manager_proc.tests.test_workflow_run_legacy.WorkflowSrvUnitTests.test_get_last_state
         """
 
         wfr: WorkflowRun = WorkflowRunFactory()
