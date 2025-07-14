@@ -1,7 +1,11 @@
+"""
+Deprecation note:
+    We shall simply remove this module one day.
+    This is retained here for backwards compatibility by Stacky execution engine.
+    Most of this module impl is superseded by `workflow_run.py` with the newer WRSC event schema.
+"""
 import datetime
-import hashlib
 import logging
-import os
 import uuid
 
 from django.db import transaction
@@ -18,18 +22,11 @@ from workflow_manager.models import (
 from workflow_manager.models.utils import WorkflowRunUtil
 from workflow_manager_proc.domain.event import wrsc
 from workflow_manager_proc.services.event_utils import emit_event, EventType
+from workflow_manager_proc.services.workflow_run import EVENT_BUS_NAME, ASSOCIATION_STATUS, WRSC_SCHEMA_VERSION, \
+    sanitize_orcabus_id, get_wrsc_hash
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
-ASSOCIATION_STATUS = "ACTIVE"
-EVENT_BUS_NAME = os.environ.get("EVENT_BUS_NAME")
-WRSC_SCHEMA_VERSION = "0.0.1"
-
-
-def sanitize_orcabus_id(orcabus_id: str) -> str:
-    # TODO: better sanitization and better location
-    return orcabus_id[-26:]
 
 
 @transaction.atomic
@@ -207,46 +204,3 @@ def _map_srv_wrsc_to_wfm_wrsc(wfr: WorkflowRun, new_state: State, srv_wrsc) -> w
     out_wrsc.id = get_wrsc_hash(out_wrsc)
 
     return out_wrsc
-
-
-def get_wrsc_hash(out_wrsc: wrsc.WorkflowRunStateChange) -> str:
-    # if there is already a hash then we simply return that
-    # TODO: allow force creation
-    # TODO: include OrcaBus IDs or rely on entity values only?
-    if out_wrsc.id:
-        return out_wrsc.id
-
-    # extract valuable keys from out_wrsc
-    keywords = list()
-
-    # out_wrsc values
-    keywords.append(out_wrsc.version)
-    # keywords.append(out_wrsc.timestamp.isoformat())  # ignoring time changes for now
-    keywords.append(out_wrsc.orcabusId)
-    keywords.append(out_wrsc.portalRunId)
-    keywords.append(out_wrsc.workflowRunName)
-    keywords.append(out_wrsc.status)
-    keywords.append(out_wrsc.workflow.orcabusId)
-
-    if out_wrsc.payload:
-        keywords.append(out_wrsc.payload.orcabusId)
-
-    if out_wrsc.analysisRun:
-        keywords.append(out_wrsc.analysisRun.orcabusId)
-
-    # add libraries
-    if out_wrsc.libraries:
-        for lib in out_wrsc.libraries:
-            keywords.append(lib.orcabusId)
-
-    # filter out any None values
-    keywords = list(filter(None, keywords))
-    # sort the list of keywords to avoid issues with record order
-    keywords.sort()
-
-    # create hash value
-    md5_object = hashlib.md5()
-    for key in keywords:
-        md5_object.update(key.encode("utf-8"))
-
-    return md5_object.hexdigest()
