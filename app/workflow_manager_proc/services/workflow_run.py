@@ -208,7 +208,7 @@ def map_workflow_run_new_state_to_wrsc(wfr: WorkflowRun, new_state: State) -> wr
 
     # Set AnalysisRun
     if wfr.analysis_run:
-        out_wrsc.analysis_run = wrsc.AnalysisRun(
+        out_wrsc.analysisRun = wrsc.AnalysisRun(
             orcabusId=wfr.analysis_run.orcabus_id,
             name=wfr.analysis_run.analysis_run_name,
         )
