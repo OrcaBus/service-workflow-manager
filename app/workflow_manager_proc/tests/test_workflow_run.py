@@ -1,10 +1,11 @@
-import json
 import os
 from unittest import mock
 
+from mockito import when, unstub
+
 from workflow_manager.models import Workflow, WorkflowRun, Library, LibraryAssociation, State, Payload, AnalysisRun
 from workflow_manager.tests.factories import WorkflowRunFactory
-from workflow_manager_proc.domain.event.wrsc import AWSEvent, WorkflowRunStateChange
+from workflow_manager_proc.domain.event.wrsc import WorkflowRunStateChange
 from workflow_manager_proc.services import workflow_run
 from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
 
@@ -18,25 +19,33 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
     def tearDown(self) -> None:
         self.env_mock.stop()
+        unstub()
         super().tearDown()
 
-    def load_mock_file(self, rel_path):
-        script_dir = os.path.dirname(__file__)
-        logger.info(f"Loading test event data from {rel_path}")
-        abs_file_path = os.path.join(script_dir, rel_path)
-        with open(abs_file_path) as f:
-            file_content = f.read()
-            self.event: dict = json.loads(file_content)
+    def test_create_workflow_run(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_create_workflow_run
+        """
+        self.load_mock_wrsc_min()
+        out_wrsc = workflow_run.create_workflow_run(self.mock_wrsc_min)
+        self.assertIsNotNone(out_wrsc)
+        self.assertEqual(Workflow.objects.count(), 1)
+        self.assertEqual(WorkflowRun.objects.count(), 1)
+        self.assertEqual(State.objects.count(), 1)
+        self.assertEqual(Payload.objects.count(), 0)
 
-    def load_mock_wrsc_max(self):
-        self.load_mock_file(rel_path="fixtures/WRSC_max.json")
-        mock_obj_with_envelope: AWSEvent = AWSEvent.model_validate(self.event)
-        self.mock_wrsc_max: WorkflowRunStateChange = mock_obj_with_envelope.detail
-
-    def load_mock_wrsc_min(self):
-        self.load_mock_file(rel_path="fixtures/WRSC_min.json")
-        mock_obj_with_envelope: AWSEvent = AWSEvent.model_validate(self.event)
-        self.mock_wrsc_min: WorkflowRunStateChange = mock_obj_with_envelope.detail
+    def test_create_workflow_run_state_has_not_been_updated(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_create_workflow_run_state_has_not_been_updated
+        """
+        self.load_mock_wrsc_min()
+        when(workflow_run).update_workflow_run_to_new_state(...).thenReturn((False, "DOES_NOT_MATTER"))
+        out_wrsc = workflow_run.create_workflow_run(self.mock_wrsc_min)
+        self.assertIsNone(out_wrsc)
+        self.assertEqual(Workflow.objects.count(), 1)
+        self.assertEqual(WorkflowRun.objects.count(), 1)
+        self.assertEqual(State.objects.count(), 0)
+        self.assertEqual(Payload.objects.count(), 0)
 
     def test_create_or_get_workflow(self):
         """
