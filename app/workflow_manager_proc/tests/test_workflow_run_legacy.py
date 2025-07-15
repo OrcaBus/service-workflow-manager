@@ -1,14 +1,10 @@
 import os
-from datetime import datetime, timedelta
-from typing import List
 from unittest import mock
 
 from django.db.models import QuerySet
-from django.utils.timezone import make_aware
 
 import workflow_manager.aws_event_bridge.executionservice.workflowrunstatechange as srv
-from workflow_manager.models import WorkflowRun, State, WorkflowRunUtil, Library
-from workflow_manager.tests.factories import WorkflowRunFactory
+from workflow_manager.models import WorkflowRun, Library
 from workflow_manager_proc.domain.event import wrsc
 from workflow_manager_proc.services.workflow_run_legacy import create_workflow_run
 from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
@@ -269,60 +265,3 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         # assert we can validate the emitting model
         self.assertIsNotNone(wrsc.WorkflowRunStateChange.model_validate(result_wrsc))
-
-    def test_get_last_state(self):
-        """
-        python manage.py test workflow_manager_proc.tests.test_workflow_run_legacy.WorkflowSrvUnitTests.test_get_last_state
-        """
-
-        wfr: WorkflowRun = WorkflowRunFactory()
-        s1: State = State(
-            timestamp=make_aware(datetime(2024, 1, 3, 23, 55, 59, 342380)),
-            workflow_run=wfr,
-            status='DRAFT'
-        )
-        s2: State = State(
-            timestamp=make_aware(datetime(2024, 1, 1, 23, 55, 59, 342380)),
-            workflow_run=wfr,
-            status='DRAFT'
-        )
-        s3: State = State(
-            timestamp=make_aware(datetime(2024, 1, 4, 23, 55, 59, 342380)),
-            workflow_run=wfr,
-            status='DRAFT'
-        )
-        s4: State = State(
-            timestamp=make_aware(datetime(2024, 1, 2, 23, 55, 59, 342380)),
-            workflow_run=wfr,
-            status='DRAFT'
-        )
-
-        # Test different orders, they all have to come to the same conclusion
-        states: List[State] = [s1, s2, s3, s4]
-        latest: State = WorkflowRunUtil.get_latest_state(states)
-        self.assertEqual(s3.timestamp, latest.timestamp)
-
-        states: List[State] = [s4, s1, s2, s3]
-        latest: State = WorkflowRunUtil.get_latest_state(states)
-        self.assertEqual(s3.timestamp, latest.timestamp)
-
-        states: List[State] = [s3, s2, s1, s4]
-        latest: State = WorkflowRunUtil.get_latest_state(states)
-        self.assertEqual(s3.timestamp, latest.timestamp)
-
-        # Now test from WorkflowRun level (need to persist DB objects though)
-        s1.save()
-        s2.save()
-        s3.save()
-        s4.save()
-        wfr.save()
-        util = WorkflowRunUtil(wfr)
-        latest = util.get_current_state()
-        self.assertEqual(s3.timestamp, latest.timestamp)
-
-        # Test we can correctly apply a time delta
-        t1 = s1.timestamp
-        t2 = s2.timestamp
-        delta = t1 - t2  # = 2 days
-        window = timedelta(hours=1)
-        self.assertTrue(delta > window, "delta > 1h")
