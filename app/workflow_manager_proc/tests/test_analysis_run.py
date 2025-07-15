@@ -3,6 +3,8 @@ import os
 import time
 from unittest import mock
 
+from django.utils.timezone import make_aware
+
 from workflow_manager.models import Library, Status, AnalysisContext, AnalysisRunState
 from workflow_manager.models.analysis import Analysis
 from workflow_manager.models.analysis_context import ContextUseCase
@@ -85,7 +87,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         AnalysisRunState(
             analysis_run=analysis_run,
             status=Status.DRAFT.convention,
-            timestamp=datetime.datetime.strptime("01/05/2025 6:00", "%m/%d/%Y %H:%M")
+            timestamp=make_aware(datetime.datetime.strptime("01/05/2025 6:00", "%m/%d/%Y %H:%M"))
         ).save()
 
     def clean_base_entities(self) -> None:

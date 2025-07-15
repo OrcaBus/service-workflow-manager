@@ -1,10 +1,10 @@
 import logging
 import os
-import datetime
 import hashlib
 
 from django.db import transaction
 from django.db.models.query import QuerySet
+from django.utils import timezone
 
 from workflow_manager.models.analysis_context import ContextUseCase
 from workflow_manager.models.analysis_run_state import AnalysisRunState
@@ -75,7 +75,7 @@ def _create_analysis_run(event: ari.AnalysisRunInitiated)-> AnalysisRun:
         AnalysisRunState(
             analysis_run=analysis_run,
             status=Status.DRAFT.convention,
-            timestamp=datetime.datetime.now(tz=datetime.timezone.utc),
+            timestamp=timezone.now(),
         ).save()
 
         # attach the libraries associated with the AnalysisRunInitiated
@@ -210,7 +210,7 @@ def _finalise_analysis_run(event: arf.AnalysisRunFinalised) -> AnalysisRun:
     AnalysisRunState(
         analysis_run=analysis_run_db,
         status=Status.READY.convention,
-        timestamp=datetime.datetime.now(tz=datetime.timezone.utc),
+        timestamp=timezone.now(),
     ).save()
     analysis_run_db.save()
     return analysis_run_db
