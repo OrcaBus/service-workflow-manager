@@ -4,11 +4,11 @@ Deprecation note:
     This is retained here for backwards compatibility by Stacky execution engine.
     Most of this module impl is superseded by `workflow_run.py` with the newer WRSC event schema.
 """
-import datetime
 import logging
 import uuid
 
 from django.db import transaction
+from django.utils import timezone
 
 import workflow_manager.aws_event_bridge.executionservice.workflowrunstatechange as srv
 from workflow_manager.models import (
@@ -121,7 +121,7 @@ def _create_workflow_run(event: srv.WorkflowRunStateChange):
                 LibraryAssociation.objects.create(
                     workflow_run=wfr,
                     library=db_lib,
-                    association_date=datetime.datetime.now(),
+                    association_date=timezone.now(),
                     status=ASSOCIATION_STATUS,
                 )
 

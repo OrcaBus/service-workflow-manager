@@ -1,10 +1,10 @@
-import datetime
 import hashlib
 import logging
 import os
 import uuid
 
 from django.db import transaction
+from django.utils import timezone
 
 from workflow_manager.models import (
     WorkflowRun,
@@ -151,7 +151,7 @@ def establish_workflow_run_libraries(event: wrsc.WorkflowRunStateChange, wfr: Wo
         LibraryAssociation.objects.create(
             workflow_run=wfr,
             library=db_lib,
-            association_date=datetime.datetime.now(),
+            association_date=timezone.now(),
             status=ASSOCIATION_STATUS,
         )
 
