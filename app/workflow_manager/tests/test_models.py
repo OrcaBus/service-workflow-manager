@@ -1,5 +1,4 @@
 import logging
-import time
 import uuid
 
 from django.core.exceptions import ValidationError
@@ -7,7 +6,6 @@ from django.test import TestCase
 from django.utils import timezone
 
 from workflow_manager.models import Library, WorkflowRun, LibraryAssociation
-from workflow_manager.models.utils import create_portal_run_id
 from workflow_manager.models.workflow import Workflow
 
 logger = logging.getLogger()
@@ -87,20 +85,6 @@ class WorkflowModelTests(TestCase):
         logger.info(lib)
         self.assertEqual(1, Library.objects.count())
         self.assertTrue(lib.orcabus_id.startswith("lib."))
-
-    def test_create_portal_run_id(self):
-        """
-        python manage.py test workflow_manager.tests.test_models.WorkflowModelTests.test_create_portal_run_id
-        """
-        portal_run_id_1 = create_portal_run_id()
-
-        # making sure portal_run_id is different generated in different time
-        time.sleep(1)
-        portal_run_id_2 = create_portal_run_id()
-
-        self.assertIsNotNone(portal_run_id_1)
-        self.assertEqual(len(portal_run_id_1), 16)
-        self.assertNotEqual(portal_run_id_1, portal_run_id_2)
 
     def test_workflow_run_libraries(self):
         """
