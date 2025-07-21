@@ -1,9 +1,14 @@
 from django.db import models
 
 from workflow_manager.fields import OrcaBusIdField
-from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.analysis_context import AnalysisContext
+from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.workflow import Workflow
+
+
+class AnalysisStatus(models.TextChoices):
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
 
 
 class AnalysisManager(OrcaBusBaseManager):
@@ -17,8 +22,9 @@ class Analysis(OrcaBusBaseModel):
     orcabus_id = OrcaBusIdField(primary_key=True, prefix='ana')
     analysis_name = models.CharField(max_length=255)
     analysis_version = models.CharField(max_length=255)
-    description = models.CharField(max_length=255)
-    status = models.CharField(max_length=255)
+
+    description = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=255, choices=AnalysisStatus, default=AnalysisStatus.ACTIVE)
 
     # relationships
     contexts = models.ManyToManyField(AnalysisContext)
