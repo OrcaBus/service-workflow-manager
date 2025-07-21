@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
 
-from workflow_manager.models import Library, WorkflowRun, LibraryAssociation
+from workflow_manager.models import Library, WorkflowRun, LibraryAssociation, Analysis, AnalysisContext
 from workflow_manager.models.workflow import Workflow
 
 logger = logging.getLogger()
@@ -113,3 +113,31 @@ class WorkflowModelTests(TestCase):
             logger.info(lib)
 
         self.assertEqual(2, len(Library.objects.all()))
+
+    def test_analysis_model(self):
+        """
+        python manage.py test workflow_manager.tests.test_models.WorkflowModelTests.test_analysis_model
+        """
+
+        ana1 = Analysis.objects.create(
+            analysis_name="test_analysis_name",
+            analysis_version="0.0.1",
+        )
+        self.assertEqual(1, Analysis.objects.count())
+        self.assertTrue(ana1.orcabus_id.startswith("ana."))
+        self.assertIsNone(ana1.description)
+        self.assertEqual(ana1.status, "ACTIVE")
+
+    def test_analysis_context_model(self):
+        """
+        python manage.py test workflow_manager.tests.test_models.WorkflowModelTests.test_analysis_context_model
+        """
+
+        ctx1 = AnalysisContext.objects.create(
+            name="test_analysis_context_name",
+            usecase="test_analysis_context_usecase",
+        )
+        self.assertEqual(1, AnalysisContext.objects.count())
+        self.assertTrue(ctx1.orcabus_id.startswith("ctx."))
+        self.assertIsNone(ctx1.description)
+        self.assertEqual(ctx1.status, "ACTIVE")

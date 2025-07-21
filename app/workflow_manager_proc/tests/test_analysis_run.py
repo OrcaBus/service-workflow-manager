@@ -42,7 +42,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
             analysis_name=ANALYSIS_1_NAME,
             analysis_version="0.0.1",
             description="Lorem Ipsum is simply dumb",
-            status="FAKE"
+            status="ACTIVE"
         ).save()
         Library(
             orcabus_id="lib.123456789ABCDEFGHJKMNPQRST",
