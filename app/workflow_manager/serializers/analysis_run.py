@@ -1,5 +1,5 @@
-from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin, OrcabusIdSerializerMetaMixin
 from workflow_manager.models import AnalysisRun
+from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin, OrcabusIdSerializerMetaMixin
 
 
 class AnalysisRunBaseSerializer(SerializersBase):
@@ -27,11 +27,11 @@ class AnalysisRunSerializer(AnalysisRunBaseSerializer):
 
 class AnalysisRunDetailSerializer(AnalysisRunBaseSerializer):
     from .library import LibrarySerializer
-    from .analysis import AnalysisDetailSerializer
+    from .analysis import AnalysisSerializer
     from .analysis_context import AnalysisContextSerializer
 
     libraries = LibrarySerializer(many=True, read_only=True)
-    analysis = AnalysisDetailSerializer(read_only=True)
+    analysis = AnalysisSerializer(read_only=True)
     storage_context = AnalysisContextSerializer(read_only=True)
     compute_context = AnalysisContextSerializer(read_only=True)
 

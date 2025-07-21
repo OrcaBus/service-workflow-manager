@@ -1,5 +1,5 @@
-from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin, OrcabusIdSerializerMetaMixin
 from workflow_manager.models import Workflow
+from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin, OrcabusIdSerializerMetaMixin
 
 
 class WorkflowBaseSerializer(SerializersBase):
@@ -15,7 +15,7 @@ class WorkflowListParamSerializer(OptionalFieldsMixin, WorkflowBaseSerializer):
 class WorkflowMinSerializer(WorkflowBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
         model = Workflow
-        fields = ["orcabus_id", "workflow_name", "workflow_version"]
+        fields = ["orcabus_id", "workflow_name", "workflow_version", "execution_engine"]
 
 
 class WorkflowSerializer(WorkflowBaseSerializer):
