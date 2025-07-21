@@ -5,7 +5,7 @@ aws-xray-sdk
 #boto3
 
 # App main dependencies
-Django==5.2.3
+Django==5.2.4
 djangorestframework==3.16.0
 django-cors-headers==4.7.0
 django-environ==0.12.0
