@@ -20,6 +20,7 @@ libumccr==0.4.1
 cachetools==6.1.0
 serverless-wsgi==3.1.0
 ulid-py==1.1.0
+pydantic==2.11.7
 
 # FIXME deprecate EventBridge Schema Registry https://github.com/OrcaBus/service-shared-resources/issues/10
 # six and regex required by automatically generated EventBridge code binding

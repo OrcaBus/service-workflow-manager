@@ -16,7 +16,6 @@ PG_HOST = os.environ.get("PG_HOST")
 PG_USER = os.environ.get("PG_USER")
 PG_DB_NAME = os.environ.get("PG_DB_NAME")
 
-
 DATABASES = {
     "default": {
         "HOST": PG_HOST,
@@ -34,16 +33,15 @@ DATABASES = {
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ALLOW_CREDENTIALS = False
 
-# FIXME: https://github.com/umccr/infrastructure/issues/272
 CORS_ALLOWED_ORIGINS = [
     "https://portal.umccr.org",
     "https://portal.prod.umccr.org",
     "https://portal.stg.umccr.org",
     "https://portal.dev.umccr.org",
-    "https://data.umccr.org",
-    "https://data.prod.umccr.org",
-    "https://data.dev.umccr.org",
-    "https://data.stg.umccr.org",
+    "https://orcaui.umccr.org",
+    "https://orcaui.prod.umccr.org",
+    "https://orcaui.dev.umccr.org",
+    "https://orcaui.stg.umccr.org",
 ]
 
 CSRF_TRUSTED_ORIGINS = copy.deepcopy(CORS_ALLOWED_ORIGINS)

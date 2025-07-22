@@ -125,16 +125,18 @@ jobs:
       - name: Print toolchain versions
         run: |
           node -v
-          python -V
+          python3 -V
           pip3 -V
           make --version
 
-      - name: Install
+      # note;
+      # on CI environment, it is an intentional pointing to 'requirements-test.txt' deps file and integration-test (it)
+      # Django profile and running it via 'manage.py test' to detect any dependency drift from local dev to the runtime
+      # target. i.e. the local dev != test or runtime target env.  ~victor
+      - name: Test
         working-directory: ./app
+        env:
+          DJANGO_SETTINGS_MODULE: workflow_manager.settings.it
         run: |
-          make install
-
-      - name: Install
-        working-directory: ./app
-        run: |
-          make test
+          pip3 install -r deps/requirements-test.txt
+          python3 manage.py test
