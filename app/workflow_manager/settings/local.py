@@ -6,8 +6,6 @@ Usage:
 """
 import sys
 
-from environ import Env
-
 from .base import *  # noqa
 
 DATABASES = {

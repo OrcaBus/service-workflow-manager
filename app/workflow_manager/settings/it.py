@@ -4,7 +4,6 @@
 Usage:
 - export DJANGO_SETTINGS_MODULE=workflow_manager.settings.it
 """
-from environ import Env
 
 from .base import *  # noqa
 
