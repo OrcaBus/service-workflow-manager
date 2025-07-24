@@ -30,7 +30,7 @@ class WorkflowFactory(factory.django.DjangoModelFactory):
     workflow_name = "TestWorkflow"
     workflow_version = "1.0"
     execution_engine_pipeline_id = str(uuid.uuid4())
-    execution_engine = "ICAv2"
+    execution_engine = "ICA"
 
 
 class PayloadFactory(factory.django.DjangoModelFactory):
