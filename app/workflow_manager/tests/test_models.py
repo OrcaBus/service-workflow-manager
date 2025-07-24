@@ -21,7 +21,7 @@ class WorkflowModelTests(TestCase):
         mock_wfl = Workflow(
             workflow_name="test_workflow",
             workflow_version="0.0.1",
-            execution_engine="CIA",
+            execution_engine="ICA",
             execution_engine_pipeline_id=str(uuid.uuid4()),
         )
         mock_wfl.save()

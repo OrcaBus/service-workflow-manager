@@ -168,7 +168,7 @@ class TestData:
         qc_workflow = Workflow(
             workflow_name="wgts_alignment_qc",
             workflow_version="1.0",
-            execution_engine="ICAv2",
+            execution_engine="ICA",
             execution_engine_pipeline_id="ica.pipeline.01234",
         )
         qc_workflow.save()
@@ -176,7 +176,7 @@ class TestData:
         wgs_workflow = Workflow(
             workflow_name="tumor_normal",
             workflow_version="1.0",
-            execution_engine="ICAv2",
+            execution_engine="ICA",
             execution_engine_pipeline_id="ica.pipeline.12345",
         )
         wgs_workflow.save()
@@ -184,7 +184,7 @@ class TestData:
         cttsov2_workflow = Workflow(
             workflow_name="cttso",
             workflow_version="2.0",
-            execution_engine="ICAv2",
+            execution_engine="ICA",
             execution_engine_pipeline_id="ica.pipeline.23456",
         )
         cttsov2_workflow.save()
@@ -192,7 +192,7 @@ class TestData:
         umccrise_workflow = Workflow(
             workflow_name="umccrise",
             workflow_version="1.0",
-            execution_engine="ICAv2",
+            execution_engine="ICA",
             execution_engine_pipeline_id="ica.pipeline.34567",
         )
         umccrise_workflow.save()

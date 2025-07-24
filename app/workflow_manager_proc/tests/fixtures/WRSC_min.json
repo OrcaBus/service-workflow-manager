@@ -18,7 +18,7 @@
       "orcabusId": "wfl.01J5M2JFE1JPYV62RYQEG99CPW",
       "name": "bssh_icav2_fastq_copy",
       "version": "1.2.3",
-      "executionEngine": "ICAv2"
+      "executionEngine": "ICA"
     },
     "status": "DRAFT"
   }
