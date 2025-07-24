@@ -1,4 +1,5 @@
 from drf_spectacular.utils import extend_schema
+from rest_framework import status
 
 from workflow_manager.models.analysis_context import AnalysisContext
 from workflow_manager.serializers.analysis_context import AnalysisContextSerializer, AnalysisContextListParamSerializer, \
@@ -22,6 +23,9 @@ class AnalysisContextViewSet(PatchOnlyViewSet):
 
     @extend_schema(
         request=UpdatableAnalysisContextSerializer,
+        responses={
+            status.HTTP_200_OK: UpdatableAnalysisContextSerializer,
+        }
     )
     def partial_update(self, request, *args, **kwargs):
         self.serializer_class = UpdatableAnalysisContextSerializer
