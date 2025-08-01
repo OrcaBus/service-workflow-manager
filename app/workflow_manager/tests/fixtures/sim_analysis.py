@@ -200,7 +200,7 @@ class TestData:
         oa_wgs_workflow = Workflow(
             workflow_name="oncoanalyser_wgs",
             workflow_version="1.0",
-            execution_engine="Nextflow",
+            execution_engine="AWS_BATCH",
             execution_engine_pipeline_id="nf.12345",
         )
         oa_wgs_workflow.save()
@@ -208,7 +208,7 @@ class TestData:
         sash_workflow = Workflow(
             workflow_name="sash",
             workflow_version="1.0",
-            execution_engine="Nextflow",
+            execution_engine="AWS_BATCH",
             execution_engine_pipeline_id="nf.23456",
         )
         sash_workflow.save()
