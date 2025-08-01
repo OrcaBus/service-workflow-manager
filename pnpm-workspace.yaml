@@ -1,5 +1,2 @@
 onlyBuiltDependencies:
   - unrs-resolver
-
-overrides:
-  '@eslint/plugin-kit@<0.3.3': '>=0.3.3'
