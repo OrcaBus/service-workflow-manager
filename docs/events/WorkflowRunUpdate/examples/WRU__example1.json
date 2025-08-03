@@ -1,0 +1,31 @@
+{
+  "version": "0",
+  "id": "f71bbbbb-5b36-40c2-f7dc-804ca6270cd6",
+  "detail-type": "WorkflowRunUpdate",
+  "source": "anything except orcabus.workflowmanager e.g. orcabus.manual or orcabus.manual.alexis or orcabus.ui.joep, ...",
+  "account": "123456789012",
+  "time": "2024-05-01T09:25:44Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "portalRunId": "202405012397gatc",
+    "workflowRunName": "<name assinged to the workflow run> e.g. manual--research-workflow-xx2-123",
+    "workflow": {
+      "orcabusId": "wfl.01J5M2JFE1JPYV62RYQEG99CPW",
+      "name": "<the name of the workflow when registered with workflow manager> e.g. bssh_icav2_fastq_copy",
+      "version": "<the version of the workflow when registered with workflow manager> e.g. 1.2.3",
+      "executionEngine": "<the execution platform of the workflow when registered with workflow manager> e.g. ICAv2"
+    },
+    "libraries": [
+      {
+        "libraryId": "L000001",
+        "orcabusId": "lib.01J5M2J44HFJ9424G7074NKTGN"
+      },
+      {
+        "libraryId": "L000002",
+        "orcabusId": "lib.01J5M2JFE1JPYV62RYQEG99CP5"
+      }
+    ],
+    "status": "DRAFT"
+  }
+}
