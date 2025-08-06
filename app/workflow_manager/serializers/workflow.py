@@ -22,16 +22,3 @@ class WorkflowSerializer(WorkflowBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
         model = Workflow
         fields = "__all__"
-
-
-class UpdatableWorkflowSerializer(WorkflowBaseSerializer):
-    class Meta(OrcabusIdSerializerMetaMixin):
-        model = Workflow
-        fields = ["execution_engine_pipeline_id"]
-
-    def update(self, instance, validated_data):
-        # If the execution_engine_pipeline_id is just an empty string, skip.
-        if validated_data.get("execution_engine_pipeline_id", None) == "":
-            validated_data.pop("execution_engine_pipeline_id")
-
-        return super().update(instance, validated_data)

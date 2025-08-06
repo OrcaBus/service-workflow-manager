@@ -7,10 +7,10 @@ from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 class ExecutionEngine(models.TextChoices):
     UNKNOWN = "Unknown"
     ICA = "ICA"
-    # SEQERA = "SEQERA"
+    SEQERA = "SEQERA"
     AWS_BATCH = "AWS_BATCH"
     AWS_ECS = "AWS_ECS"
-    # AWS_EKS = "AWS_EKS"
+    AWS_EKS = "AWS_EKS"
 
 
 class WorkflowManager(OrcaBusBaseManager):
@@ -28,7 +28,7 @@ class Workflow(OrcaBusBaseModel):
     execution_engine = models.CharField(max_length=255, choices=ExecutionEngine)
 
     # definition from an external system (as known to the execution engine)
-    execution_engine_pipeline_id = models.CharField(max_length=255, default="Unknown")
+    execution_engine_pipeline_id = models.CharField(max_length=255)
 
     # approval_state = models.CharField(max_length=255)  # FIXME: Do we still need this (or just use Analysis)?
 
