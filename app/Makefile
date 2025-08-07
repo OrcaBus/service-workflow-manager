@@ -87,7 +87,7 @@ s3-dump-download-if-not-exists:
 
 s3-load: s3-dump-download-if-not-exists db-load-data
 
-schema-gen: schema-gen-wrsc schema-gen-arsc schema-gen-ari schema-gen-arf
+schema-gen: schema-gen-wrsc schema-gen-arsc schema-gen-ari schema-gen-arf schema-gen-wru schema-gen-aru
 
 schema-gen-arsc:
 	@datamodel-codegen --input ../docs/events/WorkflowRunStateChange/WorkflowRunStateChange.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/wrsc.py
@@ -95,8 +95,14 @@ schema-gen-arsc:
 schema-gen-wrsc:
 	@datamodel-codegen --input ../docs/events/AnalysisRunStateChange/AnalysisRunStateChange.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/arsc.py
 
+schema-gen-wru:
+	@datamodel-codegen --input ../docs/events/WorkflowRunUpdate/WorkflowRunUpdate.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/wru.py
+
 schema-gen-ari:
 	@datamodel-codegen --input ../docs/events/AnalysisRunInitiated/AnalysisRunInitiated.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/ari.py
 
 schema-gen-arf:
 	@datamodel-codegen --input ../docs/events/AnalysisRunFinalised/AnalysisRunFinalised.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/arf.py
+
+schema-gen-aru:
+	@datamodel-codegen --input ../docs/events/AnalysisRunUpdate/AnalysisRunUpdate.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/aru.py
