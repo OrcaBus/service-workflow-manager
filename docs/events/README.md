@@ -29,6 +29,7 @@ python gen_schema.py <event name>/<event name>.schemal.yaml > <event name>/<even
 python gen_schema.py AnalysisRunInitiated/AnalysisRunInitiated.schema.yaml > AnalysisRunInitiated/AnalysisRunInitiated.schema.json
 python gen_schema.py AnalysisRunFinalised/AnalysisRunFinalised.schema.yaml > AnalysisRunFinalised/AnalysisRunFinalised.schema.json
 python gen_schema.py AnalysisRunStateChange/AnalysisRunStateChange.schema.yaml > AnalysisRunStateChange/AnalysisRunStateChange.schema.json
+python gen_schema.py AnalysisRunUpdate/AnalysisRunUpdate.schema.yaml > AnalysisRunUpdate/AnalysisRunUpdate.schema.json
 python gen_schema.py WorkflowRunStateChange/WorkflowRunStateChange.schema.yaml > WorkflowRunStateChange/WorkflowRunStateChange.schema.json
 python gen_schema.py WorkflowRunUpdate/WorkflowRunUpdate.schema.yaml > WorkflowRunUpdate/WorkflowRunUpdate.schema.json
 ```
