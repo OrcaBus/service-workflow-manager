@@ -82,6 +82,12 @@ definitions:
         type: array
         items:
           '$ref': '#/definitions/Library'
+      computeEnv:
+        # the storage configuration to apply to this WorkflowRun
+        type: string
+      storageEnv:
+        # the compute configuration to apply to this WorkflowRun
+        type: string
       status:
         # the current/new state of the WorkflowRun that the event announces
         # Note: not every event necessarily announces a new status (e.g. there may be several updates to a DRAFT)
