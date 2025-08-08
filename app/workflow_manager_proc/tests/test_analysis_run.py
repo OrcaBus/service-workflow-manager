@@ -9,7 +9,7 @@ from workflow_manager.models import Library, Status, AnalysisContext, AnalysisRu
 from workflow_manager.models.analysis import Analysis
 from workflow_manager.models.analysis_context import ContextUseCase
 from workflow_manager.models.analysis_run import AnalysisRun
-from workflow_manager_proc.domain.event import arsc, ari, arf
+from workflow_manager_proc.domain.event import arsc
 from workflow_manager_proc.services.analysis_run import (
     _create_analysis_run,
     _finalise_analysis_run,
@@ -65,7 +65,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
             status="ACTIVE"
         ).save()
 
-    def setup_arf_case_1(self) -> None:
+    def setup_aru_ready(self) -> None:
         self.setup_base_entities()
 
         analysis = Analysis.objects.get(orcabus_id=ANALYSIS_1_OID)
@@ -97,28 +97,20 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         AnalysisRunState.objects.all().delete()
         Library.objects.all().delete()
 
-    def test_ari_case_1(self):
+    def test_aru_draft_min(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_ari_case_1
+        python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_aru_draft_min
         """
+        self.load_mock_aru_draft_min()
 
-        script_dir = os.path.dirname(__file__)
-        rel_path = "fixtures/ARI_event_1.json"
-        logger.info(f"Loading test event data from {rel_path}")
-        abs_file_path = os.path.join(script_dir, rel_path)
-        with open(abs_file_path) as f:
-            file_content = f.read()
-
-        # Test the event loading, any exceptions will be raised
-        logger.info("Event validation and mapping against event model...")
-        ari_event = ari.AnalysisRunInitiated.model_validate_json(file_content)
-        self.assertIsNotNone(ari_event)
+        aru_event = self.mock_aru_draft_min
+        self.assertIsNotNone(aru_event)
 
         # Set up the required base entities
         self.setup_base_entities()
 
         logger.info("Testing DB record creation from event...")
-        db_analysis_run = _create_analysis_run(ari_event)
+        db_analysis_run = _create_analysis_run(aru_event)
         self.assertIsNotNone(db_analysis_run)
         self.assertEqual(db_analysis_run.analysis.analysis_name, ANALYSIS_1_NAME)
         self.assertEqual(db_analysis_run.analysis_run_name, "TestAnalysisRunName_1")
@@ -136,29 +128,21 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         logger.info("ARSC event created: ")
         logger.info(arsc.AnalysisRunStateChange.model_dump_json(arsc_event))
 
-    def test_arf_case_1(self):
+    def test_aru_ready_max(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_arf_case_1
+        python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_aru_ready_max
         """
+        self.load_mock_aru_ready_max()
 
-        script_dir = os.path.dirname(__file__)
-        rel_path = "fixtures/ARF_event_1.json"
-        logger.info(f"Loading test event data from {rel_path}")
-        abs_file_path = os.path.join(script_dir, rel_path)
-        with open(abs_file_path) as f:
-            file_content = f.read()
-
-        # Test the event loading, any exceptions will be raised
-        logger.info("Event validation and mapping against event model...")
-        arf_event = arf.AnalysisRunFinalised.model_validate_json(file_content)
-        self.assertIsNotNone(arf_event)
+        aru_event = self.mock_aru_ready_max
+        self.assertIsNotNone(aru_event)
 
         # Before we can process the event we need to fulfil its requirements
         # This event expects to finalise an existing record
-        self.setup_arf_case_1()
+        self.setup_aru_ready()
 
         logger.info("Testing DB record update from event...")
-        db_analysis_run = _finalise_analysis_run(arf_event)
+        db_analysis_run = _finalise_analysis_run(aru_event)
         self.assertIsNotNone(db_analysis_run)
         self.assertEqual(db_analysis_run.analysis.analysis_name, ANALYSIS_1_NAME)
         self.assertEqual(db_analysis_run.analysis_run_name, "TestAnalysisRunName_1")
@@ -177,103 +161,75 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         logger.info("ARSC event created: ")
         logger.info(arsc.AnalysisRunStateChange.model_dump_json(arsc_event))
 
-    def test_ari_arf_case_1(self):
+    def test_aru_draft_to_ready_1(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_ari_arf_case_1
+        python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_aru_draft_to_ready_1
 
-        Test the AnalysisRun creation via ARI event and finalisation via following ARF event.
+        Test the AnalysisRun creation via ARU DRAFT event and finalisation via following ARU READY event.
         This should test the common case of AnalysisRun creation by external execution services.
         """
-        script_dir = os.path.dirname(__file__)
-        rel_path_ari = "fixtures/ARI_event_1.json"
-        rel_path_arf = "fixtures/ARF_event_1.json"
-        logger.info(f"Loading ARI event data from {rel_path_ari}")
-        logger.info(f"Loading ARF event data from {rel_path_arf}")
-        abs_file_path_ari = os.path.join(script_dir, rel_path_ari)
-        abs_file_path_arf = os.path.join(script_dir, rel_path_arf)
-        with open(abs_file_path_ari) as f:
-            file_content_ari = f.read()
-        with open(abs_file_path_arf) as f:
-            file_content_arf = f.read()
+        # load ARU DRAFT
+        self.load_mock_aru_draft_min()
+        # load ARU READY
+        self.load_mock_aru_ready_max()
 
         logger.info("Event validation and mapping against event model...")
-        ari_event = ari.AnalysisRunInitiated.model_validate_json(file_content_ari)
-        arf_event = arf.AnalysisRunFinalised.model_validate_json(file_content_arf)
-        self.assertIsNotNone(ari_event)
-        self.assertIsNotNone(arf_event)
+        aru_draft_event = self.mock_aru_draft_min
+        aru_ready_event = self.mock_aru_ready_max
+        self.assertIsNotNone(aru_draft_event)
+        self.assertIsNotNone(aru_ready_event)
 
         # Set up the required base entities
         self.setup_base_entities()
 
-        # Initiate the AnalysisRun with the ARI event
-        db_analysis_run_ari = _create_analysis_run(ari_event)
-        # make sure the AnalysisRun ID of the ARF event matches the ID created for the ARI event
-        self.assertEqual(db_analysis_run_ari.get_latest_state().status, Status.DRAFT.convention)
-        arf_event.orcabusId = db_analysis_run_ari.orcabus_id
-        # Finalise the AnalysisRun with the ARF event
-        db_analysis_run_arf = _finalise_analysis_run(arf_event)
-        self.assertEqual(db_analysis_run_arf.get_latest_state().status, Status.READY.convention)
+        # Initiate the AnalysisRun with the ARU event
+        db_analysis_run_aru = _create_analysis_run(aru_draft_event)
+        # make sure the AnalysisRun ID of the ARU event matches the ID created for the ARU event
+        self.assertEqual(db_analysis_run_aru.get_latest_state().status, Status.DRAFT.convention)
+        aru_ready_event.orcabusId = db_analysis_run_aru.orcabus_id
+        # Finalise the AnalysisRun with the ARU event
+        db_analysis_run_aru = _finalise_analysis_run(aru_ready_event)
+        self.assertEqual(db_analysis_run_aru.get_latest_state().status, Status.READY.convention)
 
         # run some spot checks
-        self.assertEqual(db_analysis_run_ari.analysis, db_analysis_run_arf.analysis)
-        self.assertEqual(db_analysis_run_ari.analysis_run_name, db_analysis_run_arf.analysis_run_name)
-        self.assertEqual(db_analysis_run_ari.orcabus_id, db_analysis_run_arf.orcabus_id)
+        self.assertEqual(db_analysis_run_aru.analysis, db_analysis_run_aru.analysis)
+        self.assertEqual(db_analysis_run_aru.analysis_run_name, db_analysis_run_aru.analysis_run_name)
+        self.assertEqual(db_analysis_run_aru.orcabus_id, db_analysis_run_aru.orcabus_id)
 
-    def test_ari_arf_case_2(self):
+    def test_aru_draft_to_ready_2(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_ari_arf_case_2
+        python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_aru_draft_to_ready_2
 
-        Test the AnalysisRun creation via ARI event and finalisation via following ARF event.
+        Test the AnalysisRun creation via ARU DRAFT event and finalisation via following ARU READY event.
         This should test the common case of AnalysisRun creation by external execution services.
         """
         # Assume an AnalysisRun has already been created and finalised
-        self.test_ari_arf_case_1()
+        self.test_aru_draft_to_ready_1()
 
-        # then receive a new ARI event for the same AnalysisRun
-        script_dir = os.path.dirname(__file__)
-        rel_path_ari = "fixtures/ARI_event_1.json"
-        logger.info(f"Loading ARI event data from {rel_path_ari}")
-        abs_file_path_ari = os.path.join(script_dir, rel_path_ari)
-        with open(abs_file_path_ari) as f:
-            file_content_ari = f.read()
-
-        logger.info("Event validation and mapping against event model...")
-        ari_event = ari.AnalysisRunInitiated.model_validate_json(file_content_ari)
-        self.assertIsNotNone(ari_event)
-
-        # Initiate the AnalysisRun with the ARI event
-
+        # then receive repeated ARU event for the same AnalysisRun
+        # create the AnalysisRun with the repeated ARU event
         with self.assertRaises(Exception) as err:
-            _create_analysis_run(ari_event)
+            _create_analysis_run(self.mock_aru_draft_min)
         self.assertEqual(str(err.exception), 'AnalysisRun record already exists!')
+        logger.info(str(err.exception))
 
-    def test_ari_arf_case_3(self):
+    def test_aru_draft_to_ready_3(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_ari_arf_case_3
+        python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_aru_draft_to_ready_3
 
-        Test the AnalysisRun creation via ARI event and finalisation via following ARF event.
+        Test the AnalysisRun creation via ARU DRAFT event and finalisation via following ARU READY event.
         This should test the common case of AnalysisRun creation by external execution services.
         """
         # Assume an AnalysisRun has already been created and finalised
-        self.test_ari_arf_case_1()
+        self.test_aru_draft_to_ready_1()
 
-        # then receive a new ARI event for the same AnalysisRun
-        script_dir = os.path.dirname(__file__)
-        rel_path_arf = "fixtures/ARF_event_1.json"
-        logger.info(f"Loading ARF event data from {rel_path_arf}")
-        abs_file_path_arf = os.path.join(script_dir, rel_path_arf)
-        with open(abs_file_path_arf) as f:
-            file_content_arf = f.read()
-
-        logger.info("Event validation and mapping against event model...")
-        arf_event = ari.AnalysisRunInitiated.model_validate_json(file_content_arf)
-        self.assertIsNotNone(arf_event)
-
-        # Initiate the AnalysisRun with the ARI event
+        # then receive a new ARU event for the same AnalysisRun
+        # create the AnalysisRun with the repeated ARU event
 
         with self.assertRaises(Exception) as err:
-            _create_analysis_run(arf_event)
+            _create_analysis_run(self.mock_aru_ready_max)
         self.assertEqual(str(err.exception), 'AnalysisRun record already exists!')
+        logger.info(str(err.exception))
 
     def test_get_arsc_hash(self):
         """
