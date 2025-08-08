@@ -7,7 +7,7 @@ import botocore.session
 from botocore.stub import Stubber
 from django.test import TestCase
 
-from workflow_manager_proc.domain.event.wrsc import AWSEvent, WorkflowRunStateChange
+from workflow_manager_proc.domain.event import wrsc, aru
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -40,17 +40,37 @@ class WorkflowManagerProcUnitTestCase(TestCase):
 
     def load_mock_wrsc_max(self):
         self.load_mock_file(rel_path="fixtures/WRSC_max.json")
-        mock_obj_with_envelope: AWSEvent = AWSEvent.model_validate(self.event)
-        self.mock_wrsc_max: WorkflowRunStateChange = mock_obj_with_envelope.detail
+        mock_obj_with_envelope: wrsc.AWSEvent = wrsc.AWSEvent.model_validate(self.event)
+        self.mock_wrsc_max: wrsc.WorkflowRunStateChange = mock_obj_with_envelope.detail
 
     def load_mock_wrsc_min(self):
         self.load_mock_file(rel_path="fixtures/WRSC_min.json")
-        mock_obj_with_envelope: AWSEvent = AWSEvent.model_validate(self.event)
-        self.mock_wrsc_min: WorkflowRunStateChange = mock_obj_with_envelope.detail
+        mock_obj_with_envelope: wrsc.AWSEvent = wrsc.AWSEvent.model_validate(self.event)
+        self.mock_wrsc_min: wrsc.WorkflowRunStateChange = mock_obj_with_envelope.detail
 
     def load_mock_wrsc_legacy(self):
         self.load_mock_file(rel_path="fixtures/WRSC_legacy.json")
         self.mock_wrsc_legacy = self.event
+
+    def load_mock_aru_draft_min(self):
+        self.load_mock_file(rel_path="fixtures/ARU_draft_min.json")
+        mock_obj_with_envelope: aru.AWSEvent = aru.AWSEvent.model_validate(self.event)
+        self.mock_aru_draft_min: aru.AnalysisRunUpdate = mock_obj_with_envelope.detail
+
+    def load_mock_aru_draft_max(self):
+        self.load_mock_file(rel_path="fixtures/ARU_draft_max.json")
+        mock_obj_with_envelope: aru.AWSEvent = aru.AWSEvent.model_validate(self.event)
+        self.mock_aru_draft_max: aru.AnalysisRunUpdate = mock_obj_with_envelope.detail
+
+    def load_mock_aru_ready_min(self):
+        self.load_mock_file(rel_path="fixtures/ARU_ready_min.json")
+        mock_obj_with_envelope: aru.AWSEvent = aru.AWSEvent.model_validate(self.event)
+        self.mock_aru_ready_min: aru.AnalysisRunUpdate = mock_obj_with_envelope.detail
+
+    def load_mock_aru_ready_max(self):
+        self.load_mock_file(rel_path="fixtures/ARU_ready_max.json")
+        mock_obj_with_envelope: aru.AWSEvent = aru.AWSEvent.model_validate(self.event)
+        self.mock_aru_ready_max: aru.AnalysisRunUpdate = mock_obj_with_envelope.detail
 
 
 class WorkflowManagerProcIntegrationTestCase(TestCase):
