@@ -1,0 +1,55 @@
+{
+  "version": "0",
+  "id": "f71bbbbb-5b36-40c2-f7dc-804ca6270cd6",
+  "detail-type": "AnalysisRunUpdate",
+  "source": "<some glue service>",
+  "account": "123456789012",
+  "time": "2024-05-01T09:25:44Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "id": "test_id_001",
+    "version": "99.99.99",
+    "timestamp": "2025-05-01T09:25:44Z",
+    "analysisRunName": "TestAnalysisRunName_1",
+    "orcabusId": "anr.ANR123456789ABCDEFGHJKMNPQ",
+    "analysis": {
+      "orcabusId": "ana.76J5N2J83RED7387G9374NGDBA",
+      "name": "TestAnalysis1",
+      "version": "0.0.1"
+    },
+    "libraries": [
+      {
+        "libraryId": "L000001",
+        "orcabusId": "lib.123456789ABCDEFGHJKMNPQRST",
+        "readsets": [
+          {
+            "orcabusId": "fqr.READSET123456789ABCDEFGHJK",
+            "rgid": "AAGCAGTC+ACGCCAAC.1.990101_A00130_0999_BH7TVMDSX7"
+          },
+          {
+            "orcabusId": "fqr.READSET234567891ABCDEFGHJK",
+            "rgid": "AAGCAGTC+ACGCCAAC.2.990101_A00130_0999_BH7TVMDSX7"
+          }
+        ]
+      },
+      {
+        "libraryId": "L000002",
+        "orcabusId": "lib.223456789ABCDEFGHJKMNPQRST",
+        "readsets": [
+          {
+            "orcabusId": "fqr.READSET345678912ABCDEFGHJK",
+            "rgid": "CCGCAGTC+TCGCCAAC.1.990101_A00130_0999_BH7TVMDSX7"
+          },
+          {
+            "orcabusId": "fqr.READSET456789123ABCDEFGHJK",
+            "rgid": "CCGCAGTC+TCGCCAAC.2.990101_A00130_0999_BH7TVMDSX7"
+          }
+        ]
+      }
+    ],
+    "computeEnv": "research",
+    "storageEnv": "research",
+    "status": "READY"
+  }
+}
