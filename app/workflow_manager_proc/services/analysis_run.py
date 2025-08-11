@@ -1,20 +1,20 @@
+import hashlib
 import logging
 import os
-import hashlib
 
 from django.db import transaction
 from django.db.models.query import QuerySet
 from django.utils import timezone
 
-from workflow_manager.models.analysis_context import ContextUseCase
-from workflow_manager.models.analysis_run_state import AnalysisRunState
-from workflow_manager.models.utils import Status
-from workflow_manager_proc.domain.event import ari, arf, arsc
 from workflow_manager.models import (
     AnalysisRun, AnalysisRunReadset,
     Analysis, AnalysisContext,
     Library
 )
+from workflow_manager.models.analysis_context import ContextUseCase
+from workflow_manager.models.analysis_run_state import AnalysisRunState
+from workflow_manager.models.utils import Status
+from workflow_manager_proc.domain.event import arsc, aru
 from workflow_manager_proc.services.event_utils import emit_event, EventType
 
 logger = logging.getLogger()
@@ -25,7 +25,7 @@ ARSC_SCHEMA_VERSION = "0.0.1"  # TODO: set somewhere more global (and check agai
 
 
 @transaction.atomic
-def create_analysis_run(event: ari.AnalysisRunInitiated) -> None:
+def create_analysis_run(event: aru.AnalysisRunUpdate) -> None:
     db_record = _create_analysis_run(event)
     arsc = _map_analysis_run_to_arsc(db_record)
     logger.info("Emitting ARSC.")
@@ -33,10 +33,10 @@ def create_analysis_run(event: ari.AnalysisRunInitiated) -> None:
     logger.info("ARSC emitted.")
 
 
-def _create_analysis_run(event: ari.AnalysisRunInitiated)-> AnalysisRun:
+def _create_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
     """
     Parameters:
-        event: the AnalysisRunInitiated event object to create the AnalysisRun from
+        event: the AnalysisRunUpdate event object to create the AnalysisRun from
     Procedure:
         - check whether a corresponding Analysis record exists (it should according to the pre-planning approach)
             - if not exist, raise an error
@@ -46,12 +46,13 @@ def _create_analysis_run(event: ari.AnalysisRunInitiated)-> AnalysisRun:
             - associate any libraries at this point (later updates/linking is not supported at this point)
         - create a new AnalysisRunStateChange record to be returned as result of the AnalysisRun creation
     """
-    logger.info(f"Start processing ARI: {event}")
-    analysis_event: ari.Analysis = event.analysis
+    logger.info(f"Start processing ARU: {event}")
+    analysis_event: aru.Analysis = event.analysis
 
     # We expect the corresponding Analysis to exist
     try:
-        logger.info(f"Looking for Analysis ({analysis_event.name}:{analysis_event.version}) with id {analysis_event.orcabusId}.")
+        logger.info(
+            f"Looking for Analysis ({analysis_event.name}:{analysis_event.version}) with id {analysis_event.orcabusId}.")
         analysis_db: Analysis = Analysis.objects.get(
             orcabus_id=analysis_event.orcabusId
         )
@@ -78,23 +79,23 @@ def _create_analysis_run(event: ari.AnalysisRunInitiated)-> AnalysisRun:
             timestamp=timezone.now(),
         ).save()
 
-        # attach the libraries associated with the AnalysisRunInitiated
-        for ari_lib in event.libraries:
+        # attach the libraries associated with the AnalysisRunUpdate
+        for aru_lib in event.libraries:
             # get the DB record of the library
             try:
-                db_lib: Library = Library.objects.get(orcabus_id=ari_lib.orcabusId)
+                db_lib: Library = Library.objects.get(orcabus_id=aru_lib.orcabusId)
             except Library.DoesNotExist:
                 # The library record should exist - synced with metadata service on LibraryStateChange events
                 # However, until that sync is in place we may need to create a record on demand
                 # FIXME: remove this once library records are automatically synced
-                db_lib = Library.objects.create(orcabus_id=ari_lib.orcabusId, library_id=ari_lib.libraryId)
+                db_lib = Library.objects.create(orcabus_id=aru_lib.orcabusId, library_id=aru_lib.libraryId)
 
             # At this point we have a Library record, so we add that
             analysis_run.libraries.add(db_lib)
 
             # if we also have readset associated with this library, then associate them
-            if ari_lib.readsets:
-                for rs in ari_lib.readsets:
+            if aru_lib.readsets:
+                for rs in aru_lib.readsets:
                     AnalysisRunReadset(
                         orcabus_id=rs.orcabusId,
                         rgid=rs.rgid,
@@ -107,8 +108,9 @@ def _create_analysis_run(event: ari.AnalysisRunInitiated)-> AnalysisRun:
     logger.info("AnalysisRun creation complete.")
     return analysis_run
 
+
 @transaction.atomic
-def finalise_analysis_run(event: arf.AnalysisRunFinalised):
+def finalise_analysis_run(event: aru.AnalysisRunUpdate):
     db_record = _finalise_analysis_run(event)
     arsc = _map_analysis_run_to_arsc(db_record)
     logger.info("Emitting ARSC.")
@@ -116,22 +118,22 @@ def finalise_analysis_run(event: arf.AnalysisRunFinalised):
     logger.info("ARSC emitted.")
 
 
-def _finalise_analysis_run(event: arf.AnalysisRunFinalised) -> AnalysisRun:
+def _finalise_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
     """
     Parameters:
-        event: AnalysisRunFinalised event object to update the AnalysisRun from
+        event: AnalysisRunUpdate event object to update the AnalysisRun from
     Procedure:
         - Unpack AWS event
         - create new State for AnalysisRun if required
         - relay the state change as WorkflowManager ARSC event if applicable
     """
-    logger.info("Start processing AnalysisRunFinalised event:")
+    logger.info("Start processing AnalysisRunUpdate event:")
     logger.info(event)
 
     # Since we are finalising, we expect a corresponding record to exist already
     # Note: this will raise an exception if the record does NOT exist (or there are multiple)
     analysis_run_db: AnalysisRun = AnalysisRun.objects.get(orcabus_id=event.orcabusId)
-    assert analysis_run_db is not None, f"AnalysisRunFinalised: AnalysisRun record does not exist!"
+    assert analysis_run_db is not None, f"AnalysisRunUpdate: AnalysisRun record does not exist!"
 
     assert analysis_run_db.get_latest_state().status == Status.DRAFT.convention, "Cannot finalise record that is no in DRAFT state!"
 
@@ -141,14 +143,14 @@ def _finalise_analysis_run(event: arf.AnalysisRunFinalised) -> AnalysisRun:
     assert event.analysisRunName == analysis_run_db.analysis_run_name, "AnalysisRun names do not match!"
 
     # Analysis: can't be updated, has to match if present
-    analysis_arf: arf.Analysis = event.analysis
-    if analysis_arf:
-        if analysis_arf.orcabusId:
-            assert analysis_arf.orcabusId == analysis_run_db.analysis.orcabus_id, "Analysis IDs don't match!"
-        if analysis_arf.name:
-            assert analysis_arf.name == analysis_run_db.analysis.analysis_name, "AnalysisNames don't match!"
-        if analysis_arf.version:
-            assert analysis_arf.version == analysis_run_db.analysis.analysis_version, "AnalysisVersions don't match!"
+    analysis_aru: aru.Analysis = event.analysis
+    if analysis_aru:
+        if analysis_aru.orcabusId:
+            assert analysis_aru.orcabusId == analysis_run_db.analysis.orcabus_id, "Analysis IDs don't match!"
+        if analysis_aru.name:
+            assert analysis_aru.name == analysis_run_db.analysis.analysis_name, "AnalysisNames don't match!"
+        if analysis_aru.version:
+            assert analysis_aru.version == analysis_run_db.analysis.analysis_version, "AnalysisVersions don't match!"
 
     # ComputeEnv / StorageEnv: mandatory, can be provided
     # if the same env is already set on the DB record, then nothing to do
