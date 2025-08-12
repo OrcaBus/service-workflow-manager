@@ -2,36 +2,39 @@ Workflow Manager
 ================================================================================
 
 <!-- TOC -->
-* [Workflow Manager](#workflow-manager)
-  * [Service Description](#service-description)
-    * [Name & responsibility](#name--responsibility)
-    * [Description](#description)
-    * [API Endpoints](#api-endpoints)
-    * [Consumed Events](#consumed-events)
-    * [Published Events](#published-events)
-    * [(Internal) Data states & persistence model](#internal-data-states--persistence-model)
-    * [Major Business Rules](#major-business-rules)
-    * [Permissions & Access Control](#permissions--access-control)
-  * [Infrastructure & Deployment](#infrastructure--deployment)
-    * [Stateful](#stateful)
-    * [Stateless](#stateless)
-  * [Development](#development)
-    * [Project Structure](#project-structure)
-    * [Setup](#setup)
-      * [Requirements](#requirements)
-      * [Install Dependencies](#install-dependencies)
-      * [CDK](#cdk)
-      * [Stacks](#stacks)
-    * [Conventions](#conventions)
-    * [Linting & Formatting](#linting--formatting)
-    * [Testing](#testing)
-  * [Glossary & References](#glossary--references)
+- [Workflow Manager](#workflow-manager)
+  - [Service Description](#service-description)
+    - [Name \& responsibility](#name--responsibility)
+    - [Description](#description)
+    - [API Endpoints](#api-endpoints)
+    - [Consumed Events](#consumed-events)
+    - [Published Events](#published-events)
+    - [Data Model \& States](#data-model--states)
+      - [Data Model](#data-model)
+      - [States](#states)
+    - [Major Business Rules](#major-business-rules)
+    - [Permissions \& Access Control](#permissions--access-control)
+  - [Infrastructure \& Deployment](#infrastructure--deployment)
+    - [Stateful](#stateful)
+    - [Stateless](#stateless)
+  - [Development](#development)
+    - [Project Structure](#project-structure)
+    - [Setup](#setup)
+      - [Requirements](#requirements)
+      - [Install Dependencies](#install-dependencies)
+      - [CDK](#cdk)
+      - [Stacks](#stacks)
+    - [Conventions](#conventions)
+    - [Linting \& Formatting](#linting--formatting)
+    - [Testing](#testing)
+  - [Glossary \& References](#glossary--references)
 <!-- TOC -->
 
 Service Description
 --------------------------------------------------------------------------------
 
 ### Name & responsibility
+
 ### Description
 
 The Workflow Manager Service keeps track of all workflows executed within the OrcaBus platform. It's responsible for tracking and relaying state updates from execution services to OrcaBus platform services.
@@ -41,15 +44,14 @@ Only events originating from the Workflow Manager should be consumed by other se
 
 The Workflow Manager provides a RESTful API with public documentation in OpenAPI format via a Swagger-UI interface.
 
-Endpoint: https://workflow.prod.umccr.org/schema/swagger-ui/
+Production Endpoint: https://workflow.prod.umccr.org/schema/swagger-ui/
 
 ### Consumed Events
 
 | Name / DetailType        | Source                                 | Schema Link                                                     | Description                                                            |
 |--------------------------|----------------------------------------|-----------------------------------------------------------------|------------------------------------------------------------------------|
-| `WorkflowRunStateChange` | anything but `orcabus.workflowmanager` | <schema link>                                                   | Consumed to track workflow state changes emitted by execution services |
-| `AnalysisRunInitiated`   | anything but `orcabus.workflowmanager` | [schema](docs/events/AnalysisRunInitiated/AnalysisRunInitiated.schema.json) | Consumed to track requests for AnalysisRun creation                    |
-| `AnalysisRunFinalised`   | anything but `orcabus.workflowmanager` | [schema](docs/events/AnalysisRunFinalised/AnalysisRunFinalised.schema.json) | Consumed to track requests for finalisation of an AnalysisRun          |
+| `WorkflowRunUpdate` | anything but `orcabus.workflowmanager` | [schema](./docs/events/WorkflowRunUpdate/WorkflowRunUpdate.schema.json)  | Consumed to track workflow status changes emitted by execution services |
+| `AnalysisRunUpdate`   | anything but `orcabus.workflowmanager` | [schema](./docs/events/AnalysisRunUpdate/AnalysisRunUpdate.schema.json) | Consumed to track requests for AnalysisRun creation                    |
 
 ### Published Events
 
@@ -59,8 +61,41 @@ Endpoint: https://workflow.prod.umccr.org/schema/swagger-ui/
 | `AnalysisRunStateChange` | `orcabus.workflowmanager` | [schema](docs/events/AnalysisRunStateChange/AnalysisRunStateChange.schema.json) | Announces AnalysiswRun state changes |
 
 
-### (Internal) Data states & persistence model
+### Data Model & States
+
+#### Data Model
+
+See the [entity model](./docs/diagrams/workflow-manager-entity-diagram.drawio.svg) for a high level overview of the service's data model.
+
+#### States
+
+Supported `WorkflowRun` states
+
+| State         | Description                                      |
+|---------------|--------------------------------------------------|
+| DRAFT         | The initial registration of a `WorkflowRun`. This may only be the intent of execution, way before a decision of execution is / can be made. |
+| READY         | The indication that the requirement for execution are fulfilled and execution can proceed. Should include all the data needed to make the "readyness" decission and required for actual workflow execution. |
+| RUNNING       | Indicating that the workflow is running / progressing. |
+| ABORTED       | Indicating that a `WorkflowRun` was aborted (usually due to manual intervention). |
+| FAILED        | Emitted when a `WorkflowRun` execution has failed. |
+| SUCCEDED      | Emitted when a `WorkflowRun` execution was successful. Usually taken as the signal for further dependent processes to be activated. |
+| DEPRECATED    | Singalling that a successful `WorkflowRun` has been deemed no longer valid / needed and been deprecated. Also, see Workflow deprection [SOP](https://github.com/OrcaBus/wiki/blob/main/operational/SOPs/workflow-run-deprecation.md). |
+
+Supported `AnalysisRun` states
+
+| State         | Description                                      |
+|---------------|--------------------------------------------------|
+| DRAFT         | The initial registration of an `AnalysisRun`. |
+| READY         | Indicating that all requirements and data to start the Analysis are available. |
+
+
 ### Major Business Rules
+
+The Workflow Manager is acting as an interface and gatekeeper for workflow/workload related events. It abstracts the interaction between execution services and orchestration logic allowing servics to remain fairly independent without having to know of each others implementation details.
+
+To that effect the Workflow Manager exposes a set of interfaces that are uses to facilitate those communications: \
+`WorkflowRunUpdate` and `AnalysisRunUpdate` events are consumed to ingest change notifications from external services in a predictable and structured format, while `WorkflowRunStateChange` and `AnalysisRunStateChange` are emitted to announce any relevant changes to the OrcaBus platform services in a known and controlled format.
+
 ### Permissions & Access Control
 
 Infrastructure & Deployment

@@ -30,6 +30,12 @@ class Workflow(OrcaBusBaseModel):
     # definition from an external system (as known to the execution engine)
     execution_engine_pipeline_id = models.CharField(max_length=255)
 
+    # may need this to differentiate with workflows are
+    # - unvalidated
+    # - validated
+    # - deprecated
+    # - failed (validation) - although those should probably never be used and deleted directly
+    # e.g. support testing in production, so unvalidated workflows are not used
     # approval_state = models.CharField(max_length=255)  # FIXME: Do we still need this (or just use Analysis)?
 
     objects = WorkflowManager()
