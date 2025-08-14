@@ -5,7 +5,7 @@ from unittest import mock
 
 from django.utils.timezone import make_aware
 
-from workflow_manager.models import Library, Status, AnalysisContext, AnalysisRunState
+from workflow_manager.models import Library, Status, AnalysisContext, AnalysisRunState, AnalysisRunContext
 from workflow_manager.models.analysis import Analysis
 from workflow_manager.models.analysis_context import ContextUseCase
 from workflow_manager.models.analysis_run import AnalysisRun
@@ -52,13 +52,13 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
             orcabus_id="lib.223456789ABCDEFGHJKMNPQRST",
             library_id="L000002"
         ).save()
-        AnalysisContext(
+        AnalysisRunContext(
             name="research",
             usecase=ContextUseCase.COMPUTE.value,
             description="Test Compute Context - Research",
             status="ACTIVE"
         ).save()
-        AnalysisContext(
+        AnalysisRunContext(
             name="research",
             usecase=ContextUseCase.STORAGE.value,
             description="Test Storage Context - Research",
@@ -71,16 +71,16 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         analysis = Analysis.objects.get(orcabus_id=ANALYSIS_1_OID)
         lib1 = Library.objects.get(library_id="L000001")
         lib2 = Library.objects.get(library_id="L000002")
-        compute_context = AnalysisContext.objects.get(name="research", usecase=ContextUseCase.COMPUTE.value)
-        storage_context = AnalysisContext.objects.get(name="research", usecase=ContextUseCase.STORAGE.value)
+        compute_context = AnalysisRunContext.objects.get(name="research", usecase=ContextUseCase.COMPUTE.value)
+        storage_context = AnalysisRunContext.objects.get(name="research", usecase=ContextUseCase.STORAGE.value)
 
         analysis_run = AnalysisRun(
             orcabus_id="anr.ANR123456789ABCDEFGHJKMNPQ",
             analysis_run_name="TestAnalysisRunName_1",
             analysis=analysis,
-            compute_context=compute_context,
-            storage_context=storage_context,
         )
+        analysis_run.contexts.add(compute_context)
+        analysis_run.contexts.add(storage_context)
         analysis_run.libraries.add(lib1)
         analysis_run.libraries.add(lib2)
         analysis_run.save()
@@ -94,6 +94,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         Analysis.objects.all().delete()
         AnalysisContext.objects.all().delete()
         AnalysisRun.objects.all().delete()
+        AnalysisRunContext.objects.all().delete()
         AnalysisRunState.objects.all().delete()
         Library.objects.all().delete()
 
