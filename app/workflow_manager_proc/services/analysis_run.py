@@ -6,12 +6,12 @@ from django.db import transaction
 from django.db.models.query import QuerySet
 from django.utils import timezone
 
-from workflow_manager.models import (
-    AnalysisRun, AnalysisRunReadset,
-    Analysis, Library
-)
+from workflow_manager.models.analysis import Analysis
+from workflow_manager.models.analysis_run import AnalysisRun
 from workflow_manager.models.analysis_run_context import AnalysisRunContext, AnalysisRunContextUseCase
 from workflow_manager.models.analysis_run_state import AnalysisRunState
+from workflow_manager.models.library import Library
+from workflow_manager.models.readset import Readset
 from workflow_manager.models.utils import Status
 from workflow_manager_proc.domain.event import arsc, aru
 from workflow_manager_proc.services.event_utils import emit_event, EventType
@@ -95,12 +95,13 @@ def _create_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
             # if we also have readset associated with this library, then associate them
             if aru_lib.readsets:
                 for rs in aru_lib.readsets:
-                    AnalysisRunReadset(
+                    db_rs, _ = Readset.objects.get_or_create(
                         orcabus_id=rs.orcabusId,
                         rgid=rs.rgid,
-                        analysis_run=analysis_run,
-                        library=db_lib
+                        library_id=db_lib.library_id,
+                        library_orcabus_id=db_lib.orcabus_id,
                     )
+                    analysis_run.readsets.add(db_rs)
 
     logger.info(analysis_run)
     analysis_run.save()
@@ -187,20 +188,21 @@ def _finalise_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
         for rs in rss:
             if len(rss_db) > 0:
                 # check event readset against the DB readsets
-                rs_db: AnalysisRunReadset = analysis_run_db.readsets.get(rs.orcabusId, None)
+                rs_db: Readset = analysis_run_db.readsets.get(rs.orcabusId, None)
                 if rs_db:
                     # if the readset exists already, make sure it's for the same library
-                    assert rs_db.library_oid == lod, "AnalysisRunReadset Library ID does not match!"
-                    assert rs_db.library_id == lid, "AnalysisRunReadset Library ID does not match!"
+                    assert rs_db.library_orcabus_id == lod, "AnalysisRun Readset Library ID does not match!"
+                    assert rs_db.library_id == lid, "AnalysisRun Readset Library ID does not match!"
                     rss_db.remove(rs_db)  # remove the readset from the tracker
             else:
-                # No readsets associated with the AnalysisRun DB record, create new AnalysisRunReadset
-                AnalysisRunReadset(
+                # No readsets associated with the AnalysisRun DB record, create new Readset and link it to AnalysisRun
+                rs_db = Readset.objects.create(
                     orcabus_id=rs.orcabusId,
-                    analysis_run=analysis_run_db,
+                    rgid=rs.rgid,
                     library_id=lid,
-                    library_oid=lod
-                ).save()
+                    library_orcabus_id=lod,
+                )
+                analysis_run_db.readsets.add(rs_db)
     # Now we deal with the Readsets that were already attached, but were no longer part of the finalised event
     # In the first instance we don't allow this and fail if there are inconsistencies
     # TODO: in the future we could drop any records that are not confirmed in the finalisation event
@@ -218,15 +220,13 @@ def _finalise_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
 
 def _map_analysis_run_to_arsc(analysis_run: AnalysisRun) -> arsc.AnalysisRunStateChange:
     lib_list = list()
-    for l in analysis_run.libraries.all():
+    for l in analysis_run.libraries.all():  # FIXME just iterate readsets instead?
         lib_list.append(arsc.Library(
             orcabusId=l.orcabus_id,
-            libraryId=l.library_id
+            libraryId=l.library_id,
+            readsets=None  # FIXME
         ))
 
-    print(analysis_run)
-    print(analysis_run.states)
-    print(analysis_run.get_latest_state())
     current_state: AnalysisRunState = analysis_run.get_latest_state()
     arsc_object = arsc.AnalysisRunStateChange(
         id="",  # mandatory field, need to provide a default value
@@ -241,6 +241,8 @@ def _map_analysis_run_to_arsc(analysis_run: AnalysisRun) -> arsc.AnalysisRunStat
             version=analysis_run.analysis.analysis_version
         ),
         libraries=lib_list,
+        computeEnv=None,  # FIXME
+        storageEnv=None,  # FIXME
     )
     # add the unique event ID (hash of the event data)
     arsc_hash = get_arsc_hash(arsc_object)
