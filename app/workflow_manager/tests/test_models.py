@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
 
-from workflow_manager.models import Library, WorkflowRun, LibraryAssociation, Analysis, AnalysisContext
+from workflow_manager.models import Library, WorkflowRun, LibraryAssociation, Analysis, AnalysisContext, Readset
 from workflow_manager.models.analysis_run_context import AnalysisRunContext
 from workflow_manager.models.workflow import Workflow
 from workflow_manager.models.workflow_run_context import WorkflowRunContext
@@ -171,3 +171,19 @@ class WorkflowModelTests(TestCase):
         self.assertTrue(ctx1.orcabus_id.startswith("wrx."))
         self.assertIsNone(ctx1.description)
         self.assertEqual(ctx1.status, "ACTIVE")
+
+    def test_readset_model(self):
+        """
+        python manage.py test workflow_manager.tests.test_models.WorkflowModelTests.test_readset_model
+        """
+
+        rs = Readset.objects.create(
+            rgid="CAGCAGTC+ACGCCAAC.4.999999_A00130_0999_BH7TVMDSX7",
+            library_id="L2400001",
+            library_orcabus_id="lib.01J8ES4ZDRQAP2BN3SDYYV5PKW"
+        )
+        self.assertEqual(1, Readset.objects.count())
+        self.assertTrue(rs.orcabus_id.startswith("fqr."))
+        self.assertEqual(rs.rgid, "CAGCAGTC+ACGCCAAC.4.999999_A00130_0999_BH7TVMDSX7")
+        self.assertEqual(rs.library_id, "L2400001")
+        self.assertEqual(rs.library_orcabus_id, "lib.01J8ES4ZDRQAP2BN3SDYYV5PKW")
