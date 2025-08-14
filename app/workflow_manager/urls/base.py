@@ -5,6 +5,7 @@ from drf_spectacular.views import SpectacularJSONAPIView, SpectacularSwaggerView
 from workflow_manager.routers import OptionalSlashDefaultRouter
 from workflow_manager.viewsets.analysis import AnalysisViewSet
 from workflow_manager.viewsets.analysis_run import AnalysisRunViewSet
+from workflow_manager.viewsets.analysis_run_context import AnalysisRunContextViewSet
 from workflow_manager.viewsets.workflow import WorkflowViewSet
 from workflow_manager.viewsets.workflow_run import WorkflowRunViewSet
 from workflow_manager.viewsets.payload import PayloadViewSet
@@ -24,8 +25,9 @@ router = OptionalSlashDefaultRouter()
 
 router.register(r"workflowrun/stats", WorkflowRunStatsViewSet, basename="workflowrun_stats")
 router.register(r"analysis", AnalysisViewSet, basename="analysis")
-router.register(r"analysisrun", AnalysisRunViewSet, basename="analysisrun")
 router.register(r"analysiscontext", AnalysisContextViewSet, basename="analysiscontext")
+router.register(r"analysisrun", AnalysisRunViewSet, basename="analysisrun")
+router.register(r"analysisruncontext", AnalysisRunContextViewSet, basename="analysisruncontext")
 router.register(r"workflow", WorkflowViewSet, basename="workflow")
 router.register(r"workflowrun", WorkflowRunViewSet, basename="workflowrun")
 router.register(r"workflowrun", WorkflowRunActionViewSet, basename="workflowrun-action")

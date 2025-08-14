@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from workflow_manager.models import Library, WorkflowRun, LibraryAssociation, Analysis, AnalysisContext
+from workflow_manager.models.analysis_run_context import AnalysisRunContext
 from workflow_manager.models.workflow import Workflow
 
 logger = logging.getLogger()
@@ -138,6 +139,20 @@ class WorkflowModelTests(TestCase):
             usecase="test_analysis_context_usecase",
         )
         self.assertEqual(1, AnalysisContext.objects.count())
-        self.assertTrue(ctx1.orcabus_id.startswith("ctx."))
+        self.assertTrue(ctx1.orcabus_id.startswith("anx."))
+        self.assertIsNone(ctx1.description)
+        self.assertEqual(ctx1.status, "ACTIVE")
+
+    def test_analysis_run_context_model(self):
+        """
+        python manage.py test workflow_manager.tests.test_models.WorkflowModelTests.test_analysis_run_context_model
+        """
+
+        ctx1 = AnalysisRunContext.objects.create(
+            name="test_analysis_context_name",
+            usecase="test_analysis_context_usecase",
+        )
+        self.assertEqual(1, AnalysisRunContext.objects.count())
+        self.assertTrue(ctx1.orcabus_id.startswith("arx."))
         self.assertIsNone(ctx1.description)
         self.assertEqual(ctx1.status, "ACTIVE")

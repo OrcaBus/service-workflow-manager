@@ -8,10 +8,9 @@ from django.utils import timezone
 
 from workflow_manager.models import (
     AnalysisRun, AnalysisRunReadset,
-    Analysis, AnalysisContext,
-    Library
+    Analysis, Library
 )
-from workflow_manager.models.analysis_context import ContextUseCase
+from workflow_manager.models.analysis_run_context import AnalysisRunContext, AnalysisRunContextUseCase
 from workflow_manager.models.analysis_run_state import AnalysisRunState
 from workflow_manager.models.utils import Status
 from workflow_manager_proc.domain.event import arsc, aru
@@ -156,20 +155,19 @@ def _finalise_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
     # if the same env is already set on the DB record, then nothing to do
     # but if it does not exist or they are not the same, we need to update
     # It does not matter if the entry exists or not the value from the event takes precedence
-    assert event.computeEnv, "ComputeEnv field is required!"
-    if not analysis_run_db.compute_context or analysis_run_db.compute_context.name != event.computeEnv:
-        compute_context: AnalysisContext = AnalysisContext.objects.get(
+    if event.computeEnv:
+        compute_context: AnalysisRunContext = AnalysisRunContext.objects.get(
             name=event.computeEnv,
-            usecase=ContextUseCase.COMPUTE.value
+            usecase=AnalysisRunContextUseCase.COMPUTE.value
         )  # name + usecase => unique
-        analysis_run_db.compute_context = compute_context
-    assert event.storageEnv, "StorageEnv field is required!"
-    if not analysis_run_db.storage_context or analysis_run_db.storage_context.name != event.storageEnv:
-        storage_context: AnalysisContext = AnalysisContext.objects.get(
+        analysis_run_db.contexts.add(compute_context)
+
+    if event.storageEnv:
+        storage_context: AnalysisRunContext = AnalysisRunContext.objects.get(
             name=event.storageEnv,
-            usecase=ContextUseCase.STORAGE.value
+            usecase=AnalysisRunContextUseCase.STORAGE.value
         )  # name + usecase => unique
-        analysis_run_db.compute_context = storage_context
+        analysis_run_db.contexts.add(storage_context)
 
     # Libraries: are mandatory, but cannot be changed
     # Readsets: are mandatory, but Readsets can be added (if not present yet)
