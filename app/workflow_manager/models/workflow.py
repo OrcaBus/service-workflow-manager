@@ -13,6 +13,13 @@ class ExecutionEngine(models.TextChoices):
     AWS_EKS = "AWS_EKS"
 
 
+class ValidationState(models.TextChoices):
+    UNVALIDATED = "UNVALIDATED"
+    VALIDATED = "VALIDATED"
+    DEPRECATED = "DEPRECATED"
+    FAILED = "FAILED"
+
+
 class WorkflowManager(OrcaBusBaseManager):
     pass
 
@@ -36,7 +43,7 @@ class Workflow(OrcaBusBaseModel):
     # - deprecated
     # - failed (validation) - although those should probably never be used and deleted directly
     # e.g. support testing in production, so unvalidated workflows are not used
-    # approval_state = models.CharField(max_length=255)  # FIXME: Do we still need this (or just use Analysis)?
+    validation_state = models.CharField(max_length=255, choices=ValidationState, default=ValidationState.VALIDATED)  # FIXME revert to UNVALIDATED once initial migration completed
 
     objects = WorkflowManager()
 
