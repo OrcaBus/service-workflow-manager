@@ -7,7 +7,7 @@ from typing import List
 from django.db.models import QuerySet
 
 from workflow_manager.models import Workflow, WorkflowRun, Analysis, AnalysisContext, AnalysisRun, \
-    Library, LibraryAssociation, State, Status
+    Library, LibraryAssociation, State, Status, AnalysisRunContext
 from workflow_manager.models.utils import create_portal_run_id
 from workflow_manager.tests.factories import PayloadFactory, LibraryFactory
 
@@ -287,9 +287,26 @@ class TestData:
     def create_qc_analysis(self):
         # this is meant to only generate temporary results, we assign it with a temp storage context
         # and it does not have to run on a controlled compute env, so we run it on the research compute
-        research_compute_context = AnalysisContext.objects.get_by_keyword(name="research",
-                                                                          usecase="compute-env").first()
-        temp_storage_context = AnalysisContext.objects.get_by_keyword(name="temp", usecase="storage-env").first()
+        research_compute_context = AnalysisContext.objects.get_by_keyword(
+            name="research",
+            usecase="compute-env").first()
+        temp_storage_context = AnalysisContext.objects.get_by_keyword(
+            name="temp",
+            usecase="storage-env").first()
+
+        # convert anx to arx when putting into run context
+        research_compute_context_arx, _ = AnalysisRunContext.objects.get_or_create(
+            name=research_compute_context.name,
+            usecase=research_compute_context.usecase,
+            description=research_compute_context.description,
+            status=research_compute_context.status,
+        )
+        temp_storage_context_arx, _ = AnalysisRunContext.objects.get_or_create(
+            name=temp_storage_context.name,
+            usecase=temp_storage_context.usecase,
+            description=temp_storage_context.description,
+            status=temp_storage_context.status,
+        )
 
         analysis_qc_qs = Analysis.objects.get_by_keyword(analysis_name='QC_Assessment')
         analysis_qc = analysis_qc_qs.first()  # FIXME: assume there are more than one and select by latest version, etc
@@ -303,34 +320,43 @@ class TestData:
                 analysis_run = AnalysisRun(
                     analysis_run_name=f"automated__{analysis_qc.analysis_name}__{lib_record.library_id}",
                     # status="DRAFT", FIXME to AnalysisRunState
-                    compute_context=research_compute_context,
-                    storage_context=temp_storage_context,
                     analysis=analysis_qc
                 )
                 analysis_run.save()
                 analysis_run.libraries.add(lib_record)
+                analysis_run.contexts.add(research_compute_context_arx)
+                analysis_run.contexts.add(temp_storage_context_arx)
                 self.analysis_runs.append(analysis_run)
 
         return self
 
     def create_wgs_analysis(self):
         # prepare the available compute and storage contexts, to be chosen depending on the actual workload
-        clinical_compute_context = AnalysisContext.objects.get_by_keyword(name="clinical",
-                                                                          usecase="compute-env").first()
-        clinical_storage_context = AnalysisContext.objects.get_by_keyword(name="clinical",
-                                                                          usecase="storage-env").first()
-        research_compute_context = AnalysisContext.objects.get_by_keyword(name="research",
-                                                                          usecase="compute-env").first()
-        research_storage_context = AnalysisContext.objects.get_by_keyword(name="research",
-                                                                          usecase="storage-env").first()
-        clinical_context = AnalysisContext.objects.get_by_keyword(name="clinical", usecase="approval").first()
+        clinical_compute_context = AnalysisContext.objects.get_by_keyword(
+            name="clinical",
+            usecase="compute-env").first()
+        clinical_storage_context = AnalysisContext.objects.get_by_keyword(
+            name="clinical",
+            usecase="storage-env").first()
+        research_compute_context = AnalysisContext.objects.get_by_keyword(
+            name="research",
+            usecase="compute-env").first()
+        research_storage_context = AnalysisContext.objects.get_by_keyword(
+            name="research",
+            usecase="storage-env").first()
+        clinical_context = AnalysisContext.objects.get_by_keyword(
+            name="clinical",
+            usecase="approval").first()
 
         # Find the approved analysis for a wgs workload
         # NOTE: for clinical workloads the analysis has to be approved for clinical use,
         #       for research all are allowed and we choose the "latest" version
-        analysis_wgs_clinical: Analysis = Analysis.objects.filter(analysis_name='WGS',
-                                                                  contexts=clinical_context).first()
-        analysis_wgs_research: Analysis = Analysis.objects.filter(analysis_name='WGS', analysis_version='2.0').first()
+        analysis_wgs_clinical: Analysis = Analysis.objects.filter(
+            analysis_name='WGS',
+            contexts=clinical_context).first()
+        analysis_wgs_research: Analysis = Analysis.objects.filter(
+            analysis_name='WGS',
+            analysis_version='2.0').first()
 
         # FIXME: better pairing algorithm!
         pairing = defaultdict(lambda: defaultdict(list))
@@ -358,18 +384,32 @@ class TestData:
                 storage_context = clinical_storage_context if workflow == 'clinical' else research_storage_context
                 analysis = analysis_wgs_clinical if workflow == 'clinical' else analysis_wgs_research
 
+                # convert anx to arx when putting into run context
+                compute_context_arx, _ = AnalysisRunContext.objects.get_or_create(
+                    name=compute_context.name,
+                    usecase=compute_context.usecase,
+                    description=compute_context.description,
+                    status=compute_context.status,
+                )
+                storage_context_arx, _ = AnalysisRunContext.objects.get_or_create(
+                    name=storage_context.name,
+                    usecase=storage_context.usecase,
+                    description=storage_context.description,
+                    status=storage_context.status,
+                )
+
                 analysis_run_name = f"automated__{analysis.analysis_name}__{workflow}__" + \
                                     f"{tumor_lib_record.library_id}__{normal_lib_record.library_id} "
                 ar_wgs = AnalysisRun(
                     analysis_run_name=analysis_run_name,
                     # status="DRAFT",  FIXME to AnalysisRunState
-                    compute_context=compute_context,
-                    storage_context=storage_context,
                     analysis=analysis
                 )
                 ar_wgs.save()
                 ar_wgs.libraries.add(tumor_lib_record)
                 ar_wgs.libraries.add(normal_lib_record)
+                ar_wgs.contexts.add(compute_context_arx)
+                ar_wgs.contexts.add(storage_context_arx)
                 self.analysis_runs.append(ar_wgs)
             else:
                 print(f"No pairing for {sbj}.")
@@ -378,14 +418,18 @@ class TestData:
 
     def create_cttso_analysis(self):
         # prepare the available compute and storage contexts, to be chosen depending on the actual workload
-        clinical_compute_context = AnalysisContext.objects.get_by_keyword(name="clinical",
-                                                                          usecase="compute-env").first()
-        clinical_storage_context = AnalysisContext.objects.get_by_keyword(name="clinical",
-                                                                          usecase="storage-env").first()
-        research_compute_context = AnalysisContext.objects.get_by_keyword(name="research",
-                                                                          usecase="compute-env").first()
-        research_storage_context = AnalysisContext.objects.get_by_keyword(name="research",
-                                                                          usecase="storage-env").first()
+        clinical_compute_context = AnalysisContext.objects.get_by_keyword(
+            name="clinical",
+            usecase="compute-env").first()
+        clinical_storage_context = AnalysisContext.objects.get_by_keyword(
+            name="clinical",
+            usecase="storage-env").first()
+        research_compute_context = AnalysisContext.objects.get_by_keyword(
+            name="research",
+            usecase="compute-env").first()
+        research_storage_context = AnalysisContext.objects.get_by_keyword(
+            name="research",
+            usecase="storage-env").first()
 
         # Find the approved analysis for a ctTSO workload
         # NOTE: for now we only have one ctTSO analysis
@@ -400,15 +444,30 @@ class TestData:
                 compute_context = clinical_compute_context if workflow == 'clinical' else research_compute_context
                 storage_context = clinical_storage_context if workflow == 'clinical' else research_storage_context
                 analysis_run_name = f"automated__{analysis_cttso_qs.analysis_name}__{workflow}__{lib_record.library_id}"
+
+                # convert anx to arx when putting into run context
+                compute_context_arx, _ = AnalysisRunContext.objects.get_or_create(
+                    name=compute_context.name,
+                    usecase=compute_context.usecase,
+                    description=compute_context.description,
+                    status=compute_context.status,
+                )
+                storage_context_arx, _ = AnalysisRunContext.objects.get_or_create(
+                    name=storage_context.name,
+                    usecase=storage_context.usecase,
+                    description=storage_context.description,
+                    status=storage_context.status,
+                )
+
                 analysis_run = AnalysisRun(
                     analysis_run_name=analysis_run_name,
                     # status="DRAFT",  FIXME to AnalysisRunState
-                    compute_context=compute_context,
-                    storage_context=storage_context,
                     analysis=analysis_cttso_qs
                 )
                 analysis_run.save()
                 analysis_run.libraries.add(lib_record)
+                analysis_run.contexts.add(compute_context_arx)
+                analysis_run.contexts.add(storage_context_arx)
                 self.analysis_runs.append(analysis_run)
 
         return self
