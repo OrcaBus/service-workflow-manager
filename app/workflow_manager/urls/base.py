@@ -14,6 +14,7 @@ from workflow_manager.viewsets.state import StateViewSet
 from workflow_manager.viewsets.workflow_run_action import WorkflowRunActionViewSet
 # from workflow_manager.viewsets.library import LibraryViewSet
 from workflow_manager.viewsets.workflow_run_comment import WorkflowRunCommentViewSet
+from workflow_manager.viewsets.workflow_run_context import WorkflowRunContextViewSet
 from workflow_manager.viewsets.workflow_run_stats import WorkflowRunStatsViewSet
 from workflow_manager.settings.base import API_VERSION
 
@@ -31,6 +32,7 @@ router.register(r"analysisruncontext", AnalysisRunContextViewSet, basename="anal
 router.register(r"workflow", WorkflowViewSet, basename="workflow")
 router.register(r"workflowrun", WorkflowRunViewSet, basename="workflowrun")
 router.register(r"workflowrun", WorkflowRunActionViewSet, basename="workflowrun-action")
+router.register(r"workflowruncontext", WorkflowRunContextViewSet, basename="workflowruncontext")
 router.register(r"payload", PayloadViewSet, basename="payload")
 
 router.register(
