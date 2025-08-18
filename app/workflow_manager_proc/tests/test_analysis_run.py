@@ -5,7 +5,7 @@ from unittest import mock
 
 from django.utils.timezone import make_aware
 
-from workflow_manager.models import Library, Status, AnalysisContext, AnalysisRunState
+from workflow_manager.models import Library, Status, AnalysisContext, AnalysisRunState, AnalysisRunContext
 from workflow_manager.models.analysis import Analysis
 from workflow_manager.models.analysis_context import ContextUseCase
 from workflow_manager.models.analysis_run import AnalysisRun
@@ -52,13 +52,13 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
             orcabus_id="lib.223456789ABCDEFGHJKMNPQRST",
             library_id="L000002"
         ).save()
-        AnalysisContext(
+        AnalysisRunContext(
             name="research",
             usecase=ContextUseCase.COMPUTE.value,
             description="Test Compute Context - Research",
             status="ACTIVE"
         ).save()
-        AnalysisContext(
+        AnalysisRunContext(
             name="research",
             usecase=ContextUseCase.STORAGE.value,
             description="Test Storage Context - Research",
@@ -71,16 +71,16 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         analysis = Analysis.objects.get(orcabus_id=ANALYSIS_1_OID)
         lib1 = Library.objects.get(library_id="L000001")
         lib2 = Library.objects.get(library_id="L000002")
-        compute_context = AnalysisContext.objects.get(name="research", usecase=ContextUseCase.COMPUTE.value)
-        storage_context = AnalysisContext.objects.get(name="research", usecase=ContextUseCase.STORAGE.value)
+        compute_context = AnalysisRunContext.objects.get(name="research", usecase=ContextUseCase.COMPUTE.value)
+        storage_context = AnalysisRunContext.objects.get(name="research", usecase=ContextUseCase.STORAGE.value)
 
         analysis_run = AnalysisRun(
             orcabus_id="anr.ANR123456789ABCDEFGHJKMNPQ",
             analysis_run_name="TestAnalysisRunName_1",
             analysis=analysis,
-            compute_context=compute_context,
-            storage_context=storage_context,
         )
+        analysis_run.contexts.add(compute_context)
+        analysis_run.contexts.add(storage_context)
         analysis_run.libraries.add(lib1)
         analysis_run.libraries.add(lib2)
         analysis_run.save()
@@ -94,6 +94,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         Analysis.objects.all().delete()
         AnalysisContext.objects.all().delete()
         AnalysisRun.objects.all().delete()
+        AnalysisRunContext.objects.all().delete()
         AnalysisRunState.objects.all().delete()
         Library.objects.all().delete()
 
@@ -104,6 +105,37 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         self.load_mock_aru_draft_min()
 
         aru_event = self.mock_aru_draft_min
+        self.assertIsNotNone(aru_event)
+
+        # Set up the required base entities
+        self.setup_base_entities()
+
+        logger.info("Testing DB record creation from event...")
+        db_analysis_run = _create_analysis_run(aru_event)
+        self.assertIsNotNone(db_analysis_run)
+        self.assertEqual(db_analysis_run.analysis.analysis_name, ANALYSIS_1_NAME)
+        self.assertEqual(db_analysis_run.analysis_run_name, "TestAnalysisRunName_1")
+        self.assertEqual(db_analysis_run.get_latest_state().status, Status.DRAFT.convention)
+
+        logger.info("ARSC event creation from DB record...")
+        arsc_event = _map_analysis_run_to_arsc(db_analysis_run)
+        self.assertIsNotNone(arsc_event)
+        test_id = get_arsc_hash(arsc_event)
+        self.assertEqual(test_id, arsc_event.id)
+        # TODO: how to test that the id is stable / does not change?
+        # NOTE: we can't really test it as the new generation of the AnalysisRun record
+        #       will assign a new OrcaBus ID each time.
+
+        logger.info("ARSC event created: ")
+        logger.info(arsc.AnalysisRunStateChange.model_dump_json(arsc_event))
+
+    def test_aru_draft_max(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_aru_draft_max
+        """
+        self.load_mock_aru_draft_max()
+
+        aru_event = self.mock_aru_draft_max
         self.assertIsNotNone(aru_event)
 
         # Set up the required base entities

@@ -1,10 +1,12 @@
 from django.db import models
 
 from workflow_manager.fields import OrcaBusIdField
+from workflow_manager.models.readset import Readset
 from workflow_manager.models.analysis_run import AnalysisRun
 from workflow_manager.models.base import OrcaBusBaseModel, OrcaBusBaseManager
 from workflow_manager.models.library import Library
 from workflow_manager.models.workflow import Workflow
+from workflow_manager.models.workflow_run_context import WorkflowRunContext
 
 
 class WorkflowRunManager(OrcaBusBaseManager):
@@ -23,6 +25,8 @@ class WorkflowRun(OrcaBusBaseModel):
     workflow = models.ForeignKey(Workflow, null=True, blank=True, on_delete=models.SET_NULL)
     analysis_run = models.ForeignKey(AnalysisRun, null=True, blank=True, on_delete=models.SET_NULL)
     libraries = models.ManyToManyField(Library, through="LibraryAssociation")
+    contexts = models.ManyToManyField(WorkflowRunContext)
+    readsets = models.ManyToManyField(Readset)
 
     objects = WorkflowRunManager()
 
