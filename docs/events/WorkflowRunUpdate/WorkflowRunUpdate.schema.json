@@ -62,6 +62,24 @@
         },
         "orcabusId": {
           "type": "string"
+        },
+        "readsets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Readset"
+          }
+        }
+      }
+    },
+    "Readset": {
+      "type": "object",
+      "required": ["orcabusId", "rgid"],
+      "properties": {
+        "orcabusId": {
+          "type": "string"
+        },
+        "rgid": {
+          "type": "string"
         }
       }
     },
