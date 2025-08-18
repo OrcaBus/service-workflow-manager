@@ -129,6 +129,37 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         logger.info("ARSC event created: ")
         logger.info(arsc.AnalysisRunStateChange.model_dump_json(arsc_event))
 
+    def test_aru_draft_max(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_aru_draft_max
+        """
+        self.load_mock_aru_draft_max()
+
+        aru_event = self.mock_aru_draft_max
+        self.assertIsNotNone(aru_event)
+
+        # Set up the required base entities
+        self.setup_base_entities()
+
+        logger.info("Testing DB record creation from event...")
+        db_analysis_run = _create_analysis_run(aru_event)
+        self.assertIsNotNone(db_analysis_run)
+        self.assertEqual(db_analysis_run.analysis.analysis_name, ANALYSIS_1_NAME)
+        self.assertEqual(db_analysis_run.analysis_run_name, "TestAnalysisRunName_1")
+        self.assertEqual(db_analysis_run.get_latest_state().status, Status.DRAFT.convention)
+
+        logger.info("ARSC event creation from DB record...")
+        arsc_event = _map_analysis_run_to_arsc(db_analysis_run)
+        self.assertIsNotNone(arsc_event)
+        test_id = get_arsc_hash(arsc_event)
+        self.assertEqual(test_id, arsc_event.id)
+        # TODO: how to test that the id is stable / does not change?
+        # NOTE: we can't really test it as the new generation of the AnalysisRun record
+        #       will assign a new OrcaBus ID each time.
+
+        logger.info("ARSC event created: ")
+        logger.info(arsc.AnalysisRunStateChange.model_dump_json(arsc_event))
+
     def test_aru_ready_max(self):
         """
         python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_aru_ready_max
