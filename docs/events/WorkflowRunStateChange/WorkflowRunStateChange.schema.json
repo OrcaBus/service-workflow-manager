@@ -48,6 +48,12 @@
             "$ref": "#/definitions/Library"
           }
         },
+        "computeEnv": {
+          "type": "string"
+        },
+        "storageEnv": {
+          "type": "string"
+        },
         "status": {
           "type": "string"
         },
@@ -64,6 +70,24 @@
           "type": "string"
         },
         "orcabusId": {
+          "type": "string"
+        },
+        "readsets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Readset"
+          }
+        }
+      }
+    },
+    "Readset": {
+      "type": "object",
+      "required": ["orcabusId", "rgid"],
+      "properties": {
+        "orcabusId": {
+          "type": "string"
+        },
+        "rgid": {
           "type": "string"
         }
       }

@@ -79,6 +79,12 @@ definitions:
         type: array
         items:
           '$ref': '#/definitions/Library'
+      computeEnv:
+        # the storage configuration to apply to this WorkflowRun
+        type: string
+      storageEnv:
+        # the compute configuration to apply to this WorkflowRun
+        type: string
       status:
         # the current/new state of the WorkflowRun that the event announces
         # Note: not every event necessarily announces a new status
@@ -96,6 +102,24 @@ definitions:
         type: string
       orcabusId:
         # the OrcaBus internal id of the Library, e.g. lib.0001234EXAMPLE56789L1BRARY
+        type: string
+      readsets:
+        # the readsets (fastq pairs) of this library that this workflow run is based on
+        type: array
+        items:
+          '$ref': '#/definitions/Readset'
+  Readset:
+    type: object
+    required:
+      - orcabusId
+      - rgid
+    properties:
+      orcabusId:
+        # the OrcaBus internal id of the fastq readset record, e.g. fqr.001234EXAMPLE56789AABBCCDD
+        type: string
+      rgid:
+        # a unique id or the FastqPair/Readset that is defined by sequencing run properties
+        # i.e. instrument_run_id, lane, index(es)
         type: string
   Workflow:
     type: object
