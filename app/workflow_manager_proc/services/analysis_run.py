@@ -8,10 +8,10 @@ from django.utils import timezone
 
 from workflow_manager.models.analysis import Analysis
 from workflow_manager.models.analysis_run import AnalysisRun
-from workflow_manager.models.analysis_run_context import AnalysisRunContext, AnalysisRunContextUseCase
 from workflow_manager.models.analysis_run_state import AnalysisRunState
 from workflow_manager.models.library import Library
 from workflow_manager.models.readset import Readset
+from workflow_manager.models.run_context import RunContext, RunContextUseCase
 from workflow_manager.models.utils import Status
 from workflow_manager_proc.domain.event import arsc, aru
 from workflow_manager_proc.services.event_utils import emit_event, EventType
@@ -157,16 +157,16 @@ def _finalise_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
     # but if it does not exist or they are not the same, we need to update
     # It does not matter if the entry exists or not the value from the event takes precedence
     if event.computeEnv:
-        compute_context: AnalysisRunContext = AnalysisRunContext.objects.get(
+        compute_context: RunContext = RunContext.objects.get(
             name=event.computeEnv,
-            usecase=AnalysisRunContextUseCase.COMPUTE.value
+            usecase=RunContextUseCase.COMPUTE.value
         )  # name + usecase => unique
         analysis_run_db.contexts.add(compute_context)
 
     if event.storageEnv:
-        storage_context: AnalysisRunContext = AnalysisRunContext.objects.get(
+        storage_context: RunContext = RunContext.objects.get(
             name=event.storageEnv,
-            usecase=AnalysisRunContextUseCase.STORAGE.value
+            usecase=RunContextUseCase.STORAGE.value
         )  # name + usecase => unique
         analysis_run_db.contexts.add(storage_context)
 

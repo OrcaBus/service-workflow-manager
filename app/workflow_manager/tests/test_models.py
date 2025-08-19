@@ -5,10 +5,11 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
 
-from workflow_manager.models import Library, WorkflowRun, LibraryAssociation, Analysis, AnalysisContext, Readset
-from workflow_manager.models.analysis_run_context import AnalysisRunContext
+from workflow_manager.models import Library, WorkflowRun, LibraryAssociation, Analysis, AnalysisContext, Readset, \
+    RunContext
+from workflow_manager.models.analysis_context import AnalysisContextUseCase
+from workflow_manager.models.run_context import RunContextUseCase
 from workflow_manager.models.workflow import Workflow
-from workflow_manager.models.workflow_run_context import WorkflowRunContext
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -137,40 +138,46 @@ class WorkflowModelTests(TestCase):
 
         ctx1 = AnalysisContext.objects.create(
             name="test_analysis_context_name",
-            usecase="test_analysis_context_usecase",
+            usecase=AnalysisContextUseCase.COMPUTE.value,
         )
+        logger.info(ctx1)
         self.assertEqual(1, AnalysisContext.objects.count())
         self.assertTrue(ctx1.orcabus_id.startswith("anx."))
         self.assertIsNone(ctx1.description)
         self.assertEqual(ctx1.status, "ACTIVE")
+        self.assertEqual(ctx1.usecase, "COMPUTE")
 
     def test_analysis_run_context_model(self):
         """
         python manage.py test workflow_manager.tests.test_models.WorkflowModelTests.test_analysis_run_context_model
         """
 
-        ctx1 = AnalysisRunContext.objects.create(
+        ctx1 = RunContext.objects.create(
             name="test_analysis_context_name",
-            usecase="test_analysis_context_usecase",
+            usecase=RunContextUseCase.COMPUTE.value,
         )
-        self.assertEqual(1, AnalysisRunContext.objects.count())
-        self.assertTrue(ctx1.orcabus_id.startswith("arx."))
+        logger.info(ctx1)
+        self.assertEqual(1, RunContext.objects.count())
+        self.assertTrue(ctx1.orcabus_id.startswith("rnx."))
         self.assertIsNone(ctx1.description)
         self.assertEqual(ctx1.status, "ACTIVE")
+        self.assertEqual(ctx1.usecase, "COMPUTE")
 
     def test_workflow_run_context_model(self):
         """
         python manage.py test workflow_manager.tests.test_models.WorkflowModelTests.test_workflow_run_context_model
         """
 
-        ctx1 = WorkflowRunContext.objects.create(
+        ctx1 = RunContext.objects.create(
             name="test_wfr_context_name",
-            usecase="test_wfr_context_usecase",
+            usecase=RunContextUseCase.STORAGE.value,
         )
-        self.assertEqual(1, WorkflowRunContext.objects.count())
-        self.assertTrue(ctx1.orcabus_id.startswith("wrx."))
+        logger.info(ctx1)
+        self.assertEqual(1, RunContext.objects.count())
+        self.assertTrue(ctx1.orcabus_id.startswith("rnx."))
         self.assertIsNone(ctx1.description)
         self.assertEqual(ctx1.status, "ACTIVE")
+        self.assertEqual(ctx1.usecase, "STORAGE")
 
     def test_readset_model(self):
         """
