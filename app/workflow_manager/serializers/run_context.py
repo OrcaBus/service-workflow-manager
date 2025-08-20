@@ -1,32 +1,32 @@
-from workflow_manager.models import AnalysisRunContext
+from workflow_manager.models import RunContext
 from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin, OrcabusIdSerializerMetaMixin
 
 
-class AnalysisRunContextBaseSerializer(SerializersBase):
+class RunContextBaseSerializer(SerializersBase):
     pass
 
 
-class AnalysisRunContextListParamSerializer(OptionalFieldsMixin, AnalysisRunContextBaseSerializer):
+class RunContextListParamSerializer(OptionalFieldsMixin, RunContextBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
-        model = AnalysisRunContext
+        model = RunContext
         fields = "__all__"
 
 
-class AnalysisRunContextMinSerializer(AnalysisRunContextBaseSerializer):
+class RunContextMinSerializer(RunContextBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
-        model = AnalysisRunContext
+        model = RunContext
         fields = ["orcabus_id", "name", "usecase"]
 
 
-class AnalysisRunContextSerializer(AnalysisRunContextBaseSerializer):
+class RunContextSerializer(RunContextBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
-        model = AnalysisRunContext
+        model = RunContext
         fields = "__all__"
 
 
-class UpdatableAnalysisRunContextSerializer(AnalysisRunContextBaseSerializer):
+class UpdatableRunContextSerializer(RunContextBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
-        model = AnalysisRunContext
+        model = RunContext
         fields = ["description", "status"]
 
     def update(self, instance, validated_data):

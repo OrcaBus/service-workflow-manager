@@ -1,5 +1,3 @@
-from enum import Enum
-
 from django.db import models
 
 from workflow_manager.fields import OrcaBusIdField
@@ -11,7 +9,7 @@ class AnalysisContextStatus(models.TextChoices):
     INACTIVE = "INACTIVE"
 
 
-class ContextUseCase(Enum):
+class AnalysisContextUseCase(models.TextChoices):
     COMPUTE = "COMPUTE"
     STORAGE = "STORAGE"
 
@@ -26,7 +24,7 @@ class AnalysisContext(OrcaBusBaseModel):
 
     orcabus_id = OrcaBusIdField(primary_key=True, prefix='anx')
     name = models.CharField(max_length=255)
-    usecase = models.CharField(max_length=255)
+    usecase = models.CharField(max_length=255, choices=AnalysisContextUseCase)
 
     description = models.CharField(max_length=255, blank=True, null=True)
     status = models.CharField(max_length=255, choices=AnalysisContextStatus, default=AnalysisContextStatus.ACTIVE)

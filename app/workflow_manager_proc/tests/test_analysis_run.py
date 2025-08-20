@@ -5,9 +5,9 @@ from unittest import mock
 
 from django.utils.timezone import make_aware
 
-from workflow_manager.models import Library, Status, AnalysisContext, AnalysisRunState, AnalysisRunContext
+from workflow_manager.models import Library, Status, AnalysisContext, AnalysisRunState, RunContext
 from workflow_manager.models.analysis import Analysis
-from workflow_manager.models.analysis_context import ContextUseCase
+from workflow_manager.models.analysis_context import AnalysisContextUseCase
 from workflow_manager.models.analysis_run import AnalysisRun
 from workflow_manager_proc.domain.event import arsc
 from workflow_manager_proc.services.analysis_run import (
@@ -52,15 +52,15 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
             orcabus_id="lib.223456789ABCDEFGHJKMNPQRST",
             library_id="L000002"
         ).save()
-        AnalysisRunContext(
+        RunContext(
             name="research",
-            usecase=ContextUseCase.COMPUTE.value,
+            usecase=AnalysisContextUseCase.COMPUTE.value,
             description="Test Compute Context - Research",
             status="ACTIVE"
         ).save()
-        AnalysisRunContext(
+        RunContext(
             name="research",
-            usecase=ContextUseCase.STORAGE.value,
+            usecase=AnalysisContextUseCase.STORAGE.value,
             description="Test Storage Context - Research",
             status="ACTIVE"
         ).save()
@@ -71,8 +71,8 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         analysis = Analysis.objects.get(orcabus_id=ANALYSIS_1_OID)
         lib1 = Library.objects.get(library_id="L000001")
         lib2 = Library.objects.get(library_id="L000002")
-        compute_context = AnalysisRunContext.objects.get(name="research", usecase=ContextUseCase.COMPUTE.value)
-        storage_context = AnalysisRunContext.objects.get(name="research", usecase=ContextUseCase.STORAGE.value)
+        compute_context = RunContext.objects.get(name="research", usecase=AnalysisContextUseCase.COMPUTE.value)
+        storage_context = RunContext.objects.get(name="research", usecase=AnalysisContextUseCase.STORAGE.value)
 
         analysis_run = AnalysisRun(
             orcabus_id="anr.ANR123456789ABCDEFGHJKMNPQ",
@@ -94,7 +94,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         Analysis.objects.all().delete()
         AnalysisContext.objects.all().delete()
         AnalysisRun.objects.all().delete()
-        AnalysisRunContext.objects.all().delete()
+        RunContext.objects.all().delete()
         AnalysisRunState.objects.all().delete()
         Library.objects.all().delete()
 
