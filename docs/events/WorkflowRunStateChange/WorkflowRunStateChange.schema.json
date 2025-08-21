@@ -64,7 +64,10 @@
     },
     "Library": {
       "type": "object",
-      "required": ["libraryId", "orcabusId"],
+      "required": [
+        "libraryId",
+        "orcabusId"
+      ],
       "properties": {
         "libraryId": {
           "type": "string"
@@ -82,7 +85,10 @@
     },
     "Readset": {
       "type": "object",
-      "required": ["orcabusId", "rgid"],
+      "required": [
+        "orcabusId",
+        "rgid"
+      ],
       "properties": {
         "orcabusId": {
           "type": "string"
@@ -94,7 +100,12 @@
     },
     "Workflow": {
       "type": "object",
-      "required": ["orcabusId", "name", "version", "executionEngine"],
+      "required": [
+        "orcabusId",
+        "name",
+        "version",
+        "executionEngine"
+      ],
       "properties": {
         "orcabusId": {
           "type": "string"
@@ -112,7 +123,10 @@
     },
     "AnalysisRun": {
       "type": "object",
-      "required": ["orcabusId", "name"],
+      "required": [
+        "orcabusId",
+        "name"
+      ],
       "properties": {
         "orcabusId": {
           "type": "string"
@@ -124,7 +138,12 @@
     },
     "Payload": {
       "type": "object",
-      "required": ["orcabusId", "refId", "version", "data"],
+      "required": [
+        "orcabusId",
+        "refId",
+        "version",
+        "data"
+      ],
       "properties": {
         "orcabusId": {
           "type": "string"
@@ -175,5 +194,9 @@
       "$ref": "#/definitions/WorkflowRunStateChange"
     }
   },
-  "required": ["detail", "detail-type", "source"]
+  "required": [
+    "detail",
+    "detail-type",
+    "source"
+  ]
 }
