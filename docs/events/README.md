@@ -26,8 +26,6 @@ Run the JSON schema generation script:
 # generate the JSON schema from the annotated YAML file
 python gen_schema.py <event name>/<event name>.schemal.yaml > <event name>/<event name>.schema.json
 # e.g.:
-python gen_schema.py AnalysisRunInitiated/AnalysisRunInitiated.schema.yaml > AnalysisRunInitiated/AnalysisRunInitiated.schema.json
-python gen_schema.py AnalysisRunFinalised/AnalysisRunFinalised.schema.yaml > AnalysisRunFinalised/AnalysisRunFinalised.schema.json
 python gen_schema.py AnalysisRunStateChange/AnalysisRunStateChange.schema.yaml > AnalysisRunStateChange/AnalysisRunStateChange.schema.json
 python gen_schema.py AnalysisRunUpdate/AnalysisRunUpdate.schema.yaml > AnalysisRunUpdate/AnalysisRunUpdate.schema.json
 python gen_schema.py WorkflowRunStateChange/WorkflowRunStateChange.schema.yaml > WorkflowRunStateChange/WorkflowRunStateChange.schema.json
@@ -42,5 +40,5 @@ Example events can be validated against their respective JSON schema
 ```bash
 # Example
 # If the file is not valid this should produce an exception (non-zero return code)
-json validate --schema-file=AnalysisRunInitiated/AnalysisRunInitiated.schema.json --document-file=AnalysisRunInitiated/examples/ARI__example1.json
+json validate --schema-file=AnalysisRunUpdate/AnalysisRunUpdate.schema.json --document-file=AnalysisRunUpdate/examples/ARU__example_DRAFT.json
 ```

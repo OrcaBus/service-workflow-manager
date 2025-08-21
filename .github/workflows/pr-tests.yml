@@ -129,6 +129,12 @@ jobs:
           pip3 -V
           make --version
 
+      - name: Test event schema
+        working-directory: ./docs/events
+        run: |
+          make install
+          make test
+
       # note;
       # on CI environment, it is an intentional pointing to 'requirements-test.txt' deps file and integration-test (it)
       # Django profile and running it via 'manage.py test' to detect any dependency drift from local dev to the runtime

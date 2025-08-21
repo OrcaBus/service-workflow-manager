@@ -24,7 +24,8 @@ tsconfig.json
 
 config/event_schemas/
 
-# Ignore all files under `.venv`
+# Ignore all files under
 .venv/
 .local/
 htmlcov/
+docs/
