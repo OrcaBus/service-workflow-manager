@@ -3,7 +3,8 @@ from unittest import mock
 
 from mockito import when, unstub
 
-from workflow_manager.models import Workflow, WorkflowRun, Library, LibraryAssociation, State, Payload, AnalysisRun
+from workflow_manager.models import Workflow, WorkflowRun, Library, LibraryAssociation, State, Payload, AnalysisRun, \
+    Readset
 from workflow_manager.tests.factories import WorkflowRunFactory
 from workflow_manager_proc.domain.event import wrsc
 from workflow_manager_proc.services import workflow_run
@@ -95,8 +96,14 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         workflow_run.establish_workflow_run_libraries(self.mock_wru_max, mock_wfr)
 
+        logger.info(mock_wfr)
+
         self.assertEqual(Library.objects.count(), 2)
         self.assertEqual(LibraryAssociation.objects.count(), 2)
+        self.assertEqual(Readset.objects.count(), 4)
+
+        logger.info(Library.objects.values_list())
+        logger.info(Readset.objects.values_list())
 
     def test_establish_workflow_run_libraries_with_existing_library(self):
         """
@@ -104,8 +111,9 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         """
         self.load_mock_wru_max()
         _ = WorkflowRunFactory()
-        mock_wfr = WorkflowRun.objects.first()
+        mock_wfr: WorkflowRun = WorkflowRun.objects.first()
 
+        # add pre-existing libraries
         l1 = Library.objects.create(
             library_id="L000001",
             orcabus_id="01J5M2J44HFJ9424G7074NKTGN"
@@ -118,11 +126,46 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         logger.info(l1)
         logger.info(l2)
 
+        # add pre-existing readsets
+        rs1 = Readset.objects.create(
+            orcabus_id="READSET123456789ABCDEFGHJK",
+            rgid="AAGCAGTC+ACGCCAAC.1.990101_A00130_0999_BH7TVMDSX7",
+            library_id=l1.library_id,
+            library_orcabus_id=l1.orcabus_id,
+        )
+        rs2 = Readset.objects.create(
+            orcabus_id="READSET234567891ABCDEFGHJK",
+            rgid="AAGCAGTC+ACGCCAAC.2.990101_A00130_0999_BH7TVMDSX7",
+            library_id=l1.library_id,
+            library_orcabus_id=l1.orcabus_id,
+        )
+        rs3 = Readset.objects.create(
+            orcabus_id="READSET345678912ABCDEFGHJK",
+            rgid="CCGCAGTC+TCGCCAAC.1.990101_A00130_0999_BH7TVMDSX7",
+            library_id=l2.library_id,
+            library_orcabus_id=l2.orcabus_id,
+        )
+        rs4 = Readset.objects.create(
+            orcabus_id="READSET456789123ABCDEFGHJK",
+            rgid="CCGCAGTC+TCGCCAAC.2.990101_A00130_0999_BH7TVMDSX7",
+            library_id=l2.library_id,
+            library_orcabus_id=l2.orcabus_id,
+        )
+        logger.info(rs1)
+        logger.info(rs2)
+        logger.info(rs3)
+        logger.info(rs4)
+
         self.assertEqual(LibraryAssociation.objects.count(), 0)
+        self.assertEqual(Readset.objects.count(), 4)
 
         workflow_run.establish_workflow_run_libraries(self.mock_wru_max, mock_wfr)
 
         self.assertEqual(LibraryAssociation.objects.count(), 2)
+        self.assertEqual(Readset.objects.count(), 4)
+
+        logger.info(mock_wfr.readsets.values_list())
+        self.assertEqual(mock_wfr.readsets.values_list().count(), 4)
 
     def test_update_workflow_run_to_new_state(self):
         """
