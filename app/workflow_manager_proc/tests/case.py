@@ -7,7 +7,7 @@ import botocore.session
 from botocore.stub import Stubber
 from django.test import TestCase
 
-from workflow_manager_proc.domain.event import wrsc, aru
+from workflow_manager_proc.domain.event import aru, wru
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -38,15 +38,15 @@ class WorkflowManagerProcUnitTestCase(TestCase):
             file_content = f.read()
             self.event: dict = json.loads(file_content)
 
-    def load_mock_wrsc_max(self):
-        self.load_mock_file(rel_path="fixtures/WRSC_max.json")
-        mock_obj_with_envelope: wrsc.AWSEvent = wrsc.AWSEvent.model_validate(self.event)
-        self.mock_wrsc_max: wrsc.WorkflowRunStateChange = mock_obj_with_envelope.detail
+    def load_mock_wru_max(self):
+        self.load_mock_file(rel_path="fixtures/WRU_max.json")
+        mock_obj_with_envelope: wru.AWSEvent = wru.AWSEvent.model_validate(self.event)
+        self.mock_wru_max: wru.WorkflowRunUpdate = mock_obj_with_envelope.detail
 
-    def load_mock_wrsc_min(self):
-        self.load_mock_file(rel_path="fixtures/WRSC_min.json")
-        mock_obj_with_envelope: wrsc.AWSEvent = wrsc.AWSEvent.model_validate(self.event)
-        self.mock_wrsc_min: wrsc.WorkflowRunStateChange = mock_obj_with_envelope.detail
+    def load_mock_wru_min(self):
+        self.load_mock_file(rel_path="fixtures/WRU_min.json")
+        mock_obj_with_envelope: wru.AWSEvent = wru.AWSEvent.model_validate(self.event)
+        self.mock_wru_min: wru.WorkflowRunUpdate = mock_obj_with_envelope.detail
 
     def load_mock_wrsc_legacy(self):
         self.load_mock_file(rel_path="fixtures/WRSC_legacy.json")

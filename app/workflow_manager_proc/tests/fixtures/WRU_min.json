@@ -1,17 +1,13 @@
 {
   "version": "0",
   "id": "f71bbbbb-5b36-40c2-f7dc-804ca6270cd6",
-  "detail-type": "WorkflowRunStateChange",
+  "detail-type": "WorkflowRunUpdate",
   "source": "orcabus.workflowmanager",
   "account": "123456789012",
   "time": "2024-05-01T09:25:44Z",
   "region": "ap-southeast-2",
   "resources": [],
   "detail": {
-    "id": "97534601940f17ebcfee02enotsecret",
-    "version": "1.0.0",
-    "timestamp": "2025-05-01T09:25:44Z",
-    "orcabusId": "wfr.01J5M2J44HFJ9424G7074HHHHH",
     "portalRunId": "202405012397gatc",
     "workflowRunName": "540424_A01001_0193_BBBBMMDRX5 FASTQ Copy",
     "workflow": {
@@ -19,10 +15,6 @@
       "name": "bssh_icav2_fastq_copy",
       "version": "1.2.3",
       "executionEngine": "ICA"
-    },
-    "analysisRun": {
-      "orcabusId": "anr.01J5M2JFE1JPYV62RYQEG99RUN",
-      "name": "wgts-dna"
     },
     "libraries": [
       {
@@ -34,16 +26,6 @@
         "orcabusId": "lib.01J5M2JFE1JPYV62RYQEG99CP5"
       }
     ],
-    "status": "READY",
-    "payload": {
-      "orcabusId": "pld.01J5M2J44HFJ9424G7074PPPPP",
-      "refId": "99995678-238c-4200-b632-d5dd8c8db94a",
-      "version": "0.1.0",
-      "data": {
-        "projectId": "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx",
-        "executionId": "12345678-238c-4200-b632-d5dd8c8db94a",
-        "outputUriPrefix": "icav2://12345678-32d3-4c76-a324-c6a85dae87b5/ilmn_primary/"
-      }
-    }
+    "status": "DRAFT"
   }
 }

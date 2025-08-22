@@ -108,7 +108,7 @@ export class WorkflowManagerStack extends Stack {
     this.createMigrationHandler();
     this.createApiHandlerAndIntegration(props);
     this.createLegacyWrscEventHandler();
-    this.createWrscEventHandler();
+    this.createWruEventHandler();
   }
 
   private createPythonFunction(name: string, props: object): PythonFunction {
@@ -220,9 +220,9 @@ export class WorkflowManagerStack extends Stack {
     });
   }
 
-  private createWrscEventHandler() {
-    const procFn: PythonFunction = this.createPythonFunction('HandleWrscEvent', {
-      index: 'workflow_manager_proc/lambdas/handle_wrsc_event.py',
+  private createWruEventHandler() {
+    const procFn: PythonFunction = this.createPythonFunction('HandleWruEvent', {
+      index: 'workflow_manager_proc/lambdas/handle_wru_event.py',
       handler: 'handler',
       timeout: Duration.seconds(28),
     });
@@ -230,7 +230,7 @@ export class WorkflowManagerStack extends Stack {
     this.mainBus.grantPutEventsTo(procFn);
 
     const eventRule = new Rule(this, 'EventRule2', {
-      description: 'Rule to send WorkflowRunStateChange events to the HandleWrscEvent Lambda',
+      description: 'Rule to send WorkflowRunUpdate events to the HandleWruEvent Lambda',
       eventBus: this.mainBus,
     });
 
@@ -239,11 +239,7 @@ export class WorkflowManagerStack extends Stack {
       // See https://github.com/aws/aws-cdk/issues/30220
       // @ts-expect-error AWS CDK types don't support 'anything-but' pattern
       source: [{ 'anything-but': 'orcabus.workflowmanager' }],
-      detailType: ['WorkflowRunStateChange'],
-      detail: {
-        id: [{ exists: true }],
-        workflow: [{ exists: true }],
-      },
+      detailType: ['WorkflowRunUpdate'],
     });
   }
 }

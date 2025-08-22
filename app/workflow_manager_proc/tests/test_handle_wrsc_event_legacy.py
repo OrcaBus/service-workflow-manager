@@ -1,4 +1,3 @@
-import json
 import os
 from unittest import mock
 
@@ -22,14 +21,9 @@ class LegacyWrscEventHandlerUnitTests(WorkflowManagerProcUnitTestCase):
         """
         python manage.py test workflow_manager_proc.tests.test_handle_wrsc_event_legacy.LegacyWrscEventHandlerUnitTests.test_handle_wrsc_event_legacy
         """
-        script_dir = os.path.dirname(__file__)
-        rel_path = "fixtures/WRSC_legacy.json"
-        logger.info(f"Loading test event data from {rel_path}")
-        abs_file_path = os.path.join(script_dir, rel_path)
-        with open(abs_file_path) as f:
-            file_content = f.read()
+        self.load_mock_wrsc_legacy()
 
-        event_dict = json.loads(file_content)
+        event_dict = self.event
 
         handle_wrsc_event_legacy.handler(event_dict, None)
 
@@ -43,14 +37,9 @@ class LegacyWrscEventHandlerUnitTests(WorkflowManagerProcUnitTestCase):
         """
         python manage.py test workflow_manager_proc.tests.test_handle_wrsc_event_legacy.LegacyWrscEventHandlerUnitTests.test_handle_wrsc_event_legacy_with_new_schema
         """
-        script_dir = os.path.dirname(__file__)
-        rel_path = "fixtures/WRSC_max.json"
-        logger.info(f"Loading test event data from {rel_path}")
-        abs_file_path = os.path.join(script_dir, rel_path)
-        with open(abs_file_path) as f:
-            file_content = f.read()
+        self.load_mock_wru_max()
 
-        event_dict = json.loads(file_content)
+        event_dict = self.event
 
         try:
 

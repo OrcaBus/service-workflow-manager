@@ -15,7 +15,7 @@ from workflow_manager.models import (
     Status, Payload,
 )
 from workflow_manager.models.utils import WorkflowRunUtil
-from workflow_manager_proc.domain.event import wrsc
+from workflow_manager_proc.domain.event import wrsc, wru
 from workflow_manager_proc.services.event_utils import emit_event, EventType
 
 logger = logging.getLogger()
@@ -32,7 +32,7 @@ def sanitize_orcabus_id(orcabus_id: str) -> str:
 
 
 @transaction.atomic
-def create_workflow_run(event: wrsc.WorkflowRunStateChange):
+def create_workflow_run(event: wru.WorkflowRunUpdate):
     # check state list
     out_wrsc = _create_workflow_run(event)
     if out_wrsc:
@@ -46,7 +46,7 @@ def create_workflow_run(event: wrsc.WorkflowRunStateChange):
     return out_wrsc
 
 
-def _create_workflow_run(event: wrsc.WorkflowRunStateChange) -> wrsc.WorkflowRunStateChange | None:
+def _create_workflow_run(event: wru.WorkflowRunUpdate) -> wrsc.WorkflowRunStateChange | None:
     """
     Parameters:
         event: JSON event conform to WorkflowRunStateChange
@@ -87,7 +87,7 @@ def _create_workflow_run(event: wrsc.WorkflowRunStateChange) -> wrsc.WorkflowRun
     return out_wrsc
 
 
-def create_or_get_workflow(event: wrsc.WorkflowRunStateChange):
+def create_or_get_workflow(event: wru.WorkflowRunUpdate):
     try:
         logger.info(f"Looking for Workflow ({event.workflow}).")
         workflow: Workflow = Workflow.objects.get(
@@ -109,7 +109,7 @@ def create_or_get_workflow(event: wrsc.WorkflowRunStateChange):
     return workflow
 
 
-def create_or_get_workflow_run(event: wrsc.WorkflowRunStateChange, workflow: Workflow) -> WorkflowRun:
+def create_or_get_workflow_run(event: wru.WorkflowRunUpdate, workflow: Workflow) -> WorkflowRun:
     try:
         wfr: WorkflowRun = WorkflowRun.objects.get(portal_run_id=event.portalRunId)
     except Exception:
@@ -134,7 +134,7 @@ def create_or_get_workflow_run(event: wrsc.WorkflowRunStateChange, workflow: Wor
     return wfr
 
 
-def establish_workflow_run_libraries(event: wrsc.WorkflowRunStateChange, wfr: WorkflowRun) -> None:
+def establish_workflow_run_libraries(event: wru.WorkflowRunUpdate, wfr: WorkflowRun) -> None:
     for input_rec in event.libraries:
         # make sure OrcaBus ID format is sanitized (without prefix) for lookups
         orca_id = sanitize_orcabus_id(input_rec.orcabusId)
@@ -156,11 +156,11 @@ def establish_workflow_run_libraries(event: wrsc.WorkflowRunStateChange, wfr: Wo
         )
 
 
-def update_workflow_run_to_new_state(event: wrsc.WorkflowRunStateChange, wfr: WorkflowRun) -> (bool, State):
+def update_workflow_run_to_new_state(event: wru.WorkflowRunUpdate, wfr: WorkflowRun) -> tuple[bool, State]:
     # Create a new State sub (not persisted)
     new_state = State(
         status=event.status,
-        timestamp=event.timestamp,
+        timestamp=event.timestamp if event.timestamp else timezone.now(),
     )
 
     # Handle the payload
