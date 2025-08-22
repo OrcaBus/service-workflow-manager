@@ -331,6 +331,17 @@ def get_wrsc_hash(out_wrsc: wrsc.WorkflowRunStateChange) -> str:
         for lib in out_wrsc.libraries:
             keywords.append(lib.orcabusId)
 
+            # add readsets
+            if lib.readsets:
+                for rs in lib.readsets:
+                    keywords.append(rs.orcabusId)
+
+    if out_wrsc.computeEnv:
+        keywords.append(out_wrsc.computeEnv)
+
+    if out_wrsc.storageEnv:
+        keywords.append(out_wrsc.storageEnv)
+
     # filter out any None values
     keywords = list(filter(None, keywords))
     # sort the list of keywords to avoid issues with record order

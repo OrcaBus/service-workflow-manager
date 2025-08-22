@@ -310,6 +310,8 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
                 version=self.mock_wru_max.payload.version,
                 data=self.mock_wru_max.payload.data,
             ),
+            computeEnv=self.mock_wru_max.computeEnv,
+            storageEnv=self.mock_wru_max.storageEnv,
         )
 
         hash_id = workflow_run.get_wrsc_hash(mock_wrsc)
@@ -322,4 +324,4 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         mock_wrsc.id = ""
         recomputed_hash_id = workflow_run.get_wrsc_hash(mock_wrsc)
         logger.info(recomputed_hash_id)
-        self.assertEqual(recomputed_hash_id, "75b9ae475a7da9d4706cba639ef8ffbe")
+        self.assertEqual(recomputed_hash_id, "c245d06133737ec8c080a2792fd54e2a")
