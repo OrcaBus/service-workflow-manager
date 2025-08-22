@@ -12,7 +12,7 @@ from workflow_manager.models import (
     Library,
     LibraryAssociation,
     State,
-    Status, Payload,
+    Status, Payload, Readset,
 )
 from workflow_manager.models.utils import WorkflowRunUtil
 from workflow_manager_proc.domain.event import wrsc, wru
@@ -128,13 +128,15 @@ def create_or_get_workflow_run(event: wru.WorkflowRunUpdate, workflow: Workflow)
         #       Later changes will currently be ignored.
 
         # if the workflow run is linked to library record(s), create the association(s)
-        if event.libraries:
-            establish_workflow_run_libraries(event, wfr)
+        establish_workflow_run_libraries(event, wfr)
 
     return wfr
 
 
 def establish_workflow_run_libraries(event: wru.WorkflowRunUpdate, wfr: WorkflowRun) -> None:
+    if not event.libraries:
+        return
+
     for input_rec in event.libraries:
         # make sure OrcaBus ID format is sanitized (without prefix) for lookups
         orca_id = sanitize_orcabus_id(input_rec.orcabusId)
@@ -154,6 +156,17 @@ def establish_workflow_run_libraries(event: wru.WorkflowRunUpdate, wfr: Workflow
             association_date=timezone.now(),
             status=ASSOCIATION_STATUS,
         )
+
+        # if the library is linked to readset record(s), create the association(s)
+        if input_rec.readsets:
+            for rs in input_rec.readsets:
+                rs_db, _ = Readset.objects.get_or_create(
+                    orcabus_id=sanitize_orcabus_id(rs.orcabusId),
+                    rgid=rs.rgid,
+                    library_id=db_lib.library_id,
+                    library_orcabus_id=db_lib.orcabus_id
+                )
+                wfr.readsets.add(rs_db)
 
 
 def update_workflow_run_to_new_state(event: wru.WorkflowRunUpdate, wfr: WorkflowRun) -> tuple[bool, State]:

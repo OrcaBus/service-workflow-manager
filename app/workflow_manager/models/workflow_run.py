@@ -31,8 +31,7 @@ class WorkflowRun(OrcaBusBaseModel):
     objects = WorkflowRunManager()
 
     def __str__(self):
-        return f"ID: {self.orcabus_id}, portal_run_id: {self.portal_run_id}, workflow_run_name: {self.workflow_run_name}, " \
-               f"workflowRun: {self.workflow.workflow_name} "
+        return f"ID: {self.orcabus_id}, portal_run_id: {self.portal_run_id}, workflow_run_name: {self.workflow_run_name}"
 
     def get_all_states(self):
         # retrieve all states (DB records rather than a queryset)
