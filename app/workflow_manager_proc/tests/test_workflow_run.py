@@ -4,7 +4,8 @@ from unittest import mock
 from mockito import when, unstub
 
 from workflow_manager.models import Workflow, WorkflowRun, Library, LibraryAssociation, State, Payload, AnalysisRun, \
-    Readset
+    Readset, RunContext
+from workflow_manager.models.run_context import RunContextUseCase
 from workflow_manager.tests.factories import WorkflowRunFactory
 from workflow_manager_proc.domain.event import wrsc
 from workflow_manager_proc.services import workflow_run
@@ -167,6 +168,51 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         logger.info(mock_wfr.readsets.values_list())
         self.assertEqual(mock_wfr.readsets.values_list().count(), 4)
 
+    def test_establish_workflow_run_contexts(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_establish_workflow_run_contexts
+        """
+        self.load_mock_wru_max()
+        _ = WorkflowRunFactory()
+        mock_wfr = WorkflowRun.objects.first()
+
+        self.assertEqual(RunContext.objects.count(), 0)
+
+        workflow_run.establish_workflow_run_contexts(self.mock_wru_max, mock_wfr)
+
+        logger.info(mock_wfr)
+        logger.info(RunContext.objects.values_list())
+
+        self.assertEqual(RunContext.objects.count(), 2)
+
+    def test_establish_workflow_run_contexts_with_existing(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_establish_workflow_run_contexts_with_existing
+        """
+        self.load_mock_wru_max()
+        _ = WorkflowRunFactory()
+        mock_wfr = WorkflowRun.objects.first()
+
+        # add pre-existing RunContext
+        ctx1 = RunContext.objects.create(
+            name="clinical",
+            usecase=RunContextUseCase.COMPUTE.value,
+        )
+        ctx2 = RunContext.objects.create(
+            name="clinical",
+            usecase=RunContextUseCase.STORAGE.value,
+        )
+        self.assertEqual(RunContext.objects.count(), 2)
+        logger.info(ctx1)
+        logger.info(ctx2)
+
+        workflow_run.establish_workflow_run_contexts(self.mock_wru_max, mock_wfr)
+
+        logger.info(mock_wfr)
+        logger.info(RunContext.objects.values_list())
+
+        self.assertEqual(RunContext.objects.count(), 2)
+
     def test_update_workflow_run_to_new_state(self):
         """
         python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_update_workflow_run_to_new_state
@@ -211,7 +257,7 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         success, new_state = workflow_run.update_workflow_run_to_new_state(self.mock_wru_max, wfr_persisted_in_db)
 
         out_wrsc = workflow_run.map_workflow_run_new_state_to_wrsc(wfr_persisted_in_db, new_state)
-        logger.info(out_wrsc)
+        logger.info(out_wrsc.model_dump_json())
 
         validated_out_wrsc = wrsc.WorkflowRunStateChange.model_validate(out_wrsc)
 
@@ -264,6 +310,8 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
                 version=self.mock_wru_max.payload.version,
                 data=self.mock_wru_max.payload.data,
             ),
+            computeEnv=self.mock_wru_max.computeEnv,
+            storageEnv=self.mock_wru_max.storageEnv,
         )
 
         hash_id = workflow_run.get_wrsc_hash(mock_wrsc)
@@ -276,4 +324,4 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         mock_wrsc.id = ""
         recomputed_hash_id = workflow_run.get_wrsc_hash(mock_wrsc)
         logger.info(recomputed_hash_id)
-        self.assertEqual(recomputed_hash_id, "75b9ae475a7da9d4706cba639ef8ffbe")
+        self.assertEqual(recomputed_hash_id, "c245d06133737ec8c080a2792fd54e2a")

@@ -14,6 +14,7 @@ from workflow_manager.models import (
     State,
     Status, Payload, Readset,
 )
+from workflow_manager.models.run_context import RunContext, RunContextUseCase, RunContextStatus
 from workflow_manager.models.utils import WorkflowRunUtil
 from workflow_manager_proc.domain.event import wrsc, wru
 from workflow_manager_proc.services.event_utils import emit_event, EventType
@@ -130,6 +131,9 @@ def create_or_get_workflow_run(event: wru.WorkflowRunUpdate, workflow: Workflow)
         # if the workflow run is linked to library record(s), create the association(s)
         establish_workflow_run_libraries(event, wfr)
 
+        # if the workflow run has contexts, create the association(s)
+        establish_workflow_run_contexts(event, wfr)
+
     return wfr
 
 
@@ -167,6 +171,24 @@ def establish_workflow_run_libraries(event: wru.WorkflowRunUpdate, wfr: Workflow
                     library_orcabus_id=db_lib.orcabus_id
                 )
                 wfr.readsets.add(rs_db)
+
+
+def establish_workflow_run_contexts(event: wru.WorkflowRunUpdate, wfr: WorkflowRun) -> None:
+    # process computeEnv
+    if event.computeEnv:
+        compute_run_ctx, _ = RunContext.objects.get_or_create(
+            name=event.computeEnv,
+            usecase=RunContextUseCase.COMPUTE.value,
+        )
+        wfr.contexts.add(compute_run_ctx)
+
+    # process storageEnv
+    if event.storageEnv:
+        storage_run_ctx, _ = RunContext.objects.get_or_create(
+            name=event.storageEnv,
+            usecase=RunContextUseCase.STORAGE.value,
+        )
+        wfr.contexts.add(storage_run_ctx)
 
 
 def update_workflow_run_to_new_state(event: wru.WorkflowRunUpdate, wfr: WorkflowRun) -> tuple[bool, State]:
@@ -215,6 +237,22 @@ def map_workflow_run_new_state_to_wrsc(wfr: WorkflowRun, new_state: State) -> wr
                 orcabusId=in_lib.orcabus_id,
                 libraryId=in_lib.library_id,
             )
+
+            # Set readsets
+            if wfr.readsets:
+                rs_qs = wfr.readsets.filter(
+                    library_id=in_lib.library_id,
+                    library_orcabus_id=in_lib.orcabus_id,
+                )
+                if rs_qs.exists():
+                    rs_list = []
+                    for rs in rs_qs.all():
+                        rs_list.append(wrsc.Readset(
+                            orcabusId=rs.orcabus_id,
+                            rgid=rs.rgid,
+                        ))
+                    if rs_list:
+                        out_lib.readsets = rs_list
             lib_list.append(out_lib)
         if lib_list:
             out_wrsc.libraries = lib_list
@@ -236,6 +274,26 @@ def map_workflow_run_new_state_to_wrsc(wfr: WorkflowRun, new_state: State) -> wr
             version=new_state.payload.version,
             data=new_state.payload.data
         )
+
+    # Set RunContext
+    if wfr.contexts:
+        # search active compute context, get the most recent one if exists
+        compute_qs = wfr.contexts.filter(
+            usecase=RunContextUseCase.COMPUTE.value,
+            status=RunContextStatus.ACTIVE.value
+        ).order_by("-orcabus_id")
+        if compute_qs.exists():
+            compute_ctx: RunContext = compute_qs.first()
+            out_wrsc.computeEnv = compute_ctx.name
+
+        # search active storage context, get the most recent one if exists
+        storage_qs = wfr.contexts.filter(
+            usecase=RunContextUseCase.STORAGE.value,
+            status=RunContextStatus.ACTIVE.value
+        ).order_by("-orcabus_id")
+        if storage_qs.exists():
+            storage_ctx: RunContext = storage_qs.first()
+            out_wrsc.storageEnv = storage_ctx.name
 
     # Set ID by applying hash function
     out_wrsc.id = get_wrsc_hash(out_wrsc)
@@ -272,6 +330,17 @@ def get_wrsc_hash(out_wrsc: wrsc.WorkflowRunStateChange) -> str:
     if out_wrsc.libraries:
         for lib in out_wrsc.libraries:
             keywords.append(lib.orcabusId)
+
+            # add readsets
+            if lib.readsets:
+                for rs in lib.readsets:
+                    keywords.append(rs.orcabusId)
+
+    if out_wrsc.computeEnv:
+        keywords.append(out_wrsc.computeEnv)
+
+    if out_wrsc.storageEnv:
+        keywords.append(out_wrsc.storageEnv)
 
     # filter out any None values
     keywords = list(filter(None, keywords))
