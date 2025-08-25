@@ -42,3 +42,20 @@ class WruSerdeUnitTests(WorkflowManagerProcUnitTestCase):
         logger.info(wrsc_envelope2.model_dump(by_alias=True))
 
         self.assertEqual(wrsc_envelope1, wrsc_envelope2)
+
+    def test_wru_payload_without_ref_id(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_wru.WruSerdeUnitTests.test_wru_payload_without_ref_id
+        """
+        self.load_mock_wru_max()
+
+        event: dict = self.event
+        del event['detail']['payload']['refId']
+
+        logger.info(event['detail']['payload'].keys())
+
+        self.assertNotIn('refId', event['detail']['payload'].keys())
+
+        mock_obj_with_envelope: wru.AWSEvent = wru.AWSEvent.model_validate(event)
+
+        self.assertIsNotNone(mock_obj_with_envelope)

@@ -201,7 +201,7 @@ def update_workflow_run_to_new_state(event: wru.WorkflowRunUpdate, wfr: Workflow
     # Handle the payload
     if event.payload:
         new_state.payload = Payload(
-            payload_ref_id=str(uuid.uuid4()),
+            payload_ref_id=event.payload.refId if event.payload.refId else str(uuid.uuid4()),
             version=event.payload.version,
             data=event.payload.data,
         )
