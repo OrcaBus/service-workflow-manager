@@ -24,6 +24,7 @@ import {
   DB_CLUSTER_IDENTIFIER,
   DB_CLUSTER_RESOURCE_ID_PARAMETER_NAME,
 } from '@orcabus/platform-cdk-constructs/shared-config/database';
+import { WorkflowManagerSchemaRegistry } from './schema';
 
 export interface WorkflowManagerStackProps extends StackProps {
   lambdaSecurityGroupName: string;
@@ -58,6 +59,9 @@ export class WorkflowManagerStack extends Stack {
       props.lambdaSecurityGroupName,
       this.vpc
     );
+
+    // Create the registry and publish the schemas
+    new WorkflowManagerSchemaRegistry(this, 'WorkflowManagerSchemaRegistry');
 
     this.lambdaRole = new Role(this, 'LambdaRole', {
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
