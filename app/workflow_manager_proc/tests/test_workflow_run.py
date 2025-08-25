@@ -240,6 +240,55 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(State.objects.count(), 2)
         self.assertEqual(Payload.objects.count(), 1)
 
+    def test_update_workflow_run_to_new_state_with_ref_id(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_update_workflow_run_to_new_state_with_ref_id
+        """
+        self.load_mock_wru_max()
+
+        # First create wfr with min fixture DRAFT state
+        wfl_persisted_in_db = workflow_run.create_or_get_workflow(self.mock_wru_max)
+        wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(self.mock_wru_max, wfl_persisted_in_db)
+
+        success, state = workflow_run.update_workflow_run_to_new_state(self.mock_wru_max, wfr_persisted_in_db)
+        logger.info(state)
+
+        self.assertTrue(success)
+        self.assertEqual(state.status, 'READY')
+
+        # Verify related entities are created
+        self.assertEqual(State.objects.count(), 1)
+        self.assertEqual(Payload.objects.count(), 1)
+
+        self.assertEqual(Payload.objects.first().payload_ref_id, '99995678-238c-4200-b632-d5dd8c8db94a')
+
+    def test_update_workflow_run_to_new_state_without_ref_id(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_update_workflow_run_to_new_state_without_ref_id
+        """
+        self.load_mock_wru_max()
+
+        # Nullify payload refId
+        self.mock_wru_max.payload.refId = None
+
+        # First create wfr with min fixture DRAFT state
+        wfl_persisted_in_db = workflow_run.create_or_get_workflow(self.mock_wru_max)
+        wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(self.mock_wru_max, wfl_persisted_in_db)
+
+        success, state = workflow_run.update_workflow_run_to_new_state(self.mock_wru_max, wfr_persisted_in_db)
+        logger.info(state)
+
+        self.assertTrue(success)
+        self.assertEqual(state.status, 'READY')
+
+        # Verify related entities are created
+        self.assertEqual(State.objects.count(), 1)
+        self.assertEqual(Payload.objects.count(), 1)
+
+        logger.info(Payload.objects.first().payload_ref_id)
+
+        self.assertNotEqual(Payload.objects.first().payload_ref_id, '99995678-238c-4200-b632-d5dd8c8db94a')
+
     def test_map_workflow_run_new_state_to_wrsc(self):
         """
         python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_map_workflow_run_new_state_to_wrsc
