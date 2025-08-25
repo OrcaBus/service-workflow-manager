@@ -162,7 +162,6 @@ definitions:
     #       e.g. a FAILED state may contain error output, whereas a READY state will have to include all information required to execute the WorkflowRun
     type: object
     required:
-      - refId
       - version
       - data
     properties:

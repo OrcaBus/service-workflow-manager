@@ -136,7 +136,6 @@
     "Payload": {
       "type": "object",
       "required": [
-        "refId",
         "version",
         "data"
       ],
