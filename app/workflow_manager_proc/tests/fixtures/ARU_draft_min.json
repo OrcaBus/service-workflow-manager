@@ -10,9 +10,9 @@
   "detail": {
     "analysisRunName": "TestAnalysisRunName_1",
     "analysis": {
-      "orcabusId": "ana.76J5N2J83RED7387G9374NGDBA",
-      "name": "TestAnalysis1",
-      "version": "0.0.1"
+      "orcabusId": "ana.01K3FSK7ZRED7387G9374NGDBA",
+      "name": "WGS",
+      "version": "1.0"
     },
     "libraries": [
       {

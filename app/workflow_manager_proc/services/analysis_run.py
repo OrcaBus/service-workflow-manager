@@ -14,6 +14,7 @@ from workflow_manager.models.readset import Readset
 from workflow_manager.models.run_context import RunContext, RunContextUseCase
 from workflow_manager.models.utils import Status
 from workflow_manager_proc.domain.event import arsc, aru
+from workflow_manager_proc.services import analysis_run_utils
 from workflow_manager_proc.services.event_utils import emit_event, EventType
 
 logger = logging.getLogger()
@@ -26,9 +27,9 @@ ARSC_SCHEMA_VERSION = "0.0.1"  # TODO: set somewhere more global (and check agai
 @transaction.atomic
 def create_analysis_run(event: aru.AnalysisRunUpdate) -> None:
     db_record = _create_analysis_run(event)
-    arsc = _map_analysis_run_to_arsc(db_record)
+    mapped_arsc = _map_analysis_run_to_arsc(db_record)
     logger.info("Emitting ARSC.")
-    emit_event(event_type=EventType.ARSC, event_bus=EVENT_BUS_NAME, event_json=arsc.model_dump_json())
+    emit_event(event_type=EventType.ARSC, event_bus=EVENT_BUS_NAME, event_json=mapped_arsc.model_dump_json())
     logger.info("ARSC emitted.")
 
 
@@ -46,6 +47,9 @@ def _create_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
         - create a new AnalysisRunStateChange record to be returned as result of the AnalysisRun creation
     """
     logger.info(f"Start processing ARU: {event}")
+    # assert DRAFT status
+    assert event.status.upper() == Status.DRAFT.convention, "AnalysisRunUpdate: Unexpected state!"
+
     analysis_event: aru.Analysis = event.analysis
 
     # We expect the corresponding Analysis to exist
@@ -53,7 +57,7 @@ def _create_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
         logger.info(
             f"Looking for Analysis ({analysis_event.name}:{analysis_event.version}) with id {analysis_event.orcabusId}.")
         analysis_db: Analysis = Analysis.objects.get(
-            orcabus_id=analysis_event.orcabusId
+            orcabus_id = analysis_event.orcabusId
         )
     except Exception as e:
         logger.error("No Analysis record found!")
@@ -103,6 +107,20 @@ def _create_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
                     )
                     analysis_run.readsets.add(db_rs)
 
+        if event.computeEnv:
+            rc = RunContext.objects.get_by_keyword(
+                usecase=RunContextUseCase.COMPUTE.value,
+                name=event.computeEnv
+            ).first()
+            analysis_run.contexts.add(rc)
+
+        if event.storageEnv:
+            rc = RunContext.objects.get_by_keyword(
+                usecase=RunContextUseCase.STORAGE.value,
+                name=event.storageEnv
+            ).first()
+            analysis_run.contexts.add(rc)
+
     logger.info(analysis_run)
     analysis_run.save()
     logger.info("AnalysisRun creation complete.")
@@ -112,9 +130,11 @@ def _create_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
 @transaction.atomic
 def finalise_analysis_run(event: aru.AnalysisRunUpdate):
     db_record = _finalise_analysis_run(event)
-    arsc = _map_analysis_run_to_arsc(db_record)
+    mapped_arsc = _map_analysis_run_to_arsc(db_record)
     logger.info("Emitting ARSC.")
-    emit_event(event_type=EventType.ARSC, event_bus=EVENT_BUS_NAME, event_json=arsc.model_dump_json())
+    emit_event(event_type=EventType.ARSC, event_bus=EVENT_BUS_NAME, event_json=mapped_arsc.model_dump_json())
+    # TODO: add WorkflowRun DRAFT generation for workflows in analysis
+    _create_workflow_runs_for_analysis_run(mapped_arsc)
     logger.info("ARSC emitted.")
 
 
@@ -178,6 +198,7 @@ def _finalise_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
     #       However, on the DB side they are directly linked to the AnalysisRun and not to the Library.
     rss_db = set(analysis_run_db.readsets.all())  # keep track of all Readsets that are already attached
     # Now check each library of the event and check the associated readsets whether they match the DB records
+    logger.info("Finalising associated libraries")
     for l in event.libraries:
         lid = l.libraryId
         lod = l.orcabusId
@@ -186,9 +207,11 @@ def _finalise_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
         assert analysis_run_db.libraries.get(library_id=lid) == analysis_run_db.libraries.get(orcabus_id=lod)
         rss = l.readsets
         for rs in rss:
+            logger.info("Finalising associated readsets")
             if len(rss_db) > 0:
+                logger.info("Readsets exist.")
                 # check event readset against the DB readsets
-                rs_db: Readset = analysis_run_db.readsets.get(rs.orcabusId, None)
+                rs_db: Readset = analysis_run_db.readsets.filter(orcabus_id=rs.orcabusId).first()
                 if rs_db:
                     # if the readset exists already, make sure it's for the same library
                     assert rs_db.library_orcabus_id == lod, "AnalysisRun Readset Library ID does not match!"
@@ -209,6 +232,7 @@ def _finalise_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
     assert len(rss_db) == 0, f"Unmatched readsets for AnalysisRun, {rss_db}!"
 
     # no issues, then associate new status and emit ARSC event
+    logger.info("Finalising associated run state")
     AnalysisRunState(
         analysis_run=analysis_run_db,
         status=Status.READY.convention,
@@ -250,29 +274,30 @@ def _map_analysis_run_to_arsc(analysis_run: AnalysisRun) -> arsc.AnalysisRunStat
     return arsc_object
 
 
-def get_arsc_hash(arsc: arsc.AnalysisRunStateChange) -> str:
+def get_arsc_hash(ar_state: arsc.AnalysisRunStateChange) -> str:
     # if there is already a hash then we simply return that
     # TODO: allow force creation
     # TODO: include OrcaBus IDs or rely on entity values only?
-    if arsc.id:
-        return arsc.id
+    if ar_state.id:
+        logger.info("ARSC already has a hash id. Skipping calculation.")
+        return ar_state.id
 
     # extract valuable keys from ARSC
     keywords = list()
 
     # ARSC values
-    keywords.append(arsc.version)
-    keywords.append(arsc.orcabusId)
+    keywords.append(ar_state.version)
+    keywords.append(ar_state.orcabusId)
     # keywords.append(arsc.timestamp.isoformat())  # ignoring time changes for now
-    keywords.append(arsc.status)
-    keywords.append(arsc.analysisRunName)
-    keywords.append(arsc.computeEnv)
-    keywords.append(arsc.storageEnv)
-    keywords.append(arsc.analysis.orcabusId)
+    keywords.append(ar_state.status)
+    keywords.append(ar_state.analysisRunName)
+    keywords.append(ar_state.computeEnv)
+    keywords.append(ar_state.storageEnv)
+    keywords.append(ar_state.analysis.orcabusId)
 
     # add libraries and their readsets
-    if arsc.libraries:
-        for lib in arsc.libraries:
+    if ar_state.libraries:
+        for lib in ar_state.libraries:
             keywords.append(lib.orcabusId)
             if lib.readsets:
                 for readset in lib.readsets:
@@ -282,6 +307,7 @@ def get_arsc_hash(arsc: arsc.AnalysisRunStateChange) -> str:
     keywords = list(filter(None, keywords))
     # sort the list of keywords to avoid issues with record order
     keywords.sort()
+    logger.info(f"ANR hash keys: {keywords}")
 
     # create hash value
     md5_object = hashlib.md5()
@@ -289,3 +315,18 @@ def get_arsc_hash(arsc: arsc.AnalysisRunStateChange) -> str:
         md5_object.update(key.encode("utf-8"))
 
     return md5_object.hexdigest()
+
+
+def _create_workflow_runs_for_analysis_run(analysis_run: arsc.AnalysisRunStateChange) -> None:
+    """
+    Create WorkflowRun records for the AnalysisRun based on its state transition to READY.
+    Args:
+        analysis_run: the AnalysisRunStateChange announcing the READY state of the AnalysisRun to create WorkflowRuns for. Note: has to be READY state.
+    Returns: None. Returns are handled internally via event emissions if/when required.
+    """
+    # assert we operate on the correct state
+    assert analysis_run.status.upper() == Status.READY.convention, "Expected READY state!"
+
+    # TODO: handle the case where we receive the same READY event multiple times (don't want to create WorkflowRun records twice)
+    # then create the WorkflowRun records for this AnalysisRun
+    analysis_run_utils.create_workflows_runs_from_analysis_run(analysis_run)

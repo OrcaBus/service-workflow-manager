@@ -23,6 +23,7 @@ ANALYSIS_1_OID = "ana.76J5N2J83RED7387G9374NGDBA"
 
 
 class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
+    fixtures = ['./workflow_manager_proc/tests/fixtures/aru_test_fixtures.json', ]
 
     def setUp(self) -> None:
         self.env_mock = mock.patch.dict(os.environ, {"EVENT_BUS_NAME": "FooBus"})
@@ -34,164 +35,86 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         # self.clean_base_entities()
         super().tearDown()
 
-    def setup_base_entities(self) -> None:
-        # prepare basic prerequisites that are expected to be preconfigured in a real DB
-        # e.g. Analysis, Libraries, AnalysisContexts, ...
-        Analysis(
-            orcabus_id=ANALYSIS_1_OID,
-            analysis_name=ANALYSIS_1_NAME,
-            analysis_version="0.0.1",
-            description="Lorem Ipsum is simply dumb",
-            status="ACTIVE"
-        ).save()
-        Library(
-            orcabus_id="lib.123456789ABCDEFGHJKMNPQRST",
-            library_id="L000001"
-        ).save()
-        Library(
-            orcabus_id="lib.223456789ABCDEFGHJKMNPQRST",
-            library_id="L000002"
-        ).save()
-        RunContext(
-            name="research",
-            usecase=AnalysisContextUseCase.COMPUTE.value,
-            description="Test Compute Context - Research",
-            status="ACTIVE"
-        ).save()
-        RunContext(
-            name="research",
-            usecase=AnalysisContextUseCase.STORAGE.value,
-            description="Test Storage Context - Research",
-            status="ACTIVE"
-        ).save()
-
-    def setup_aru_ready(self) -> None:
-        self.setup_base_entities()
-
-        analysis = Analysis.objects.get(orcabus_id=ANALYSIS_1_OID)
-        lib1 = Library.objects.get(library_id="L000001")
-        lib2 = Library.objects.get(library_id="L000002")
-        compute_context = RunContext.objects.get(name="research", usecase=AnalysisContextUseCase.COMPUTE.value)
-        storage_context = RunContext.objects.get(name="research", usecase=AnalysisContextUseCase.STORAGE.value)
-
-        analysis_run = AnalysisRun(
-            orcabus_id="anr.ANR123456789ABCDEFGHJKMNPQ",
-            analysis_run_name="TestAnalysisRunName_1",
-            analysis=analysis,
-        )
-        analysis_run.contexts.add(compute_context)
-        analysis_run.contexts.add(storage_context)
-        analysis_run.libraries.add(lib1)
-        analysis_run.libraries.add(lib2)
-        analysis_run.save()
-        AnalysisRunState(
-            analysis_run=analysis_run,
-            status=Status.DRAFT.convention,
-            timestamp=make_aware(datetime.datetime.strptime("01/05/2025 6:00", "%m/%d/%Y %H:%M"))
-        ).save()
-
-    def clean_base_entities(self) -> None:
-        Analysis.objects.all().delete()
-        AnalysisContext.objects.all().delete()
-        AnalysisRun.objects.all().delete()
-        RunContext.objects.all().delete()
-        AnalysisRunState.objects.all().delete()
-        Library.objects.all().delete()
-
     def test_aru_draft_min(self):
         """
         python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_aru_draft_min
         """
         self.load_mock_aru_draft_min()
-
-        aru_event = self.mock_aru_draft_min
-        self.assertIsNotNone(aru_event)
-
-        # Set up the required base entities
-        self.setup_base_entities()
+        aru_analysis_run = self.mock_aru_draft_min
+        self.assertIsNotNone(aru_analysis_run)
 
         logger.info("Testing DB record creation from event...")
-        db_analysis_run = _create_analysis_run(aru_event)
+        db_analysis_run = _create_analysis_run(aru_analysis_run)
         self.assertIsNotNone(db_analysis_run)
-        self.assertEqual(db_analysis_run.analysis.analysis_name, ANALYSIS_1_NAME)
+        self.assertEqual(db_analysis_run.analysis.analysis_name, "WGS")
+        self.assertEqual(db_analysis_run.analysis.analysis_version, "1.0")
         self.assertEqual(db_analysis_run.analysis_run_name, "TestAnalysisRunName_1")
         self.assertEqual(db_analysis_run.get_latest_state().status, Status.DRAFT.convention)
+        self.assertEqual(db_analysis_run.contexts.count(), 0)
+        self.assertEqual(AnalysisRun.objects.count(), 1)
 
         logger.info("ARSC event creation from DB record...")
         arsc_event = _map_analysis_run_to_arsc(db_analysis_run)
         self.assertIsNotNone(arsc_event)
+        # check whether the hash id was set properly
         test_id = get_arsc_hash(arsc_event)
         self.assertEqual(test_id, arsc_event.id)
-        # TODO: how to test that the id is stable / does not change?
-        # NOTE: we can't really test it as the new generation of the AnalysisRun record
-        #       will assign a new OrcaBus ID each time.
-
-        logger.info("ARSC event created: ")
-        logger.info(arsc.AnalysisRunStateChange.model_dump_json(arsc_event))
+        # NOTE: We cannot directly test the hash id as the OrcaBus ID of the generated AnalysisRun
+        #       will constantly change with every new generation. Therefore we overwrite it with a
+        #       fixed ID to make the generated hash stable. This allows testing of the rest of the
+        #       elements that make up the hash.
+        # NOTE: We also have to reset the has id assigned above to allow it to be recalculated
+        arsc_event.orcabusId = "anr.11223344556677889900TEST01"
+        arsc_event.id = None  # reset the previously assigned hash id
+        testable_hash_id = get_arsc_hash(arsc_event)
+        self.assertEqual(testable_hash_id, "21547fb4fe7e4ca2454eddd656065613")
 
     def test_aru_draft_max(self):
         """
         python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_aru_draft_max
         """
         self.load_mock_aru_draft_max()
-
-        aru_event = self.mock_aru_draft_max
-        self.assertIsNotNone(aru_event)
-
-        # Set up the required base entities
-        self.setup_base_entities()
+        aru_analysis_run = self.mock_aru_draft_max
+        self.assertIsNotNone(aru_analysis_run)
 
         logger.info("Testing DB record creation from event...")
-        db_analysis_run = _create_analysis_run(aru_event)
+        db_analysis_run = _create_analysis_run(aru_analysis_run)
         self.assertIsNotNone(db_analysis_run)
-        self.assertEqual(db_analysis_run.analysis.analysis_name, ANALYSIS_1_NAME)
+        self.assertEqual(db_analysis_run.analysis.analysis_name, "WGS")
+        self.assertEqual(db_analysis_run.analysis.analysis_version, "2.0")
         self.assertEqual(db_analysis_run.analysis_run_name, "TestAnalysisRunName_1")
         self.assertEqual(db_analysis_run.get_latest_state().status, Status.DRAFT.convention)
+        self.assertEqual(db_analysis_run.contexts.count(), 2)
+        self.assertEqual(AnalysisRun.objects.count(), 1)
 
         logger.info("ARSC event creation from DB record...")
         arsc_event = _map_analysis_run_to_arsc(db_analysis_run)
         self.assertIsNotNone(arsc_event)
+        # check whether the hash id was set properly
         test_id = get_arsc_hash(arsc_event)
         self.assertEqual(test_id, arsc_event.id)
-        # TODO: how to test that the id is stable / does not change?
-        # NOTE: we can't really test it as the new generation of the AnalysisRun record
-        #       will assign a new OrcaBus ID each time.
-
-        logger.info("ARSC event created: ")
-        logger.info(arsc.AnalysisRunStateChange.model_dump_json(arsc_event))
+        # NOTE: We cannot directly test the hash id as the OrcaBus ID of the generated AnalysisRun
+        #       will constantly change with every new generation. Therefore we overwrite it with a
+        #       fixed ID to make the generated hash stable. This allows testing of the rest of the
+        #       elements that make up the hash.
+        # NOTE: We also have to reset the has id assigned above to allow it to be recalculated
+        arsc_event.orcabusId = "anr.11223344556677889900TEST01"
+        arsc_event.id = None  # reset the previously assigned hash id
+        testable_hash_id = get_arsc_hash(arsc_event)
+        self.assertEqual(testable_hash_id, "e11b1d7bcdb57c5475c3f56f919c836e")
 
     def test_aru_ready_max(self):
         """
         python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_aru_ready_max
         """
+
+        # Now run the READY event
         self.load_mock_aru_ready_max()
+        aru_analysis_run = self.mock_aru_ready_max
+        self.assertIsNotNone(aru_analysis_run)
 
-        aru_event = self.mock_aru_ready_max
-        self.assertIsNotNone(aru_event)
-
-        # Before we can process the event we need to fulfil its requirements
-        # This event expects to finalise an existing record
-        self.setup_aru_ready()
-
-        logger.info("Testing DB record update from event...")
-        db_analysis_run = _finalise_analysis_run(aru_event)
-        self.assertIsNotNone(db_analysis_run)
-        self.assertEqual(db_analysis_run.analysis.analysis_name, ANALYSIS_1_NAME)
-        self.assertEqual(db_analysis_run.analysis_run_name, "TestAnalysisRunName_1")
-        # the state has to be READY now, as we processed a finalisation event
-        self.assertEqual(db_analysis_run.get_latest_state().status, Status.READY.convention)
-
-        logger.info("ARSC event creation from DB record...")
-        arsc_event = _map_analysis_run_to_arsc(db_analysis_run)
-        self.assertIsNotNone(arsc_event)
-        test_id = get_arsc_hash(arsc_event)
-        self.assertEqual(test_id, arsc_event.id)
-        # TODO: how to test that the id is stable / does not change?
-        # NOTE: we can't really test it as the new generation of the AnalysisRun record
-        #       will assign a new OrcaBus ID each time.
-
-        logger.info("ARSC event created: ")
-        logger.info(arsc.AnalysisRunStateChange.model_dump_json(arsc_event))
+        logger.info("Testing DB record creation from event...")
+        self.assertRaises(AnalysisRun.DoesNotExist, _finalise_analysis_run, aru_analysis_run)
 
     def test_aru_draft_to_ready_1(self):
         """
@@ -200,33 +123,52 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         Test the AnalysisRun creation via ARU DRAFT event and finalisation via following ARU READY event.
         This should test the common case of AnalysisRun creation by external execution services.
         """
-        # load ARU DRAFT
-        self.load_mock_aru_draft_min()
-        # load ARU READY
+        # Run the DRAFT event
+        self.load_mock_aru_draft_max()
+        aru_analysis_run = self.mock_aru_draft_max
+        self.assertIsNotNone(aru_analysis_run)
+        db_analysis_run_draft = _create_analysis_run(aru_analysis_run)
+        self.assertEqual(AnalysisRun.objects.count(), 1)
+        self.assertEqual(db_analysis_run_draft.get_latest_state().status, Status.DRAFT.convention)
+        logger.info("DRAFT event handling finished.")
+
+        # Now run the READY event
         self.load_mock_aru_ready_max()
+        aru_analysis_run = self.mock_aru_ready_max
+        self.assertIsNotNone(aru_analysis_run)
+        # Now set the OrcaBus ID that was assigned to the DRAFT, so they match
+        aru_analysis_run.orcabusId = db_analysis_run_draft.orcabus_id
 
-        logger.info("Event validation and mapping against event model...")
-        aru_draft_event = self.mock_aru_draft_min
-        aru_ready_event = self.mock_aru_ready_max
-        self.assertIsNotNone(aru_draft_event)
-        self.assertIsNotNone(aru_ready_event)
+        logger.info("Testing DB record creation from event...")
+        db_analysis_run = _finalise_analysis_run(aru_analysis_run)
+        self.assertIsNotNone(db_analysis_run)
+        self.assertEqual(db_analysis_run.analysis.analysis_name, "WGS")
+        self.assertEqual(db_analysis_run.analysis.analysis_version, "2.0")
+        self.assertEqual(db_analysis_run.analysis_run_name, "TestAnalysisRunName_1")
+        self.assertEqual(db_analysis_run.get_latest_state().status, Status.READY.convention)
+        self.assertEqual(db_analysis_run.contexts.count(), 2)
+        self.assertEqual(AnalysisRun.objects.count(), 1)
 
-        # Set up the required base entities
-        self.setup_base_entities()
-
-        # Initiate the AnalysisRun with the ARU event
-        db_analysis_run_aru = _create_analysis_run(aru_draft_event)
-        # make sure the AnalysisRun ID of the ARU event matches the ID created for the ARU event
-        self.assertEqual(db_analysis_run_aru.get_latest_state().status, Status.DRAFT.convention)
-        aru_ready_event.orcabusId = db_analysis_run_aru.orcabus_id
-        # Finalise the AnalysisRun with the ARU event
-        db_analysis_run_aru = _finalise_analysis_run(aru_ready_event)
-        self.assertEqual(db_analysis_run_aru.get_latest_state().status, Status.READY.convention)
+        logger.info("ARSC event creation from DB record...")
+        arsc_event = _map_analysis_run_to_arsc(db_analysis_run)
+        self.assertIsNotNone(arsc_event)
+        # check whether the hash id was set properly
+        test_id = get_arsc_hash(arsc_event)
+        self.assertEqual(test_id, arsc_event.id)
+        # NOTE: We cannot directly test the hash id as the OrcaBus ID of the generated AnalysisRun
+        #       will constantly change with every new generation. Therefore we overwrite it with a
+        #       fixed ID to make the generated hash stable. This allows testing of the rest of the
+        #       elements that make up the hash.
+        # NOTE: We also have to reset the has id assigned above to allow it to be recalculated
+        arsc_event.orcabusId = "anr.11223344556677889900TEST01"
+        arsc_event.id = None  # reset the previously assigned hash id
+        testable_hash_id = get_arsc_hash(arsc_event)
+        self.assertEqual(testable_hash_id, "22934f07889c8d10f72f7334c80b43cc")
 
         # run some spot checks
-        self.assertEqual(db_analysis_run_aru.analysis, db_analysis_run_aru.analysis)
-        self.assertEqual(db_analysis_run_aru.analysis_run_name, db_analysis_run_aru.analysis_run_name)
-        self.assertEqual(db_analysis_run_aru.orcabus_id, db_analysis_run_aru.orcabus_id)
+        self.assertEqual(db_analysis_run_draft.analysis, db_analysis_run.analysis)
+        self.assertEqual(db_analysis_run_draft.analysis_run_name, db_analysis_run.analysis_run_name)
+        self.assertEqual(db_analysis_run_draft.orcabus_id, db_analysis_run.orcabus_id)
 
     def test_aru_draft_to_ready_2(self):
         """
@@ -241,7 +183,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         # then receive repeated ARU event for the same AnalysisRun
         # create the AnalysisRun with the repeated ARU event
         with self.assertRaises(Exception) as err:
-            _create_analysis_run(self.mock_aru_draft_min)
+            _create_analysis_run(self.mock_aru_draft_max)
         self.assertEqual(str(err.exception), 'AnalysisRun record already exists!')
         logger.info(str(err.exception))
 
@@ -258,9 +200,30 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         # then receive a new ARU event for the same AnalysisRun
         # create the AnalysisRun with the repeated ARU event
 
+        # We expect an error since we call a method meant to handle DRAFT events
+        # with an event that has a READY status
         with self.assertRaises(Exception) as err:
             _create_analysis_run(self.mock_aru_ready_max)
-        self.assertEqual(str(err.exception), 'AnalysisRun record already exists!')
+        self.assertEqual(str(err.exception), 'AnalysisRunUpdate: Unexpected state!')
+        logger.info(str(err.exception))
+
+    def test_aru_draft_to_ready_4(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_analysis_run.AnalysisRunUnitTests.test_aru_draft_to_ready_4
+
+        Test the handling of a duplicated READY event, e.g. after it has already been processed
+        """
+        # Assume an AnalysisRun has already been created and finalised
+        self.test_aru_draft_to_ready_1()
+
+        # then receive a new ARU READY event for the same AnalysisRun
+        # create the AnalysisRun with the repeated ARU event
+
+        # We expect an error since we call a method meant to handle DRAFT events
+        # with an event that has a READY status
+        with self.assertRaises(Exception) as err:
+            _finalise_analysis_run(self.mock_aru_ready_max)
+        self.assertEqual(str(err.exception), 'Cannot finalise record that is no in DRAFT state!')
         logger.info(str(err.exception))
 
     def test_get_arsc_hash(self):
@@ -293,7 +256,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         hash_0 = get_arsc_hash(test_arsc)
         time.sleep(2)
         hash_x = get_arsc_hash(test_arsc)
-        assert hash_0 == hash_x, "Hash isn't that same!"
+        assert hash_0 == hash_x, "Hash isn't the same!"
 
         # Change some data and expect a different hash
         test_arsc.status = "TESTING2"
