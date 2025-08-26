@@ -155,7 +155,8 @@ def _finalise_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
     analysis_run_db: AnalysisRun = AnalysisRun.objects.get(orcabus_id=event.orcabusId)
     assert analysis_run_db is not None, f"AnalysisRunUpdate: AnalysisRun record does not exist!"
 
-    assert analysis_run_db.get_latest_state().status == Status.DRAFT.convention, "Cannot finalise record that is no in DRAFT state!"
+    # ensure the current state is DRAFT before we transition to READY
+    assert analysis_run_db.get_latest_state().status == Status.DRAFT.convention, "Cannot finalise record that is not in DRAFT state!"
 
     # AnalysisRunId: can't be updated, has to match
     assert event.orcabusId == analysis_run_db.orcabus_id, "AnalysisRun IDs don't match!"
@@ -244,14 +245,41 @@ def _finalise_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
 
 def _map_analysis_run_to_arsc(analysis_run: AnalysisRun) -> arsc.AnalysisRunStateChange:
     lib_list = list()
-    for l in analysis_run.libraries.all():  # FIXME just iterate readsets instead?
-        lib_list.append(arsc.Library(
+    for l in analysis_run.libraries.all():
+        # create arsc library record
+        library = arsc.Library(
             orcabusId=l.orcabus_id,
             libraryId=l.library_id,
-            readsets=None  # FIXME
-        ))
+            readsets=None
+        )
+        # find all readsets of the run with the same library ids
+        rs_set = analysis_run.readsets.filter(library_id=l.library_id, library_orcabus_id=l.orcabus_id)
+        if rs_set.count() > 0:
+            library.readsets = list()
+        # create arsc readset records and add to the arsc library record
+        for rs in rs_set:
+            library.readsets.append(arsc.Readset(
+                orcabusId=rs.orcabus_id,
+                rgid=rs.rgid
+            ))
+        lib_list.append(library)
 
     current_state: AnalysisRunState = analysis_run.get_latest_state()
+
+    # fetch the compute env if there is one
+    compute_envs = analysis_run.contexts.filter(usecase=RunContextUseCase.COMPUTE.value)
+    assert compute_envs.count() <= 1, "Multiple Compute Envs are currently not supported!"
+    compute_env = None
+    if compute_envs.count() == 1:
+        compute_env = compute_envs.first().name
+
+    # fetch the storage env if there is one
+    storage_envs = analysis_run.contexts.filter(usecase=RunContextUseCase.STORAGE.value)
+    assert storage_envs.count() <= 1, "Multiple Storage Envs are currently not supported!"
+    storage_env = None
+    if storage_envs.count() == 1:
+        storage_env = storage_envs.first().name
+
     arsc_object = arsc.AnalysisRunStateChange(
         id="",  # mandatory field, need to provide a default value
         version=ARSC_SCHEMA_VERSION,
@@ -265,8 +293,8 @@ def _map_analysis_run_to_arsc(analysis_run: AnalysisRun) -> arsc.AnalysisRunStat
             version=analysis_run.analysis.analysis_version
         ),
         libraries=lib_list,
-        computeEnv=None,  # FIXME
-        storageEnv=None,  # FIXME
+        computeEnv=compute_env,
+        storageEnv=storage_env,
     )
     # add the unique event ID (hash of the event data)
     arsc_hash = get_arsc_hash(arsc_object)
@@ -327,6 +355,9 @@ def _create_workflow_runs_for_analysis_run(analysis_run: arsc.AnalysisRunStateCh
     # assert we operate on the correct state
     assert analysis_run.status.upper() == Status.READY.convention, "Expected READY state!"
 
-    # TODO: handle the case where we receive the same READY event multiple times (don't want to create WorkflowRun records twice)
+    # TODO: handle the case where we receive the same READY event multiple times
+    #       (don't want to create WorkflowRun records twice).
+    #       Currently covered by the _finalise_analysis_run method,
+    #       but perhaps an explicit state transition validator would be better
     # then create the WorkflowRun records for this AnalysisRun
     analysis_run_utils.create_workflows_runs_from_analysis_run(analysis_run)
