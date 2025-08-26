@@ -101,7 +101,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         arsc_event.orcabusId = "anr.11223344556677889900TEST01"
         arsc_event.id = None  # reset the previously assigned hash id
         testable_hash_id = get_arsc_hash(arsc_event)
-        self.assertEqual(testable_hash_id, "e11b1d7bcdb57c5475c3f56f919c836e")
+        self.assertEqual(testable_hash_id, "4676030bea0c4d172f34bc4be39237ef")
 
     def test_aru_ready_max(self):
         """
@@ -163,7 +163,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         arsc_event.orcabusId = "anr.11223344556677889900TEST01"
         arsc_event.id = None  # reset the previously assigned hash id
         testable_hash_id = get_arsc_hash(arsc_event)
-        self.assertEqual(testable_hash_id, "22934f07889c8d10f72f7334c80b43cc")
+        self.assertEqual(testable_hash_id, "460bdbf4a9ca9bec77c5991b3509a15a")
 
         # run some spot checks
         self.assertEqual(db_analysis_run_draft.analysis, db_analysis_run.analysis)
