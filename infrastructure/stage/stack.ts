@@ -113,6 +113,7 @@ export class WorkflowManagerStack extends Stack {
     this.createApiHandlerAndIntegration(props);
     this.createLegacyWrscEventHandler();
     this.createWruEventHandler();
+    this.createAruEventHandler();
   }
 
   private createPythonFunction(name: string, props: object): PythonFunction {
@@ -244,6 +245,29 @@ export class WorkflowManagerStack extends Stack {
       // @ts-expect-error AWS CDK types don't support 'anything-but' pattern
       source: [{ 'anything-but': 'orcabus.workflowmanager' }],
       detailType: ['WorkflowRunUpdate'],
+    });
+  }
+
+  private createAruEventHandler() {
+    const procFn: PythonFunction = this.createPythonFunction('HandleAruEvent', {
+      index: 'workflow_manager_proc/lambdas/handle_aru_event.py',
+      handler: 'handler',
+      timeout: Duration.seconds(28),
+    });
+
+    this.mainBus.grantPutEventsTo(procFn);
+
+    const eventRule = new Rule(this, 'EventRuleARU', {
+      description: 'Rule to send AnalysisRunUpdate events to the HandleAruEvent Lambda',
+      eventBus: this.mainBus,
+    });
+
+    eventRule.addTarget(new aws_events_targets.LambdaFunction(procFn));
+    eventRule.addEventPattern({
+      // See https://github.com/aws/aws-cdk/issues/30220
+      // @ts-expect-error AWS CDK types don't support 'anything-but' pattern
+      source: [{ 'anything-but': 'orcabus.workflowmanager' }],
+      detailType: ['AnalysisRunUpdate'],
     });
   }
 }
