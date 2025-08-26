@@ -1,11 +1,10 @@
 import django
 
-from workflow_manager.models import Status
-
 django.setup()
 
 # --- keep ^^^ at top of the module
 import logging
+from workflow_manager.models import Status
 from workflow_manager_proc.domain.event import aru
 from workflow_manager_proc.services.analysis_run import create_analysis_run, finalise_analysis_run
 
