@@ -17,31 +17,25 @@ export class WorkflowManagerSchemaRegistry extends Construct {
     super(scope, id);
 
     // Create EventBridge schema registry
-    new aws_eventschemas.CfnRegistry(this, this.SCHEMA_REGISTRY_NAME, {
+    const registry = new aws_eventschemas.CfnRegistry(this, this.SCHEMA_REGISTRY_NAME, {
       registryName: this.SCHEMA_REGISTRY_NAME,
       description: 'Schema Registry for ' + this.SCHEMA_REGISTRY_NAME,
     });
 
     // Publish schema into the registry
     getSchemas().forEach((s) => {
-      this.publish(s);
+      const schema = new aws_eventschemas.CfnSchema(this, s.schemaName, {
+        content: readFileSync(s.schemaLocation, 'utf-8'),
+        type: this.SCHEMA_TYPE,
+        registryName: s.schemaName,
+        description: s.schemaDescription,
+        schemaName: s.schemaName,
+      });
+
+      // Make Schema component depends on the Registry component
+      // Essentially, it forms the deployment dependency at CloudFormation
+      schema.addDependency(registry);
     });
-  }
-
-  private publish(props: SchemaProps) {
-    const content: string = this.getSchemaContent(props.schemaLocation);
-
-    new aws_eventschemas.CfnSchema(this, props.schemaName, {
-      content: content,
-      registryName: this.SCHEMA_REGISTRY_NAME,
-      type: this.SCHEMA_TYPE,
-      description: props.schemaDescription,
-      schemaName: props.schemaName,
-    });
-  }
-
-  private getSchemaContent(loc: string): string {
-    return readFileSync(loc, 'utf-8');
   }
 }
 
