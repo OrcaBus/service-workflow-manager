@@ -14,9 +14,9 @@
     "analysisRunName": "TestAnalysisRunName_1",
     "orcabusId": "anr.ANR123456789ABCDEFGHJKMNPQ",
     "analysis": {
-      "orcabusId": "ana.76J5N2J83RED7387G9374NGDBA",
-      "name": "TestAnalysis1",
-      "version": "0.0.1"
+      "orcabusId": "ana.01K3FSK7ZRED738GT4KM7A2E6F",
+      "name": "WGS",
+      "version": "2.0"
     },
     "libraries": [
       {

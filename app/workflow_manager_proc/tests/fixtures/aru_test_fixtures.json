@@ -1,0 +1,262 @@
+[
+  {
+    "model": "workflow_manager.analysiscontext",
+    "pk": "anx.01K3FSK7X85P5WMK0S0WFEQBP8",
+    "fields": {
+      "name": "clinical",
+      "usecase": "COMPUTE",
+      "description": "Clinical compute environment",
+      "status": "ACTIVE"
+    }
+  },
+  {
+    "model": "workflow_manager.analysiscontext",
+    "pk": "anx.01K3FSK7YMAN3T7THJDZHYSHPB",
+    "fields": {
+      "name": "research",
+      "usecase": "COMPUTE",
+      "description": "Research compute environment",
+      "status": "ACTIVE"
+    }
+  },
+  {
+    "model": "workflow_manager.analysiscontext",
+    "pk": "anx.01K3FSK7YRYZ7SNB3T2C63MZJ5",
+    "fields": {
+      "name": "clinical",
+      "usecase": "STORAGE",
+      "description": "Clinical storage environment",
+      "status": "ACTIVE"
+    }
+  },
+  {
+    "model": "workflow_manager.analysiscontext",
+    "pk": "anx.01K3FSK7YXYQZWKEBVMP2TVDXQ",
+    "fields": {
+      "name": "research",
+      "usecase": "STORAGE",
+      "description": "Research storage environment",
+      "status": "ACTIVE"
+    }
+  },
+  {
+    "model": "workflow_manager.analysiscontext",
+    "pk": "anx.01K3FSK7Z1MCV0XTJBMH8NH69D",
+    "fields": {
+      "name": "temp",
+      "usecase": "STORAGE",
+      "description": "For internal use, short term storage",
+      "status": "ACTIVE"
+    }
+  },
+  {
+    "model": "workflow_manager.workflow",
+    "pk": "wfl.01K3FSK7Z508JHE0R134JEVJFP",
+    "fields": {
+      "workflow_name": "wgts_alignment_qc",
+      "workflow_version": "1.0",
+      "execution_engine": "ICA",
+      "execution_engine_pipeline_id": "ica.pipeline.01234",
+      "validation_state": "VALIDATED"
+    }
+  },
+  {
+    "model": "workflow_manager.workflow",
+    "pk": "wfl.01K3FSK7ZBR2MCCHWCAKHNSPQK",
+    "fields": {
+      "workflow_name": "tumor_normal",
+      "workflow_version": "1.0",
+      "execution_engine": "ICA",
+      "execution_engine_pipeline_id": "ica.pipeline.12345",
+      "validation_state": "VALIDATED"
+    }
+  },
+  {
+    "model": "workflow_manager.workflow",
+    "pk": "wfl.01K3FSK7ZG8CBGE2KS67VB2M9T",
+    "fields": {
+      "workflow_name": "cttso",
+      "workflow_version": "2.0",
+      "execution_engine": "ICA",
+      "execution_engine_pipeline_id": "ica.pipeline.23456",
+      "validation_state": "VALIDATED"
+    }
+  },
+  {
+    "model": "workflow_manager.workflow",
+    "pk": "wfl.01K3FSK7ZNEKX6TWDJC0VA07E9",
+    "fields": {
+      "workflow_name": "umccrise",
+      "workflow_version": "1.0",
+      "execution_engine": "ICA",
+      "execution_engine_pipeline_id": "ica.pipeline.34567",
+      "validation_state": "VALIDATED"
+    }
+  },
+  {
+    "model": "workflow_manager.workflow",
+    "pk": "wfl.01K3FSK7ZTAVNVY5DTC0AV8T01",
+    "fields": {
+      "workflow_name": "oncoanalyser_wgs",
+      "workflow_version": "1.0",
+      "execution_engine": "AWS_BATCH",
+      "execution_engine_pipeline_id": "nf.12345",
+      "validation_state": "VALIDATED"
+    }
+  },
+  {
+    "model": "workflow_manager.workflow",
+    "pk": "wfl.01K3FSK7ZYHG8GM21V6BZY13X4",
+    "fields": {
+      "workflow_name": "sash",
+      "workflow_version": "1.0",
+      "execution_engine": "AWS_BATCH",
+      "execution_engine_pipeline_id": "nf.23456",
+      "validation_state": "VALIDATED"
+    }
+  },
+  {
+    "model": "workflow_manager.analysis",
+    "pk": "ana.01K3FSK803PWYJE9XWJ0C2CRG9",
+    "fields": {
+      "analysis_name": "QC_Assessment",
+      "analysis_version": "1.0",
+      "description": "Quality Control analysis for WGS and WTS",
+      "status": "ACTIVE",
+      "contexts": ["anx.01K3FSK7Z1MCV0XTJBMH8NH69D"],
+      "workflows": ["wfl.01K3FSK7Z508JHE0R134JEVJFP"]
+    }
+  },
+  {
+    "model": "workflow_manager.analysis",
+    "pk": "ana.01K3FSK81PC0C8FB1TJJG97HB8",
+    "fields": {
+      "analysis_name": "ctTSO",
+      "analysis_version": "2.0",
+      "description": "Analysis for ctTSO samples",
+      "status": "ACTIVE",
+      "contexts": ["anx.01K3FSK7X85P5WMK0S0WFEQBP8"],
+      "workflows": ["wfl.01K3FSK7ZG8CBGE2KS67VB2M9T"]
+    }
+  },
+  {
+    "model": "workflow_manager.analysis",
+    "pk": "ana.01K3FSK7ZRED738GT4KM7A2E6F",
+    "fields": {
+      "analysis_name": "WGS",
+      "analysis_version": "2.0",
+      "description": "Analysis for WGS samples",
+      "status": "ACTIVE",
+      "contexts": [],
+      "workflows": [
+        "wfl.01K3FSK7ZBR2MCCHWCAKHNSPQK",
+        "wfl.01K3FSK7ZTAVNVY5DTC0AV8T01",
+        "wfl.01K3FSK7ZYHG8GM21V6BZY13X4"
+      ]
+    }
+  },
+  {
+    "model": "workflow_manager.analysis",
+    "pk": "ana.01K3FSK7ZRED7387G9374NGDBA",
+    "fields": {
+      "analysis_name": "WGS",
+      "analysis_version": "1.0",
+      "description": "Analysis for WGS samples",
+      "status": "ACTIVE",
+      "contexts": ["anx.01K3FSK7X85P5WMK0S0WFEQBP8"],
+      "workflows": ["wfl.01K3FSK7ZBR2MCCHWCAKHNSPQK", "wfl.01K3FSK7ZNEKX6TWDJC0VA07E9"]
+    }
+  },
+  {
+    "model": "workflow_manager.library",
+    "pk": "lib.01J5M2JFE1JPYV62RYQEG99CP1",
+    "fields": {
+      "library_id": "L000001"
+    }
+  },
+  {
+    "model": "workflow_manager.library",
+    "pk": "lib.02J5M2JFE1JPYV62RYQEG99CP2",
+    "fields": {
+      "library_id": "L000002"
+    }
+  },
+  {
+    "model": "workflow_manager.library",
+    "pk": "lib.03J5M2JFE1JPYV62RYQEG99CP3",
+    "fields": {
+      "library_id": "L000003"
+    }
+  },
+  {
+    "model": "workflow_manager.library",
+    "pk": "lib.03J5M2JFE1JPYV62RYQEG99CP4",
+    "fields": {
+      "library_id": "L000004"
+    }
+  },
+  {
+    "model": "workflow_manager.library",
+    "pk": "lib.03J5M2JFE1JPYV62RYQEG99CP5",
+    "fields": {
+      "library_id": "L000005"
+    }
+  },
+  {
+    "model": "workflow_manager.library",
+    "pk": "lib.04J5M2JFE1JPYV62RYQEG99CP6",
+    "fields": {
+      "library_id": "L000006"
+    }
+  },
+  {
+    "model": "workflow_manager.runcontext",
+    "pk": "rnx.01K3FMGQFXBGZDHFRY8Y7D11G5",
+    "fields": {
+      "name": "research",
+      "usecase": "COMPUTE",
+      "description": "Research compute environment",
+      "status": "ACTIVE"
+    }
+  },
+  {
+    "model": "workflow_manager.runcontext",
+    "pk": "rnx.01K3FMGQG2N9KCV8FV2JJETQDJ",
+    "fields": {
+      "name": "temp",
+      "usecase": "STORAGE",
+      "description": "For internal use, short term storage",
+      "status": "ACTIVE"
+    }
+  },
+  {
+    "model": "workflow_manager.runcontext",
+    "pk": "rnx.01K3FMGQHYZ6XPRECSRBX28NJ5",
+    "fields": {
+      "name": "clinical",
+      "usecase": "COMPUTE",
+      "description": "Clinical compute environment",
+      "status": "ACTIVE"
+    }
+  },
+  {
+    "model": "workflow_manager.runcontext",
+    "pk": "rnx.01K3FMGQJ35CW57XKMF404W3P8",
+    "fields": {
+      "name": "clinical",
+      "usecase": "STORAGE",
+      "description": "Clinical storage environment",
+      "status": "ACTIVE"
+    }
+  },
+  {
+    "model": "workflow_manager.runcontext",
+    "pk": "rnx.01K3FMGQJKFE2BWKZXAS5MB4TY",
+    "fields": {
+      "name": "research",
+      "usecase": "STORAGE",
+      "description": "Research storage environment",
+      "status": "ACTIVE"
+    }
+  }
+]
