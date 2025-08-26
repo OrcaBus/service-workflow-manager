@@ -223,7 +223,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         # with an event that has a READY status
         with self.assertRaises(Exception) as err:
             _finalise_analysis_run(self.mock_aru_ready_max)
-        self.assertEqual(str(err.exception), 'Cannot finalise record that is no in DRAFT state!')
+        self.assertEqual(str(err.exception), 'Cannot finalise record that is not in DRAFT state!')
         logger.info(str(err.exception))
 
     def test_get_arsc_hash(self):
