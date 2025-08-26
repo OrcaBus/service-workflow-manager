@@ -14,5 +14,8 @@
       "pnpm-lock.yaml"
     ]
   },
-  "context": {}
+  "context": {
+    "@aws-cdk/core:enableAdditionalMetadataCollection": "false"
+  },
+  "versionReporting": false
 }
