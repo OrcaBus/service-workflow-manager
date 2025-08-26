@@ -27,7 +27,7 @@ export class WorkflowManagerSchemaRegistry extends Construct {
       const schema = new aws_eventschemas.CfnSchema(this, s.schemaName, {
         content: readFileSync(s.schemaLocation, 'utf-8'),
         type: this.SCHEMA_TYPE,
-        registryName: s.schemaName,
+        registryName: registry.registryName as string,
         description: s.schemaDescription,
         schemaName: s.schemaName,
       });
