@@ -37,7 +37,7 @@ class Workflow(OrcaBusBaseModel):
     execution_engine = models.CharField(max_length=255, choices=ExecutionEngine)
 
     # definition from an external system (as known to the execution engine)
-    execution_engine_pipeline_id = models.CharField(max_length=255)
+    execution_engine_pipeline_id = models.CharField(max_length=255, default="Unknown")
 
     # may need this to differentiate with workflows are
     # - unvalidated
