@@ -75,6 +75,12 @@ def _create_workflow_run(event: wru.WorkflowRunUpdate) -> wrsc.WorkflowRunStateC
     # Then create the actual workflow run entry if it does not exist
     wfr = create_or_get_workflow_run(event, workflow)
 
+    # if the input library is linked to readset record(s), create the association(s)
+    establish_workflow_run_readsets(event, wfr)
+
+    # if the workflow run has contexts, create the association(s)
+    establish_workflow_run_contexts(event, wfr)
+
     success, new_state = update_workflow_run_to_new_state(event, wfr)
 
     if not success:
@@ -131,9 +137,6 @@ def create_or_get_workflow_run(event: wru.WorkflowRunUpdate, workflow: Workflow)
         # if the workflow run is linked to library record(s), create the association(s)
         establish_workflow_run_libraries(event, wfr)
 
-        # if the workflow run has contexts, create the association(s)
-        establish_workflow_run_contexts(event, wfr)
-
     return wfr
 
 
@@ -161,14 +164,40 @@ def establish_workflow_run_libraries(event: wru.WorkflowRunUpdate, wfr: Workflow
             status=ASSOCIATION_STATUS,
         )
 
+
+def establish_workflow_run_readsets(event: wru.WorkflowRunUpdate, wfr: WorkflowRun) -> None:
+    if not event.libraries:
+        logger.warning(f"Event for PortalRunID {event.portalRunId} has no libraries associated with it. "
+                       f"Skipping readset linking.")
+        return
+
+    if wfr.libraries.count() == 0:
+        logger.warning(f"Workflow run {wfr.orcabus_id} has no libraries associated with it. Skipping readset linking.")
+        return
+
+    # Grab all the libraries that is linked to this workflow run
+    wfr_associated_library_orcabus_ids = []
+    for lib_db in wfr.libraries.all():
+        lib_db: Library = lib_db
+        wfr_associated_library_orcabus_ids.append(lib_db.orcabus_id)
+
+    for input_rec in event.libraries:
+        input_rec: wru.Library = input_rec
+
+        # Make sure the libraries from incoming event and existing-linked to workflow run is in agreement
+        if input_rec.orcabusId not in wfr_associated_library_orcabus_ids:
+            logger.warning(f"Event library {input_rec.orcabusId} is not associated with the workflow run "
+                           f"{wfr.orcabus_id}. Skipping readset linking.")
+            continue
+
         # if the library is linked to readset record(s), create the association(s)
         if input_rec.readsets:
             for rs in input_rec.readsets:
                 rs_db, _ = Readset.objects.get_or_create(
-                    orcabus_id=sanitize_orcabus_id(rs.orcabusId),
+                    orcabus_id=rs.orcabusId,
                     rgid=rs.rgid,
-                    library_id=db_lib.library_id,
-                    library_orcabus_id=db_lib.orcabus_id
+                    library_id=input_rec.libraryId,
+                    library_orcabus_id=input_rec.orcabusId
                 )
                 wfr.readsets.add(rs_db)
 
@@ -201,7 +230,7 @@ def update_workflow_run_to_new_state(event: wru.WorkflowRunUpdate, wfr: Workflow
     # Handle the payload
     if event.payload:
         new_state.payload = Payload(
-            payload_ref_id=event.payload.refId if event.payload.refId else str(uuid.uuid4()),
+            payload_ref_id=str(uuid.uuid4()),  # FIXME Concept change: This is a quick fix to unblock current dev. We are changing the behaviour to internal hash scheme in next tick
             version=event.payload.version,
             data=event.payload.data,
         )
