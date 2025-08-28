@@ -11,10 +11,7 @@
     "portalRunId": "202405012397gatc",
     "workflowRunName": "540424_A01001_0193_BBBBMMDRX5 FASTQ Copy",
     "workflow": {
-      "orcabusId": "wfl.01J5M2JFE1JPYV62RYQEG99CPW",
-      "name": "bssh_icav2_fastq_copy",
-      "version": "1.2.3",
-      "executionEngine": "ICA"
+      "orcabusId": "wfl.01J5M2JFE1JPYV62RYQEG99CPW"
     },
     "libraries": [
       {

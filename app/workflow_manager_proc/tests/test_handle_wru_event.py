@@ -4,6 +4,7 @@ from unittest import mock
 from pydantic import ValidationError
 
 from workflow_manager.models import WorkflowRun, Workflow, Library, LibraryAssociation, State, Payload
+from workflow_manager.tests.factories import WorkflowFactory
 from workflow_manager_proc.lambdas import handle_wru_event
 from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
 
@@ -41,6 +42,7 @@ class WruEventHandlerUnitTests(WorkflowManagerProcUnitTestCase):
         """
         python manage.py test workflow_manager_proc.tests.test_handle_wru_event.WruEventHandlerUnitTests.test_handle_wru_event
         """
+        _ = WorkflowFactory()
         self.load_mock_wru_max()
 
         handle_wru_event.handler(self.event, None)
@@ -56,6 +58,7 @@ class WruEventHandlerUnitTests(WorkflowManagerProcUnitTestCase):
         """
         python manage.py test workflow_manager_proc.tests.test_handle_wru_event.WruEventHandlerUnitTests.test_handle_wru_event_min
         """
+        _ = WorkflowFactory()
         self.load_mock_wru_min()
 
         handle_wru_event.handler(self.event, None)

@@ -164,7 +164,10 @@ def _map_srv_wrsc_to_wfm_wrsc(wfr: WorkflowRun, new_state: State, srv_wrsc) -> w
             orcabusId=wfr.workflow.orcabus_id,
             name=wfr.workflow.name,
             version=wfr.workflow.version,
+            codeVersion=wfr.workflow.code_version,
             executionEngine=wfr.workflow.execution_engine,
+            executionEnginePipelineId=wfr.workflow.execution_engine_pipeline_id,
+            validationState=wfr.workflow.validation_state,
         ),
         status=Status.get_convention(new_state.status),  # ensure we follow conventions
     )
