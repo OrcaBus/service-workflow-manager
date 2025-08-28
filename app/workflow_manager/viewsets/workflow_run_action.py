@@ -35,10 +35,10 @@ class WorkflowRunActionViewSet(ViewSet):
     @action(detail=True, methods=['get'], url_name='validate_rerun_workflows', url_path='validate_rerun_workflows')
     def validate_rerun_workflows(self, request, *args, **kwargs):
         wfl_run = get_object_or_404(self.queryset, pk=kwargs.get('pk'))
-        is_valid = wfl_run.workflow.workflow_name in AllowedRerunWorkflow
+        is_valid = wfl_run.workflow.name in AllowedRerunWorkflow
 
         # Get allowed dataset choice for the workflow
-        wfl_name = wfl_run.workflow.workflow_name
+        wfl_name = wfl_run.workflow.name
         allowed_dataset_choice = []
         if wfl_name == AllowedRerunWorkflow.RNASUM.value:
             allowed_dataset_choice = RERUN_INPUT_SERIALIZERS[wfl_name].allowed_dataset_choice
@@ -73,12 +73,12 @@ class WorkflowRunActionViewSet(ViewSet):
         pk = self.kwargs.get('pk')
         wfl_run = get_object_or_404(self.queryset, pk=pk)
 
-        # Only approved workflow_name is allowed
-        if wfl_run.workflow.workflow_name not in AllowedRerunWorkflow:
-            return Response(f"This workflow type is not allowed: {wfl_run.workflow.workflow_name}",
+        # Only approved workflow name is allowed
+        if wfl_run.workflow.name not in AllowedRerunWorkflow:
+            return Response(f"This workflow type is not allowed: {wfl_run.workflow.name}",
                             status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = RERUN_INPUT_SERIALIZERS[wfl_run.workflow.workflow_name](data=request.data)
+        serializer = RERUN_INPUT_SERIALIZERS[wfl_run.workflow.name](data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
@@ -97,7 +97,7 @@ def construct_rerun_eb_detail(wfl_run: WorkflowRun, input_body: dict) -> dict:
     Construct event bridge detail for rerun based on the existing workflow run and request body
     """
     new_portal_run_id = create_portal_run_id()
-    wfl_name = wfl_run.workflow.workflow_name
+    wfl_name = wfl_run.workflow.name
 
     # Each rerun workflow type must implement its own rerun duplication logic and raise `RerunDuplicationError`
     # if it is considered a duplication, unless `allow_duplication` is set to True in the input body.
@@ -107,6 +107,8 @@ def construct_rerun_eb_detail(wfl_run: WorkflowRun, input_body: dict) -> dict:
     else:
         raise ValueError(f"Rerun is not allowed for this workflow: {wfl_name}")
 
+    # FIXME RNAsum rerun UI trigger to update legacy WRSC to WRU schema
+    #  https://github.com/OrcaBus/service-workflow-manager/issues/99
     # Replace old portal_run_id with new_portal_run_id in any part of the string
     new_eb_detail = json.loads(
         json.dumps({
@@ -114,9 +116,9 @@ def construct_rerun_eb_detail(wfl_run: WorkflowRun, input_body: dict) -> dict:
             "payload": new_payload,
             "portalRunId": new_portal_run_id,
             "linkedLibraries": LibrarySerializer(wfl_run.libraries.all(), many=True, camel_case_data=True).data,
-            "workflowName": wfl_run.workflow.workflow_name,
+            "workflowName": wfl_run.workflow.name,
             "workflowRunName": wfl_run.workflow_run_name,
-            "workflowVersion": wfl_run.workflow.workflow_version,
+            "workflowVersion": wfl_run.workflow.version,
             "timestamp": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
         }).replace(f"{wfl_run.portal_run_id}", f"{new_portal_run_id}"))
 

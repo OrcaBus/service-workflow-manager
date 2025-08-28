@@ -27,11 +27,13 @@ class WorkflowManager(OrcaBusBaseManager):
 class Workflow(OrcaBusBaseModel):
     class Meta:
         # a combo of this gives us human-readable pipeline id
-        unique_together = ["workflow_name", "workflow_version", "execution_engine"]
+        unique_together = ["name", "version", "code_version", "execution_engine"]
 
     orcabus_id = OrcaBusIdField(primary_key=True, prefix='wfl')
-    workflow_name = models.CharField(max_length=255)
-    workflow_version = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)
+    version = models.CharField(max_length=255)
+    # See https://github.com/OrcaBus/service-workflow-manager/issues/95
+    code_version = models.CharField(max_length=255, default="0.0.0")
     execution_engine = models.CharField(max_length=255, choices=ExecutionEngine)
 
     # definition from an external system (as known to the execution engine)
@@ -48,4 +50,4 @@ class Workflow(OrcaBusBaseModel):
     objects = WorkflowManager()
 
     def __str__(self):
-        return f"ID: {self.orcabus_id}, workflow_name: {self.workflow_name}, workflow_version: {self.workflow_version}"
+        return f"ID: {self.orcabus_id}, name: {self.name}, version: {self.version}"

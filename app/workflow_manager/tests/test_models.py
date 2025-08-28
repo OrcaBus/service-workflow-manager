@@ -22,8 +22,8 @@ class WorkflowModelTests(TestCase):
         python manage.py test workflow_manager.tests.test_models.WorkflowModelTests.test_save_workflow
         """
         mock_wfl = Workflow(
-            workflow_name="test_workflow",
-            workflow_version="0.0.1",
+            name="test_workflow",
+            version="0.0.1",
             execution_engine="ICA",
             execution_engine_pipeline_id=str(uuid.uuid4()),
         )
@@ -42,16 +42,16 @@ class WorkflowModelTests(TestCase):
 
         try:
             mock_wfl = Workflow(
-                workflow_name="test_workflow",
-                workflow_version="0.0.1",
+                name="test_workflow",
+                version="0.0.1",
                 execution_engine="CIA",
                 execution_engine_pipeline_id=str(uuid.uuid4()),
             )
             mock_wfl.save()
 
             mock_wfl2 = Workflow(
-                workflow_name="test_workflow",
-                workflow_version="0.0.1",
+                name="test_workflow",
+                version="0.0.1",
                 execution_engine="CIA",
                 execution_engine_pipeline_id=str(uuid.uuid4()),
             )

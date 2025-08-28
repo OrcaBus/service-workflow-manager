@@ -35,7 +35,7 @@ class TestData:
         The first execution failed and led to a repetition that succeeded
         """
 
-        wf = WorkflowFactory(workflow_name=self.WORKFLOW_NAME + "Primary")
+        wf = WorkflowFactory(name=self.WORKFLOW_NAME + "Primary")
 
         # The first execution (workflow run 1)
         wfr_1 = WorkflowRunFactory(
@@ -82,7 +82,7 @@ class TestData:
         Third workflow: VariantCalling (1 run for 2 libraries)
         """
 
-        wf_qc = WorkflowFactory(workflow_name=self.WORKFLOW_NAME + "QC")
+        wf_qc = WorkflowFactory(name=self.WORKFLOW_NAME + "QC")
 
         # QC of Library 1
         wfr_qc_1 = WorkflowRunFactory(
@@ -118,7 +118,7 @@ class TestData:
         )
 
         # Alignment
-        wf_align = WorkflowFactory(workflow_name=self.WORKFLOW_NAME + "Alignment")
+        wf_align = WorkflowFactory(name=self.WORKFLOW_NAME + "Alignment")
         wfr_a = WorkflowRunFactory(
             workflow_run_name=self.WORKFLOW_NAME + "AlignmentRun",
             portal_run_id="3456",
@@ -136,7 +136,7 @@ class TestData:
             )
 
         # Variant Calling
-        wf_vc = WorkflowFactory(workflow_name=self.WORKFLOW_NAME + "VariantCalling")
+        wf_vc = WorkflowFactory(name=self.WORKFLOW_NAME + "VariantCalling")
         wfr_vc = WorkflowRunFactory(
             workflow_run_name=self.WORKFLOW_NAME + "VariantCallingRun",
             portal_run_id="4567",
