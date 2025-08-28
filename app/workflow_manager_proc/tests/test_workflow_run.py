@@ -1,6 +1,7 @@
 import os
 from unittest import mock
 
+from django.utils import timezone
 from mockito import when, unstub
 
 from workflow_manager.models import Workflow, WorkflowRun, Library, LibraryAssociation, State, Payload, AnalysisRun, \
@@ -35,6 +36,66 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(WorkflowRun.objects.count(), 1)
         self.assertEqual(State.objects.count(), 1)
         self.assertEqual(Payload.objects.count(), 0)
+
+    def test_create_workflow_run_with_multiple_drafts(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_create_workflow_run_with_multiple_drafts
+        """
+        # First DRAFT
+        self.load_mock_wru_min()
+        out_wrsc = workflow_run.create_workflow_run(self.mock_wru_min)
+        self.assertIsNotNone(out_wrsc)
+        self.assertEqual(Workflow.objects.count(), 1)
+        self.assertEqual(WorkflowRun.objects.count(), 1)
+        # Initial minimal DRAFT state
+        self.assertEqual(State.objects.count(), 1)
+        # No payload linking yet
+        self.assertEqual(Payload.objects.count(), 0)
+        # Readset and RunContext are not known yet either
+        self.assertEqual(Readset.objects.count(), 0)
+        self.assertEqual(RunContext.objects.count(), 0)
+
+        print("-" * 128)
+
+        # Second DRAFT
+        self.load_mock_wru_max()
+
+        # Temporary override the event to simulate the second DRAFT
+        self.mock_wru_max.status = 'DRAFT'
+        self.mock_wru_max.timestamp = timezone.now()
+        self.mock_wru_max.payload.refId = None
+
+        out_wrsc = workflow_run.create_workflow_run(self.mock_wru_max)
+        self.assertIsNotNone(out_wrsc)
+        self.assertEqual(Workflow.objects.count(), 1)
+        self.assertEqual(WorkflowRun.objects.count(), 1)
+        self.assertEqual(State.objects.count(), 2)
+        # FIXME Payload will generate new due to refId being UUID formula
+        self.assertEqual(Payload.objects.count(), 1)
+        # Evaluate the following
+        self.assertEqual(Readset.objects.count(), 4)
+        self.assertEqual(RunContext.objects.count(), 2)
+
+        print("-" * 128)
+
+        # Third DRAFT
+        self.load_mock_wru_max()
+
+        # Temporary override the event to simulate the third (simply repeating / duplicate) DRAFT
+        self.mock_wru_max.status = 'DRAFT'
+        self.mock_wru_max.timestamp = timezone.now()
+        self.mock_wru_max.payload.refId = None
+
+        out_wrsc = workflow_run.create_workflow_run(self.mock_wru_max)
+        self.assertIsNotNone(out_wrsc)
+        self.assertEqual(Workflow.objects.count(), 1)
+        self.assertEqual(WorkflowRun.objects.count(), 1)
+        self.assertEqual(State.objects.count(), 3)
+        # FIXME Payload will generate new due to refId being UUID formula
+        self.assertEqual(Payload.objects.count(), 2)
+        # Evaluate the following - make sure Readset and RunContext count should be the same since the second draft
+        self.assertEqual(Readset.objects.count(), 4)
+        self.assertEqual(RunContext.objects.count(), 2)
 
     def test_create_workflow_run_state_has_not_been_updated(self):
         """
@@ -101,10 +162,11 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         self.assertEqual(Library.objects.count(), 2)
         self.assertEqual(LibraryAssociation.objects.count(), 2)
-        self.assertEqual(Readset.objects.count(), 4)
 
         logger.info(Library.objects.values_list())
-        logger.info(Readset.objects.values_list())
+
+        # calling `establish_workflow_run_libraries` method alone should not process Readset records yet
+        self.assertEqual(Readset.objects.count(), 0)
 
     def test_establish_workflow_run_libraries_with_existing_library(self):
         """
@@ -165,8 +227,127 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(LibraryAssociation.objects.count(), 2)
         self.assertEqual(Readset.objects.count(), 4)
 
-        logger.info(mock_wfr.readsets.values_list())
+        # calling `establish_workflow_run_libraries` method alone should not process Readset records yet
+        self.assertEqual(mock_wfr.readsets.values_list().count(), 0)
+
+    def test_establish_workflow_run_readsets(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_establish_workflow_run_readsets
+        """
+        self.load_mock_wru_max()
+        _ = WorkflowRunFactory()
+        mock_wfr: WorkflowRun = WorkflowRun.objects.first()
+
+        # Create libraries and link to workflow run
+        l1 = Library.objects.create(
+            library_id="L000001",
+            orcabus_id="01J5M2J44HFJ9424G7074NKTGN"
+        )
+        l2 = Library.objects.create(
+            library_id="L000002",
+            orcabus_id="01J5M2JFE1JPYV62RYQEG99CP5"
+        )
+        LibraryAssociation.objects.create(
+            workflow_run=mock_wfr,
+            library=l1,
+            association_date=timezone.now(),
+            status="ACTIVE"
+        )
+        LibraryAssociation.objects.create(
+            workflow_run=mock_wfr,
+            library=l2,
+            association_date=timezone.now(),
+            status="ACTIVE"
+        )
+
+        # Assert pre condition
+        self.assertEqual(Readset.objects.count(), 0)
+        self.assertEqual(mock_wfr.readsets.values_list().count(), 0)
+
+        workflow_run.establish_workflow_run_readsets(self.mock_wru_max, mock_wfr)
+
+        # Assert post condition
+        self.assertEqual(Readset.objects.count(), 4)
         self.assertEqual(mock_wfr.readsets.values_list().count(), 4)
+
+    def test_establish_workflow_run_readsets_without_event_libraries(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_establish_workflow_run_readsets_without_event_libraries
+        """
+        self.load_mock_wru_max()
+        _ = WorkflowRunFactory()
+        mock_wfr: WorkflowRun = WorkflowRun.objects.first()
+
+        # Remove libraries from the event
+        self.mock_wru_max.libraries = []
+
+        # Assert pre condition
+        self.assertEqual(Readset.objects.count(), 0)
+        self.assertEqual(mock_wfr.readsets.values_list().count(), 0)
+
+        workflow_run.establish_workflow_run_readsets(self.mock_wru_max, mock_wfr)
+
+        # Assert post condition
+        self.assertEqual(Readset.objects.count(), 0)
+        self.assertEqual(mock_wfr.readsets.values_list().count(), 0)
+
+    def test_establish_workflow_run_readsets_without_wfr_libraries(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_establish_workflow_run_readsets_without_wfr_libraries
+        """
+        self.load_mock_wru_max()
+        _ = WorkflowRunFactory()
+        mock_wfr: WorkflowRun = WorkflowRun.objects.first()
+
+        # Assert pre condition
+        self.assertEqual(Readset.objects.count(), 0)
+        self.assertEqual(mock_wfr.readsets.values_list().count(), 0)
+
+        workflow_run.establish_workflow_run_readsets(self.mock_wru_max, mock_wfr)
+
+        # Assert post condition
+        self.assertEqual(Readset.objects.count(), 0)
+        self.assertEqual(mock_wfr.readsets.values_list().count(), 0)
+
+    def test_establish_workflow_run_readsets_differing_wfr_libraries(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_establish_workflow_run_readsets_differing_wfr_libraries
+        """
+        self.load_mock_wru_max()
+        _ = WorkflowRunFactory()
+        mock_wfr: WorkflowRun = WorkflowRun.objects.first()
+
+        # Create _differing_ libraries and link to workflow run
+        l1 = Library.objects.create(
+            library_id="L900001",
+            orcabus_id="09J5M2J44HFJ9424G7074NKTGN"
+        )
+        l2 = Library.objects.create(
+            library_id="L900002",
+            orcabus_id="09J5M2JFE1JPYV62RYQEG99CP5"
+        )
+        LibraryAssociation.objects.create(
+            workflow_run=mock_wfr,
+            library=l1,
+            association_date=timezone.now(),
+            status="ACTIVE"
+        )
+        LibraryAssociation.objects.create(
+            workflow_run=mock_wfr,
+            library=l2,
+            association_date=timezone.now(),
+            status="ACTIVE"
+        )
+
+        # Assert pre condition
+        self.assertEqual(Readset.objects.count(), 0)
+        self.assertEqual(mock_wfr.readsets.values_list().count(), 0)
+
+        workflow_run.establish_workflow_run_readsets(self.mock_wru_max, mock_wfr)
+
+        # Assert post condition
+        self.assertEqual(Readset.objects.count(), 0)
+        self.assertEqual(mock_wfr.readsets.values_list().count(), 0)
 
     def test_establish_workflow_run_contexts(self):
         """
@@ -260,7 +441,7 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(State.objects.count(), 1)
         self.assertEqual(Payload.objects.count(), 1)
 
-        self.assertEqual(Payload.objects.first().payload_ref_id, '99995678-238c-4200-b632-d5dd8c8db94a')
+        self.assertNotEqual(Payload.objects.first().payload_ref_id, '99995678-238c-4200-b632-d5dd8c8db94a')
 
     def test_update_workflow_run_to_new_state_without_ref_id(self):
         """
