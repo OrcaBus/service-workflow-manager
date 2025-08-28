@@ -66,11 +66,8 @@ def _create_workflow_run(event: wru.WorkflowRunUpdate) -> wrsc.WorkflowRunStateC
     """
     logger.info(f"Start processing {event}")
 
-    # We expect: a corresponding Workflow has to exist for each workflow run
-    # NOTE: for now we allow dynamic workflow creation
-    # TODO: expect workflows to be pre-registered
-    # TODO: could move that logic to caller and expect WF to exist here
-    workflow = create_or_get_workflow(event)
+    # We expect a corresponding Workflow has to exist for each workflow run
+    workflow = get_workflow(event)
 
     # Then create the actual workflow run entry if it does not exist
     wfr = create_or_get_workflow_run(event, workflow)
@@ -94,26 +91,14 @@ def _create_workflow_run(event: wru.WorkflowRunUpdate) -> wrsc.WorkflowRunStateC
     return out_wrsc
 
 
-def create_or_get_workflow(event: wru.WorkflowRunUpdate):
+def get_workflow(event: wru.WorkflowRunUpdate):
     try:
         logger.info(f"Looking for Workflow ({event.workflow}).")
-        workflow: Workflow = Workflow.objects.get(
-            name=event.workflow.name,
-            version=event.workflow.version,
-            execution_engine=event.workflow.executionEngine
-        )
-    except Exception:
-        logger.warning("No Workflow record found! Creating new entry.")
-        workflow = Workflow(
-            name=event.workflow.name,
-            version=event.workflow.version,
-            execution_engine=event.workflow.executionEngine,
-            execution_engine_pipeline_id="Unknown",
-        )
-        logger.info("Persisting Workflow record.")
-        workflow.save()
-
-    return workflow
+        workflow: Workflow = Workflow.objects.get(orcabus_id=event.workflow.orcabusId)
+        return workflow
+    except Exception as e:
+        logger.error("No Workflow record found! Raising exception.")
+        raise e
 
 
 def create_or_get_workflow_run(event: wru.WorkflowRunUpdate, workflow: Workflow) -> WorkflowRun:
@@ -253,7 +238,10 @@ def map_workflow_run_new_state_to_wrsc(wfr: WorkflowRun, new_state: State) -> wr
             orcabusId=wfr.workflow.orcabus_id,
             name=wfr.workflow.name,
             version=wfr.workflow.version,
+            codeVersion=wfr.workflow.code_version,
             executionEngine=wfr.workflow.execution_engine,
+            executionEnginePipelineId=wfr.workflow.execution_engine_pipeline_id,
+            validationState=wfr.workflow.validation_state,
         ),
         status=Status.get_convention(new_state.status),  # ensure we follow conventions
     )

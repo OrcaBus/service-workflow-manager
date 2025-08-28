@@ -98,10 +98,7 @@
     "Workflow": {
       "type": "object",
       "required": [
-        "orcabusId",
-        "name",
-        "version",
-        "executionEngine"
+        "orcabusId"
       ],
       "properties": {
         "orcabusId": {
@@ -113,7 +110,16 @@
         "version": {
           "type": "string"
         },
+        "codeVersion": {
+          "type": "string"
+        },
         "executionEngine": {
+          "type": "string"
+        },
+        "executionEnginePipelineId": {
+          "type": "string"
+        },
+        "validationState": {
           "type": "string"
         }
       }

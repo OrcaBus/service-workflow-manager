@@ -27,6 +27,7 @@ class WorkflowFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Workflow
 
+    orcabus_id = "01J5M2JFE1JPYV62RYQEG99CPW"
     name = "TestWorkflow"
     version = "1.0"
     execution_engine_pipeline_id = str(uuid.uuid4())

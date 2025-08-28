@@ -104,6 +104,7 @@
         "orcabusId",
         "name",
         "version",
+        "codeVersion",
         "executionEngine"
       ],
       "properties": {
@@ -116,7 +117,16 @@
         "version": {
           "type": "string"
         },
+        "codeVersion": {
+          "type": "string"
+        },
         "executionEngine": {
+          "type": "string"
+        },
+        "executionEnginePipelineId": {
+          "type": "string"
+        },
+        "validationState": {
           "type": "string"
         }
       }

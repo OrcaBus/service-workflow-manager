@@ -7,7 +7,7 @@ from mockito import when, unstub
 from workflow_manager.models import Workflow, WorkflowRun, Library, LibraryAssociation, State, Payload, AnalysisRun, \
     Readset, RunContext
 from workflow_manager.models.run_context import RunContextUseCase
-from workflow_manager.tests.factories import WorkflowRunFactory
+from workflow_manager.tests.factories import WorkflowRunFactory, WorkflowFactory
 from workflow_manager_proc.domain.event import wrsc
 from workflow_manager_proc.services import workflow_run
 from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
@@ -29,6 +29,7 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         """
         python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_create_workflow_run
         """
+        _ = WorkflowFactory()
         self.load_mock_wru_min()
         out_wrsc = workflow_run.create_workflow_run(self.mock_wru_min)
         self.assertIsNotNone(out_wrsc)
@@ -41,6 +42,8 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         """
         python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_create_workflow_run_with_multiple_drafts
         """
+        _ = WorkflowFactory()
+
         # First DRAFT
         self.load_mock_wru_min()
         out_wrsc = workflow_run.create_workflow_run(self.mock_wru_min)
@@ -101,6 +104,7 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         """
         python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_create_workflow_run_state_has_not_been_updated
         """
+        _ = WorkflowFactory()
         self.load_mock_wru_min()
         when(workflow_run).update_workflow_run_to_new_state(...).thenReturn((False, "DOES_NOT_MATTER"))
         out_wrsc = workflow_run.create_workflow_run(self.mock_wru_min)
@@ -110,18 +114,19 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(State.objects.count(), 0)
         self.assertEqual(Payload.objects.count(), 0)
 
-    def test_create_or_get_workflow(self):
+    def test_get_workflow(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_create_or_get_workflow
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_get_workflow
         """
+        _ = WorkflowFactory()
         self.load_mock_wru_max()
 
-        wfl_persisted_in_db = workflow_run.create_or_get_workflow(self.mock_wru_max)
+        wfl_persisted_in_db = workflow_run.get_workflow(self.mock_wru_max)
         logger.info(wfl_persisted_in_db)
         self.assertEqual(Workflow.objects.count(), 1)
 
         # Try the second time. The workflow db lookup should be found the existing record.
-        wfl_persisted_in_db2 = workflow_run.create_or_get_workflow(self.mock_wru_max)
+        wfl_persisted_in_db2 = workflow_run.get_workflow(self.mock_wru_max)
         logger.info(wfl_persisted_in_db2)
         self.assertEqual(wfl_persisted_in_db.orcabus_id, wfl_persisted_in_db.orcabus_id)
         self.assertEqual(Workflow.objects.count(), 1)
@@ -130,9 +135,10 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         """
         python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_create_or_get_workflow_run
         """
+        _ = WorkflowFactory()
         self.load_mock_wru_max()
 
-        wfl_persisted_in_db = workflow_run.create_or_get_workflow(self.mock_wru_max)
+        wfl_persisted_in_db = workflow_run.get_workflow(self.mock_wru_max)
 
         wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(self.mock_wru_max, wfl_persisted_in_db)
         logger.info(wfr_persisted_in_db)
@@ -398,10 +404,11 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         """
         python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_update_workflow_run_to_new_state
         """
+        _ = WorkflowFactory()
         self.load_mock_wru_min()
 
         # First create wfr with min fixture DRAFT state
-        wfl_persisted_in_db = workflow_run.create_or_get_workflow(self.mock_wru_min)
+        wfl_persisted_in_db = workflow_run.get_workflow(self.mock_wru_min)
         wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(self.mock_wru_min, wfl_persisted_in_db)
 
         success, state = workflow_run.update_workflow_run_to_new_state(self.mock_wru_min, wfr_persisted_in_db)
@@ -425,10 +432,11 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         """
         python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_update_workflow_run_to_new_state_with_ref_id
         """
+        _ = WorkflowFactory()
         self.load_mock_wru_max()
 
         # First create wfr with min fixture DRAFT state
-        wfl_persisted_in_db = workflow_run.create_or_get_workflow(self.mock_wru_max)
+        wfl_persisted_in_db = workflow_run.get_workflow(self.mock_wru_max)
         wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(self.mock_wru_max, wfl_persisted_in_db)
 
         success, state = workflow_run.update_workflow_run_to_new_state(self.mock_wru_max, wfr_persisted_in_db)
@@ -447,13 +455,14 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         """
         python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_update_workflow_run_to_new_state_without_ref_id
         """
+        _ = WorkflowFactory()
         self.load_mock_wru_max()
 
         # Nullify payload refId
         self.mock_wru_max.payload.refId = None
 
         # First create wfr with min fixture DRAFT state
-        wfl_persisted_in_db = workflow_run.create_or_get_workflow(self.mock_wru_max)
+        wfl_persisted_in_db = workflow_run.get_workflow(self.mock_wru_max)
         wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(self.mock_wru_max, wfl_persisted_in_db)
 
         success, state = workflow_run.update_workflow_run_to_new_state(self.mock_wru_max, wfr_persisted_in_db)
@@ -474,8 +483,9 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         """
         python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_map_workflow_run_new_state_to_wrsc
         """
+        _ = WorkflowFactory()
         self.load_mock_wru_max()
-        wfl_persisted_in_db = workflow_run.create_or_get_workflow(self.mock_wru_max)
+        wfl_persisted_in_db = workflow_run.get_workflow(self.mock_wru_max)
         wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(self.mock_wru_max, wfl_persisted_in_db)
 
         anr = AnalysisRun.objects.create(
@@ -526,7 +536,10 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
                 orcabusId=self.mock_wru_max.workflow.orcabusId,
                 name=self.mock_wru_max.workflow.name,
                 version=self.mock_wru_max.workflow.version,
+                codeVersion=self.mock_wru_max.workflow.codeVersion,
                 executionEngine=self.mock_wru_max.workflow.executionEngine,
+                executionEnginePipelineId=self.mock_wru_max.workflow.executionEnginePipelineId,
+                validationState=self.mock_wru_max.workflow.validationState,
             ),
             analysisRun=wrsc.AnalysisRun(
                 orcabusId=self.mock_wru_max.analysisRun.orcabusId,
