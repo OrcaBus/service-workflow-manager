@@ -15,7 +15,7 @@ class WorkflowListParamSerializer(OptionalFieldsMixin, WorkflowBaseSerializer):
 class WorkflowMinSerializer(WorkflowBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
         model = Workflow
-        fields = ["orcabus_id", "workflow_name", "workflow_version", "execution_engine"]
+        fields = ["orcabus_id", "name", "version", "execution_engine"]
 
 
 class WorkflowSerializer(WorkflowBaseSerializer):

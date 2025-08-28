@@ -167,48 +167,48 @@ class TestData:
         # The workflows that are available to be run
 
         qc_workflow = Workflow(
-            workflow_name="wgts_alignment_qc",
-            workflow_version="1.0",
+            name="wgts_alignment_qc",
+            version="1.0",
             execution_engine="ICA",
             execution_engine_pipeline_id="ica.pipeline.01234",
         )
         qc_workflow.save()
 
         wgs_workflow = Workflow(
-            workflow_name="tumor_normal",
-            workflow_version="1.0",
+            name="tumor_normal",
+            version="1.0",
             execution_engine="ICA",
             execution_engine_pipeline_id="ica.pipeline.12345",
         )
         wgs_workflow.save()
 
         cttsov2_workflow = Workflow(
-            workflow_name="cttso",
-            workflow_version="2.0",
+            name="cttso",
+            version="2.0",
             execution_engine="ICA",
             execution_engine_pipeline_id="ica.pipeline.23456",
         )
         cttsov2_workflow.save()
 
         umccrise_workflow = Workflow(
-            workflow_name="umccrise",
-            workflow_version="1.0",
+            name="umccrise",
+            version="1.0",
             execution_engine="ICA",
             execution_engine_pipeline_id="ica.pipeline.34567",
         )
         umccrise_workflow.save()
 
         oa_wgs_workflow = Workflow(
-            workflow_name="oncoanalyser_wgs",
-            workflow_version="1.0",
+            name="oncoanalyser_wgs",
+            version="1.0",
             execution_engine="AWS_BATCH",
             execution_engine_pipeline_id="nf.12345",
         )
         oa_wgs_workflow.save()
 
         sash_workflow = Workflow(
-            workflow_name="sash",
-            workflow_version="1.0",
+            name="sash",
+            version="1.0",
             execution_engine="AWS_BATCH",
             execution_engine_pipeline_id="nf.23456",
         )
@@ -512,7 +512,7 @@ class TestData:
         for workflow in workflows.all():
             wr: WorkflowRun = WorkflowRun(
                 portal_run_id=create_portal_run_id(),
-                workflow_run_name=f"{analysis_run.analysis_run_name}__{workflow.workflow_name}",
+                workflow_run_name=f"{analysis_run.analysis_run_name}__{workflow.name}",
                 workflow=workflow,
                 analysis_run=analysis_run,
             )

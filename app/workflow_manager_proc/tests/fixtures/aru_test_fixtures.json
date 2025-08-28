@@ -53,8 +53,8 @@
     "model": "workflow_manager.workflow",
     "pk": "wfl.01K3FSK7Z508JHE0R134JEVJFP",
     "fields": {
-      "workflow_name": "wgts_alignment_qc",
-      "workflow_version": "1.0",
+      "name": "wgts_alignment_qc",
+      "version": "1.0",
       "execution_engine": "ICA",
       "execution_engine_pipeline_id": "ica.pipeline.01234",
       "validation_state": "VALIDATED"
@@ -64,8 +64,8 @@
     "model": "workflow_manager.workflow",
     "pk": "wfl.01K3FSK7ZBR2MCCHWCAKHNSPQK",
     "fields": {
-      "workflow_name": "tumor_normal",
-      "workflow_version": "1.0",
+      "name": "tumor_normal",
+      "version": "1.0",
       "execution_engine": "ICA",
       "execution_engine_pipeline_id": "ica.pipeline.12345",
       "validation_state": "VALIDATED"
@@ -75,8 +75,8 @@
     "model": "workflow_manager.workflow",
     "pk": "wfl.01K3FSK7ZG8CBGE2KS67VB2M9T",
     "fields": {
-      "workflow_name": "cttso",
-      "workflow_version": "2.0",
+      "name": "cttso",
+      "version": "2.0",
       "execution_engine": "ICA",
       "execution_engine_pipeline_id": "ica.pipeline.23456",
       "validation_state": "VALIDATED"
@@ -86,8 +86,8 @@
     "model": "workflow_manager.workflow",
     "pk": "wfl.01K3FSK7ZNEKX6TWDJC0VA07E9",
     "fields": {
-      "workflow_name": "umccrise",
-      "workflow_version": "1.0",
+      "name": "umccrise",
+      "version": "1.0",
       "execution_engine": "ICA",
       "execution_engine_pipeline_id": "ica.pipeline.34567",
       "validation_state": "VALIDATED"
@@ -97,8 +97,8 @@
     "model": "workflow_manager.workflow",
     "pk": "wfl.01K3FSK7ZTAVNVY5DTC0AV8T01",
     "fields": {
-      "workflow_name": "oncoanalyser_wgs",
-      "workflow_version": "1.0",
+      "name": "oncoanalyser_wgs",
+      "version": "1.0",
       "execution_engine": "AWS_BATCH",
       "execution_engine_pipeline_id": "nf.12345",
       "validation_state": "VALIDATED"
@@ -108,8 +108,8 @@
     "model": "workflow_manager.workflow",
     "pk": "wfl.01K3FSK7ZYHG8GM21V6BZY13X4",
     "fields": {
-      "workflow_name": "sash",
-      "workflow_version": "1.0",
+      "name": "sash",
+      "version": "1.0",
       "execution_engine": "AWS_BATCH",
       "execution_engine_pipeline_id": "nf.23456",
       "validation_state": "VALIDATED"

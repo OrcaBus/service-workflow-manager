@@ -71,13 +71,13 @@ def _create_workflow_run(event: srv.WorkflowRunStateChange):
     try:
         logger.info(f"Looking for Workflow ({srv_wrsc.workflowName}:{srv_wrsc.workflowVersion}).")
         workflow: Workflow = Workflow.objects.get(
-            workflow_name=srv_wrsc.workflowName, workflow_version=srv_wrsc.workflowVersion
+            name=srv_wrsc.workflowName, version=srv_wrsc.workflowVersion
         )
     except Exception:
         logger.warning("No Workflow record found! Creating new entry.")
         workflow = Workflow(
-            workflow_name=srv_wrsc.workflowName,
-            workflow_version=srv_wrsc.workflowVersion,
+            name=srv_wrsc.workflowName,
+            version=srv_wrsc.workflowVersion,
             execution_engine="Unknown",
             execution_engine_pipeline_id="Unknown",
         )
@@ -162,8 +162,8 @@ def _map_srv_wrsc_to_wfm_wrsc(wfr: WorkflowRun, new_state: State, srv_wrsc) -> w
         workflowRunName=wfr.workflow_run_name,
         workflow=wrsc.Workflow(
             orcabusId=wfr.workflow.orcabus_id,
-            name=wfr.workflow.workflow_name,
-            version=wfr.workflow.workflow_version,
+            name=wfr.workflow.name,
+            version=wfr.workflow.version,
             executionEngine=wfr.workflow.execution_engine,
         ),
         status=Status.get_convention(new_state.status),  # ensure we follow conventions

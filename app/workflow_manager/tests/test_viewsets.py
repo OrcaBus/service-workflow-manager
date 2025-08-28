@@ -70,7 +70,7 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
 
         # Change the workflow name to 'rnasum' as this is the only allowed workflow name for rerun
         wfl = Workflow.objects.all().first()
-        wfl.workflow_name = "rnasum"
+        wfl.name = "rnasum"
         wfl.save()
 
         response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "INVALID_CHOICE"})

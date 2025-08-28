@@ -34,7 +34,7 @@ def create_workflows_runs_from_analysis_run(analysis_run: arsc.AnalysisRunStateC
 
 def create_wru_draft(workflow: Workflow, libraries: List[Library]) -> wru.WorkflowRunUpdate:
     prid = create_portal_run_id()
-    wfr_name = f"{wfr_name_prefix}--{workflow.workflow_name}--{workflow.workflow_version}--{prid}"
+    wfr_name = f"{wfr_name_prefix}--{workflow.name}--{workflow.version}--{prid}"
     # update with libraries
     wfr_libraries = []
     for lib in libraries:
@@ -55,8 +55,8 @@ def create_wru_draft(workflow: Workflow, libraries: List[Library]) -> wru.Workfl
 def _map_model_workflow_to_wru_workflow(wfl: Workflow) -> wru.Workflow:
     wru_wfl = wru.Workflow(
         orcabusId=wfl.orcabus_id,
-        name=wfl.workflow_name,
-        version=wfl.workflow_version,
+        name=wfl.name,
+        version=wfl.version,
         executionEngine=wfl.execution_engine
     )
     return wru_wfl

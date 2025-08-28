@@ -27,8 +27,8 @@ class WorkflowFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Workflow
 
-    workflow_name = "TestWorkflow"
-    workflow_version = "1.0"
+    name = "TestWorkflow"
+    version = "1.0"
     execution_engine_pipeline_id = str(uuid.uuid4())
     execution_engine = "ICA"
 
