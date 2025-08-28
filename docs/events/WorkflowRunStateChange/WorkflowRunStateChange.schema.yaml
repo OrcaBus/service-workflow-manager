@@ -141,6 +141,12 @@ definitions:
       executionEngine:
         # the workflow execution engine
         type: string
+      executionEnginePipelineId:
+        # the workflow execution engine pipeline id
+        type: string
+      validationState:
+        # the workflow validation state
+        type: string
   AnalysisRun:
     type: object
     required:
