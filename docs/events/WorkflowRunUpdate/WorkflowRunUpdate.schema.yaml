@@ -127,10 +127,8 @@ definitions:
   Workflow:
     type: object
     required:
+      # the Workflow object is read only, hence, only required orcabusId
       - orcabusId
-      - name
-      - version
-      - executionEngine
     properties:
       orcabusId:
         # the OrcaBus internal id of the Workflow, e.g. wfl.001234EXAMPLE56789ANALYSIS
@@ -141,8 +139,17 @@ definitions:
       version:
         # the version of the Workflow (mainly for human readability)
         type: string
+      codeVersion:
+        # the version of the pipeline code
+        type: string
       executionEngine:
         # the workflow execution engine
+        type: string
+      executionEnginePipelineId:
+        # the workflow execution engine pipeline id
+        type: string
+      validationState:
+        # the workflow validation state
         type: string
   AnalysisRun:
     type: object

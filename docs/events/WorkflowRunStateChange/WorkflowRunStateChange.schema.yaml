@@ -127,6 +127,7 @@ definitions:
       - orcabusId
       - name
       - version
+      - codeVersion
       - executionEngine
     properties:
       orcabusId:
@@ -138,8 +139,17 @@ definitions:
       version:
         # the version of the Workflow (mainly for human readability)
         type: string
+      codeVersion:
+        # the version of the pipeline code
+        type: string
       executionEngine:
         # the workflow execution engine
+        type: string
+      executionEnginePipelineId:
+        # the workflow execution engine pipeline id
+        type: string
+      validationState:
+        # the workflow validation state
         type: string
   AnalysisRun:
     type: object
