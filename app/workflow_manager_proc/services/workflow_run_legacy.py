@@ -20,6 +20,7 @@ from workflow_manager.models import (
     Status, Payload,
 )
 from workflow_manager.models.utils import WorkflowRunUtil
+from workflow_manager.models.workflow import ValidationState
 from workflow_manager_proc.domain.event import wrsc
 from workflow_manager_proc.services.event_utils import emit_event, EventType
 from workflow_manager_proc.services.workflow_run import EVENT_BUS_NAME, ASSOCIATION_STATUS, WRSC_SCHEMA_VERSION, \
@@ -71,7 +72,12 @@ def _create_workflow_run(event: srv.WorkflowRunStateChange):
     try:
         logger.info(f"Looking for Workflow ({srv_wrsc.workflowName}:{srv_wrsc.workflowVersion}).")
         workflow: Workflow = Workflow.objects.get(
-            name=srv_wrsc.workflowName, version=srv_wrsc.workflowVersion
+            name=srv_wrsc.workflowName,
+            version=srv_wrsc.workflowVersion,
+            code_version="0.0.0",  # legacy default constant
+            execution_engine="Unknown",  # legacy default constant
+            execution_engine_pipeline_id="Unknown",  # legacy default constant
+            validation_state=ValidationState.VALIDATED.value,  # in legacy records, all workflows are validated
         )
     except Exception:
         logger.warning("No Workflow record found! Creating new entry.")
