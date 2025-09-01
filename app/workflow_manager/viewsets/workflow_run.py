@@ -86,7 +86,7 @@ class WorkflowRunViewSet(BaseViewSet):
                 Q(comment__icontains=search_params) |
                 Q(libraries__library_id__icontains=search_params) |
                 Q(libraries__orcabus_id__icontains=search_params) |
-                Q(workflow__workflow_name__icontains=search_params)
+                Q(workflow__name__icontains=search_params)
             ).distinct() # Add distinct to remove duplicates
 
         return result_set

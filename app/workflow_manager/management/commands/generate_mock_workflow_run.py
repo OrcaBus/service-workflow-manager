@@ -12,7 +12,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # don't do anything if there is already mock data
-        if Workflow.objects.filter(workflow_name__startswith=TestData.WORKFLOW_NAME).exists():
+        if Workflow.objects.filter(name__startswith=TestData.WORKFLOW_NAME).exists():
             print("Mock data found, Skipping creation.")
             return
 
