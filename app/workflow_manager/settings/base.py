@@ -142,7 +142,8 @@ REST_FRAMEWORK = {
         "djangorestframework_camel_case.parser.CamelCaseJSONParser",
     ),
     "JSON_UNDERSCOREIZE": {
-        'no_underscore_before_number': True,
+        "no_underscore_before_number": True,
+        "ignore_fields": ("data",),  # Treat model field name "data" as an opaque object. Do not transform recursively.
     },
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",

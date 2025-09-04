@@ -1,10 +1,12 @@
 import os
+import uuid
 from unittest import mock
 
 from django.db.models import QuerySet
 
 import workflow_manager.aws_event_bridge.executionservice.workflowrunstatechange as srv
-from workflow_manager.models import WorkflowRun, Library
+from workflow_manager.models import WorkflowRun, Library, Workflow
+from workflow_manager.models.workflow import ExecutionEngine, ValidationState
 from workflow_manager_proc.domain.event import wrsc
 from workflow_manager_proc.services.workflow_run_legacy import create_workflow_run
 from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
@@ -265,3 +267,69 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         # assert we can validate the emitting model
         self.assertIsNotNone(wrsc.WorkflowRunStateChange.model_validate(result_wrsc))
+
+    def test_create_workflow_run_legacy_dynamic_workflow_creation_behaviour(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run_legacy.WorkflowSrvUnitTests.test_create_workflow_run_legacy_dynamic_workflow_creation_behaviour
+        """
+        self.load_mock_wrsc_legacy()
+
+        # Pre Condition
+        self.assertEqual(0, Workflow.objects.count())
+
+        mock_wrsc_event_with_envelope = srv.Marshaller.unmarshall(self.event, srv.AWSEvent)
+
+        create_workflow_run(mock_wrsc_event_with_envelope.detail)
+
+        # Post Condition
+        self.assertEqual(Workflow.objects.count(), 1)
+        # Assert that the legacy values are used in the new schema column fields
+        persisted_wfl: Workflow = Workflow.objects.first()
+        self.assertEqual(persisted_wfl.code_version, "0.0.0")
+        self.assertEqual(persisted_wfl.execution_engine, "Unknown")
+        self.assertEqual(persisted_wfl.execution_engine_pipeline_id, "Unknown")
+        self.assertEqual(persisted_wfl.validation_state, "VALIDATED")
+
+    def test_create_workflow_run_legacy_dynamic_workflow_get_behaviour(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run_legacy.WorkflowSrvUnitTests.test_create_workflow_run_legacy_dynamic_workflow_get_behaviour
+        """
+        self.load_mock_wrsc_legacy()
+
+        # Legacy dynamic workflow creation behaviour
+        existing_workflow_legacy = Workflow.objects.create(
+            name=self.event['detail']['workflowName'],
+            version=self.event['detail']['workflowVersion'],
+            execution_engine="Unknown",
+            execution_engine_pipeline_id="Unknown",
+            validation_state=ValidationState.VALIDATED.value,
+        )
+
+        # New deterministic workflow creation behaviour (via API)
+        _ = Workflow.objects.create(
+            name=self.event['detail']['workflowName'],
+            version=self.event['detail']['workflowVersion'],
+            code_version="85ce3d-dev",
+            execution_engine=ExecutionEngine.ICA.value,
+            execution_engine_pipeline_id=str(uuid.uuid4()),
+            validation_state=ValidationState.UNVALIDATED.value,
+        )
+
+        # Pre Condition
+        self.assertEqual(2, Workflow.objects.count())
+
+        mock_wrsc_event_with_envelope = srv.Marshaller.unmarshall(self.event, srv.AWSEvent)
+
+        out_wrsc = create_workflow_run(mock_wrsc_event_with_envelope.detail)
+
+        # Post Condition
+        # Assert that no new Workflow have been created. Database get query should found existing legacy record.
+        self.assertEqual(Workflow.objects.count(), 2)
+        # Assert that the legacy values are used in the new schema column fields
+        self.assertEqual(out_wrsc.workflow.name, existing_workflow_legacy.name)
+        self.assertEqual(out_wrsc.workflow.version, existing_workflow_legacy.version)
+        self.assertEqual(out_wrsc.workflow.codeVersion, existing_workflow_legacy.code_version)
+        self.assertEqual(out_wrsc.workflow.executionEngine, existing_workflow_legacy.execution_engine)
+        self.assertEqual(out_wrsc.workflow.executionEnginePipelineId,
+                         existing_workflow_legacy.execution_engine_pipeline_id)
+        self.assertEqual(out_wrsc.workflow.validationState, existing_workflow_legacy.validation_state)
