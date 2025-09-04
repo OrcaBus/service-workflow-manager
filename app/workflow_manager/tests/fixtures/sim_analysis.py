@@ -530,7 +530,26 @@ class TestData:
                 timestamp=datetime.now(timezone.utc),
                 payload=PayloadFactory(
                     payload_ref_id=str(uuid.uuid4()),
-                    data={"comment": f"Payload for initial state of wfr.{wr.orcabus_id}"}),
+                    data={
+                        "comment": f"Payload for initial state of wfr.{wr.orcabus_id}",
+                        "under_score": "foo",
+                        "key-with-dash": "bar",
+                        "PascalCase": "bash",
+                        "inputs": {
+                            "forceGenome": True,
+                            "genome_type": "alt",
+                            "genome_version": "38",
+                            "genomes": {
+                                "GRCh38_umccr": {
+                                    "fai": "s3://reference-data/refdata/genomes/GRCh38_umccr/foo/bar/GRCh38.fa.fai"
+                                }
+                            }
+                        },
+                        "engineParameters": {
+                            "logsUri": "s3://reference-data/refdata/logs/",
+                            "logs_uri": "s3://underscore-data/refdata/logs/",
+                        }
+                    }),
                 comment="Initial State"
             )
             initial_state.save()
