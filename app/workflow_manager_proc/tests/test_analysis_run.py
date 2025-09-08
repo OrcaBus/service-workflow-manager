@@ -67,7 +67,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         arsc_event.orcabusId = "anr.11223344556677889900TEST01"
         arsc_event.id = None  # reset the previously assigned hash id
         testable_hash_id = get_arsc_hash(arsc_event)
-        self.assertEqual(testable_hash_id, "21547fb4fe7e4ca2454eddd656065613")
+        self.assertEqual(testable_hash_id, "7d7744638d14bfbd92a6f501bb70fe93")
 
     def test_aru_draft_max(self):
         """
@@ -101,7 +101,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         arsc_event.orcabusId = "anr.11223344556677889900TEST01"
         arsc_event.id = None  # reset the previously assigned hash id
         testable_hash_id = get_arsc_hash(arsc_event)
-        self.assertEqual(testable_hash_id, "4676030bea0c4d172f34bc4be39237ef")
+        self.assertEqual(testable_hash_id, "3819045ce69fca7c51c6c295c4d69215")
 
     def test_aru_ready_max(self):
         """
@@ -163,7 +163,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         arsc_event.orcabusId = "anr.11223344556677889900TEST01"
         arsc_event.id = None  # reset the previously assigned hash id
         testable_hash_id = get_arsc_hash(arsc_event)
-        self.assertEqual(testable_hash_id, "460bdbf4a9ca9bec77c5991b3509a15a")
+        self.assertEqual(testable_hash_id, "1fb00d940efa30a74514da31e892fda0")
 
         # run some spot checks
         self.assertEqual(db_analysis_run_draft.analysis, db_analysis_run.analysis)
@@ -238,7 +238,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         )
         test_arsc = arsc.AnalysisRunStateChange(
             id="",
-            version="0.0.1",
+            version="1.0.0",
             timestamp=datetime.datetime.strptime("01/05/2025 6:00", "%m/%d/%Y %H:%M"),
             orcabusId="SOME9ARSC9ANALYSISRUN9ID12345",
             analysisRunName="testAnalysisRunName",

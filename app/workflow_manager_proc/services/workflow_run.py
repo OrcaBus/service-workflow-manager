@@ -24,7 +24,7 @@ logger.setLevel(logging.INFO)
 
 ASSOCIATION_STATUS = "ACTIVE"
 EVENT_BUS_NAME = os.environ.get("EVENT_BUS_NAME")
-WRSC_SCHEMA_VERSION = "0.0.1"
+WRSC_SCHEMA_VERSION = "1.0.0"  # TODO: set somewhere more global (and check against schema?)
 
 
 def sanitize_orcabus_id(orcabus_id: str) -> str:
