@@ -10,6 +10,7 @@ from workflow_manager.models.run_context import RunContextUseCase
 from workflow_manager.tests.factories import WorkflowRunFactory, WorkflowFactory
 from workflow_manager_proc.domain.event import wrsc
 from workflow_manager_proc.services import workflow_run
+from workflow_manager_proc.services.event_utils import hash_payload_data
 from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
 
 
@@ -45,6 +46,7 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         _ = WorkflowFactory()
 
         # First DRAFT
+        logger.info("1, DRAFT")
         self.load_mock_wru_min()
         out_wrsc = workflow_run.create_workflow_run(self.mock_wru_min)
         self.assertIsNotNone(out_wrsc)
@@ -61,6 +63,7 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         print("-" * 128)
 
         # Second DRAFT
+        logger.info("2. DRAFT")
         self.load_mock_wru_max()
 
         # Temporary override the event to simulate the second DRAFT
@@ -73,7 +76,6 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(Workflow.objects.count(), 1)
         self.assertEqual(WorkflowRun.objects.count(), 1)
         self.assertEqual(State.objects.count(), 2)
-        # FIXME Payload will generate new due to refId being UUID formula
         self.assertEqual(Payload.objects.count(), 1)
         # Evaluate the following
         self.assertEqual(Readset.objects.count(), 4)
@@ -82,6 +84,7 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         print("-" * 128)
 
         # Third DRAFT
+        logger.info("3. DRAFT")
         self.load_mock_wru_max()
 
         # Temporary override the event to simulate the third (simply repeating / duplicate) DRAFT
@@ -94,8 +97,7 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(Workflow.objects.count(), 1)
         self.assertEqual(WorkflowRun.objects.count(), 1)
         self.assertEqual(State.objects.count(), 3)
-        # FIXME Payload will generate new due to refId being UUID formula
-        self.assertEqual(Payload.objects.count(), 2)
+        self.assertEqual(Payload.objects.count(), 1)  # The payload did not change, so we don't expect a new entry
         # Evaluate the following - make sure Readset and RunContext count should be the same since the second draft
         self.assertEqual(Readset.objects.count(), 4)
         self.assertEqual(RunContext.objects.count(), 2)
@@ -558,13 +560,20 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         )
 
         hash_id = workflow_run.get_wrsc_hash(mock_wrsc)
-        logger.info(hash_id)
+        logger.info(f"Given hash: {hash_id}")
 
         # Assert ID already exist in WRSC
-        self.assertEqual(hash_id, "97534601940f17ebcfee02enotsecret")
+        # The ID is the hash of the event, we expect it to be present
+        self.assertEqual(hash_id, "9a4a56898f96a74c28557df54e760275")
 
-        # Set ID to empty to force compute hash
-        mock_wrsc.id = ""
+        # We expect the re-calculated hash to match the given hash
+        mock_wrsc.id = ""  # Set ID to empty to force compute hash
         recomputed_hash_id = workflow_run.get_wrsc_hash(mock_wrsc)
-        logger.info(recomputed_hash_id)
-        self.assertEqual(recomputed_hash_id, "c245d06133737ec8c080a2792fd54e2a")
+        logger.info(f"Computed hash: {recomputed_hash_id}")
+        self.assertEqual(recomputed_hash_id, hash_id)
+
+        # We expect the given hash to be returned
+        # TODO: we currently don't enforce a re-calculation or verification of the hash
+        mock_wrsc.id = "FooBar"
+        provided_hash = workflow_run.get_wrsc_hash(mock_wrsc)
+        self.assertEqual(provided_hash, "FooBar")

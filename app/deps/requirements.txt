@@ -26,3 +26,4 @@ pydantic==2.11.7
 # six and regex required by automatically generated EventBridge code binding
 six==1.17.0
 regex==2024.11.6
+rfc8785==0.1.4

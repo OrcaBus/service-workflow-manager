@@ -17,7 +17,7 @@ from workflow_manager.models import (
 from workflow_manager.models.run_context import RunContext, RunContextUseCase, RunContextStatus
 from workflow_manager.models.utils import WorkflowRunUtil
 from workflow_manager_proc.domain.event import wrsc, wru
-from workflow_manager_proc.services.event_utils import emit_event, EventType
+from workflow_manager_proc.services.event_utils import emit_event, EventType, hash_payload_data
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -213,12 +213,22 @@ def update_workflow_run_to_new_state(event: wru.WorkflowRunUpdate, wfr: Workflow
     )
 
     # Handle the payload
+    # If we already have that payload in the DB we reuse it,
+    # otherwise we create a new record
     if event.payload:
-        new_state.payload = Payload(
-            payload_ref_id=str(uuid.uuid4()),  # FIXME Concept change: This is a quick fix to unblock current dev. We are changing the behaviour to internal hash scheme in next tick
-            version=event.payload.version,
-            data=event.payload.data,
-        )
+        # Make sure the provided refId is either not set or matches the expected hash value
+        calculated_data_hash = hash_payload_data(event.payload.data)
+        data_hash =  event.payload.refId if event.payload.refId else calculated_data_hash
+        assert calculated_data_hash == data_hash, "Provided Payload data hash does not match expected value"
+        try:
+            pld: Payload = Payload.objects.get(payload_ref_id=data_hash)
+        except Exception:
+            pld = Payload(
+                payload_ref_id=hash_payload_data(event.payload.data),  # use a hash of the payload data as refId
+                version=event.payload.version,
+                data=event.payload.data,
+            )
+        new_state.payload = pld
 
     # Attempt to transition to new state (will persist new state if successful)
     success = WorkflowRunUtil(wfr).transition_to(new_state)
@@ -338,7 +348,8 @@ def get_wrsc_hash(out_wrsc: wrsc.WorkflowRunStateChange) -> str:
     keywords.append(out_wrsc.workflow.orcabusId)
 
     if out_wrsc.payload:
-        keywords.append(out_wrsc.payload.orcabusId)
+        # use the refId field which holds a hash of the payload data
+        keywords.append(out_wrsc.payload.refId)
 
     if out_wrsc.analysisRun:
         keywords.append(out_wrsc.analysisRun.orcabusId)

@@ -8,7 +8,7 @@
   "region": "ap-southeast-2",
   "resources": [],
   "detail": {
-    "id": "97534601940f17ebcfee02enotsecret",
+    "id": "9a4a56898f96a74c28557df54e760275",
     "version": "1.0.0",
     "timestamp": "2025-05-01T09:25:44Z",
     "orcabusId": "wfr.01J5M2J44HFJ9424G7074HHHHH",
@@ -61,7 +61,7 @@
     "storageEnv": "clinical",
     "status": "READY",
     "payload": {
-      "refId": "99995678-238c-4200-b632-d5dd8c8db94a",
+      "refId": "af7401ac30b18164fafd3f7357726469c6401bef78549375c0b56d3a42bab0d1",
       "version": "0.1.0",
       "data": {
         "projectId": "bxxxxxxxx-dxxx-4xxxx-adcc-xxxxxxxxx",
