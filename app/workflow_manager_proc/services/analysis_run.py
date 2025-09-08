@@ -21,7 +21,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 EVENT_BUS_NAME = os.environ.get("EVENT_BUS_NAME")
-ARSC_SCHEMA_VERSION = "0.0.1"  # TODO: set somewhere more global (and check against schema?)
+ARSC_SCHEMA_VERSION = "1.0.0"  # TODO: set somewhere more global (and check against schema?)
 
 
 @transaction.atomic
