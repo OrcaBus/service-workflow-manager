@@ -176,13 +176,6 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'UMCCR OrcaBus workflow_manager API',
     'VERSION': API_VERSION,
     'SERVE_INCLUDE_SCHEMA': False,
-    'SECURITY': [
-        {
-            "type": "http",
-            "scheme": "bearer",
-            "bearerFormat": "JWT",
-        }
-    ],
     'CONTACT': {
         'name': 'UMCCR',
         'email': 'services@umccr.org'
