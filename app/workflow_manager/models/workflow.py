@@ -45,7 +45,7 @@ class Workflow(OrcaBusBaseModel):
     # - deprecated
     # - failed (validation) - although those should probably never be used and deleted directly
     # e.g. support testing in production, so unvalidated workflows are not used
-    validation_state = models.CharField(max_length=255, choices=ValidationState, default=ValidationState.VALIDATED)  # FIXME revert to UNVALIDATED once initial migration completed
+    validation_state = models.CharField(max_length=255, choices=ValidationState, default=ValidationState.UNVALIDATED)
 
     objects = WorkflowManager()
 
