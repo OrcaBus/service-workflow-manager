@@ -84,8 +84,10 @@ def _create_workflow_run(event: srv.WorkflowRunStateChange):
         workflow = Workflow(
             name=srv_wrsc.workflowName,
             version=srv_wrsc.workflowVersion,
-            execution_engine="Unknown",
-            execution_engine_pipeline_id="Unknown",
+            code_version="0.0.0",  # legacy default constant
+            execution_engine="Unknown",  # legacy default constant
+            execution_engine_pipeline_id="Unknown",  # legacy default constant
+            validation_state=ValidationState.VALIDATED.value,  # in legacy records, all workflows are validated
         )
         logger.info("Persisting Workflow record.")
         workflow.save()
