@@ -25,7 +25,7 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
     """
     valid_states_map = {
         'RESOLVED': ['FAILED'],
-        'DEPRECATED': ['SUCCEEDED', 'READY']
+        'DEPRECATED': ['SUCCEEDED', 'READY', 'DRAFT']
     }
 
     def get_queryset(self):
