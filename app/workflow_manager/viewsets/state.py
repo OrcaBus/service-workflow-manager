@@ -18,23 +18,32 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
     lookup_value_regex = "[^/]+" # to allow id prefix
 
     """
-    valid_states_map for state creation, update
+    states_transition_validation_map for state creation, update
+    Structure:
+    - If value is a list: ['STATE1', 'STATE2'] means only these states can transition to the key
+    - If value is a dict with 'excluded_states': allows all states except those listed
+    - If value is a dict with 'allowed_states': same as list format
+
     refer:
         "Resolved" -- https://github.com/umccr/orcabus/issues/593
         "Deprecated" -- https://github.com/umccr/orcabus/issues/695
     """
-    valid_states_map = {
-        'RESOLVED': ['FAILED'],
-        'DEPRECATED': ['SUCCEEDED', 'READY', 'DRAFT']
+    states_transition_validation_map = {
+        'RESOLVED': ['FAILED'],  # Only FAILED can transition to RESOLVED
+        'DEPRECATED': {'excluded_states': ['FAILED', 'ABORTED', 'RESOLVED', 'DEPRECATED']}  # All states except these can transition to DEPRECATED
     }
+
 
     def get_queryset(self):
         return State.objects.filter(workflow_run=self.kwargs["orcabus_id"])
 
-    @extend_schema(responses=OpenApiTypes.OBJECT, description="Valid states map for new state creation, update")
-    @action(detail=False, methods=['get'], url_name='valid_states_map', url_path='valid_states_map')
-    def get_valid_states_map(self, request, **kwargs):
-        return Response(self.valid_states_map)
+    @extend_schema(responses=OpenApiTypes.OBJECT, description="Get states transition validation map")
+    @action(detail=False, methods=['get'], url_name='get_states_transition_validation_map', url_path='get_states_transition_validation_map')
+    def get_states_transition_validation_map(self, request, **kwargs):
+        """
+        Returns states transition validation map.
+        """
+        return Response(self.states_transition_validation_map)
 
     def create(self, request, *args, **kwargs):
         """
@@ -45,16 +54,21 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
         workflow_run = WorkflowRun.objects.get(orcabus_id=wfr_orcabus_id)
 
         latest_state = workflow_run.get_latest_state()
-        if not latest_state:
-            return Response({"detail": "No state found for workflow run '{}'".format(wfr_orcabus_id)},
-                            status=status.HTTP_400_BAD_REQUEST)
-        latest_status = latest_state.status
         request_status = request.data.get('status', '').upper()
 
-        # check if the state status is valid
-        if not self.check_state_status(latest_status, request_status):
-            return Response({"detail": "Invalid state request. Can't add state '{}' to '{}'".format(request_status, latest_status)},
-                            status=status.HTTP_400_BAD_REQUEST)
+        # Handle case when there's no latest state - only allow DEPRECATED
+        if not latest_state:
+            if request_status != 'DEPRECATED':
+                return Response({"detail": "No state found for workflow run '{}'. Only DEPRECATED is allowed when there are no states.".format(wfr_orcabus_id)},
+                                status=status.HTTP_400_BAD_REQUEST)
+            # Allow DEPRECATED when there's no state (it's not in excluded states)
+            latest_status = None
+        else:
+            latest_status = latest_state.status
+            # check if the state status is valid
+            if not self.is_valid_next_state(latest_status, request_status):
+                return Response({"detail": "Invalid state request. Can't add state '{}' to '{}'".format(request_status, latest_status)},
+                                status=status.HTTP_400_BAD_REQUEST)
 
         # comment is required when request change state
         if not request.data.get('comment'):
@@ -77,8 +91,8 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
 
-        # Check if the state being updated is "Resolved"
-        if instance.status not in self.valid_states_map:
+        # Check if the state being updated is in the validation map
+        if instance.status not in self.states_transition_validation_map:
             return Response({"detail": "Invalid state status."},
                             status=status.HTTP_400_BAD_REQUEST)
 
@@ -98,14 +112,43 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
 
         return Response(serializer.data)
 
+    def is_valid_next_state(self, current_status, request_status: str) -> bool:
+        """
+        Check if transitioning from current_status to request_status is valid.
 
-    def check_state_status(self, current_status, request_status):
+        Uses states_transition_validation_map to determine validity:
+        - If map entry is a list: only states in the list can transition
+        - If map entry is a dict with 'excluded_states': all states except excluded ones can transition
+        - If map entry is a dict with 'allowed_states': same as list format
+        - If current_status is None (no state exists): only DEPRECATED is allowed
         """
-        check if the state status is valid:
-        valid_states_map[request_state] == current_state.status
-        """
-        if request_status not in self.valid_states_map:
+        # Handle case when there's no current state - only allow DEPRECATED
+        if current_status is None:
+            return request_status.upper() == 'DEPRECATED'
+
+        request_status_upper = request_status.upper()
+        current_status_upper = current_status.upper()
+
+        # Check if request_status is in the validation map
+        if request_status_upper not in self.states_transition_validation_map:
             return False
-        if current_status not in self.valid_states_map[request_status]:
-            return False
-        return True
+
+        validation_rule = self.states_transition_validation_map[request_status_upper]
+
+        # Handle dict format with 'excluded_states' or 'allowed_states'
+        if isinstance(validation_rule, dict):
+            if 'excluded_states' in validation_rule:
+                # Allow all states except the excluded ones
+                excluded_states = [s.upper() for s in validation_rule['excluded_states']]
+                return current_status_upper not in excluded_states
+            elif 'allowed_states' in validation_rule:
+                # Only allow states in the allowed_states list
+                allowed_states = [s.upper() for s in validation_rule['allowed_states']]
+                return current_status_upper in allowed_states
+
+        # Handle list format (backward compatibility and simpler format)
+        if isinstance(validation_rule, list):
+            allowed_states = [s.upper() for s in validation_rule]
+            return current_status_upper in allowed_states
+
+        return False
