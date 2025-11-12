@@ -38,8 +38,8 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
         return State.objects.filter(workflow_run=self.kwargs["orcabus_id"])
 
     @extend_schema(responses=OpenApiTypes.OBJECT, description="Get states transition validation map")
-    @action(detail=False, methods=['get'], url_name='valid_next_states', url_path='valid_next_states')
-    def valid_states_transition_validation_map(self, request, **kwargs):
+    @action(detail=False, methods=['get'], url_name='get_states_transition_validation_map', url_path='get_states_transition_validation_map')
+    def get_states_transition_validation_map(self, request, **kwargs):
         """
         Returns states transition validation map.
         """
