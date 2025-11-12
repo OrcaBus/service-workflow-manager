@@ -92,7 +92,7 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
         instance = self.get_object()
 
         # Check if the state being updated is in the validation map
-        if not self.is_valid_next_state(instance.status, request.data.get('status')):
+        if instance.status not in self.states_transition_validation_map:
             return Response({"detail": "Invalid state status."},
                             status=status.HTTP_400_BAD_REQUEST)
 
