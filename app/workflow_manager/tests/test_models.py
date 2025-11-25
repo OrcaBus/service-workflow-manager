@@ -138,14 +138,14 @@ class WorkflowModelTests(TestCase):
 
         ctx1 = AnalysisContext.objects.create(
             name="test_analysis_context_name",
-            usecase=AnalysisContextUseCase.COMPUTE.value,
+            usecase=AnalysisContextUseCase.VALIDATION.value
         )
         logger.info(ctx1)
         self.assertEqual(1, AnalysisContext.objects.count())
         self.assertTrue(ctx1.orcabus_id.startswith("anx."))
         self.assertIsNone(ctx1.description)
         self.assertEqual(ctx1.status, "ACTIVE")
-        self.assertEqual(ctx1.usecase, "COMPUTE")
+        self.assertEqual(ctx1.usecase, "VALIDATION")
 
     def test_analysis_run_context_model(self):
         """
