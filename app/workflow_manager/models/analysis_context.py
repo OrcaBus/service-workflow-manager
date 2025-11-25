@@ -10,8 +10,12 @@ class AnalysisContextStatus(models.TextChoices):
 
 
 class AnalysisContextUseCase(models.TextChoices):
-    COMPUTE = "COMPUTE"
-    STORAGE = "STORAGE"
+    # State of validation: UNKNOWN, PENDING, VERIFIED, VALIDATED, REJECTED
+    VALIDATION_STATUS = "VALIDATION_STATUS"
+    # Approval use case: ctTSO, WGS, WGTS,...
+    # A VALIDATION state of VALIDATED is required for any APPROVAL use case
+    # E.g. only fully validated analysis can be used for accredited workloads
+    APPROVAL = "APPROVAL"
 
 
 class AnalysisContextManager(OrcaBusBaseManager):

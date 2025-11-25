@@ -14,10 +14,11 @@ class ExecutionEngine(models.TextChoices):
 
 
 class ValidationState(models.TextChoices):
-    UNVALIDATED = "UNVALIDATED"
-    VALIDATED = "VALIDATED"
-    DEPRECATED = "DEPRECATED"
-    FAILED = "FAILED"
+    UNVALIDATED = "UNVALIDATED"  # workflow with unknown validation state
+    VERIFIED = "VERIFIED"        # workflow verified by default tests
+    VALIDATED = "VALIDATED"      # workflow fully validated for accredited workloads
+    FAILED = "FAILED"            # workflow failed verification tests
+    DEPRECATED = "DEPRECATED"    # verfied workflow that is deprecated
 
 
 class WorkflowManager(OrcaBusBaseManager):
