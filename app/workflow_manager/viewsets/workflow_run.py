@@ -1,4 +1,6 @@
-from django.db.models import Q, Max, F
+from datetime import datetime
+from django.db.models import Q, Max, F, Value
+from django.db.models.functions import Coalesce
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import action
 
@@ -29,6 +31,10 @@ class WorkflowRunViewSet(BaseViewSet):
         add search terms:
         library_id: filter by library_id
         orcabus_id: filter by orcabus_id
+
+        add order_by:
+        order_by: current state (latest state) timestamp
+        (by default, order by first state timestamp)
         """
         # default time is 0
         start_time = self.request.query_params.get('start_time', 0)
@@ -43,6 +49,9 @@ class WorkflowRunViewSet(BaseViewSet):
         # get search query params
         search_params = self.request.query_params.get('search', '')
 
+        # get order_by and normalize it
+        order_by = self.request.query_params.get('order_by', '').strip()
+
         # exclude the custom query params from the rest of the query params
         def exclude_params(params):
             for param in params:
@@ -53,7 +62,8 @@ class WorkflowRunViewSet(BaseViewSet):
             'end_time',
             'is_ongoing',
             'status',
-            'search'
+            'search',
+            'order_by'
         ])
 
         # get all workflow runs with rest of the query params
@@ -63,8 +73,22 @@ class WorkflowRunViewSet(BaseViewSet):
                                         .prefetch_related('libraries')\
                                         .select_related('workflow')
 
+        # Determine if we need the latest_state_time annotation
+        needs_annotation = bool(start_time and end_time) or bool(status) or bool(order_by)
+
+        # Add annotation once if needed, using Coalesce for ordering to handle NULL values
+        if needs_annotation:
+            if order_by:
+                # Use Coalesce when ordering to handle NULL values (WorkflowRuns with no states)
+                result_set = result_set.annotate(
+                    latest_state_time=Coalesce(Max('states__timestamp'), Value(datetime.min))
+                )
+            else:
+                # Simple annotation for filtering
+                result_set = result_set.annotate(latest_state_time=Max('states__timestamp'))
+
         if start_time and end_time:
-            result_set = result_set.annotate(latest_state_time=Max('states__timestamp')).filter(
+            result_set = result_set.filter(
                 latest_state_time__range=[start_time, end_time]
             )
 
@@ -74,10 +98,22 @@ class WorkflowRunViewSet(BaseViewSet):
             )
 
         if status:
-            result_set = result_set.annotate(latest_state_time=Max('states__timestamp')).filter(
+            result_set = result_set.filter(
                 states__timestamp=F('latest_state_time'),
                 states__status=status.upper()
             )
+
+        if order_by:
+            # Apply custom ordering - this will override any default ordering
+            # Clear any existing ordering first to ensure our ordering takes precedence
+            result_set = result_set.order_by()
+
+            if order_by == 'timestamp':
+                # Ascending order: oldest first
+                result_set = result_set.order_by('latest_state_time', '-orcabus_id')
+            elif order_by == '-timestamp':
+                # Descending order: newest first
+                result_set = result_set.order_by('latest_state_time', '-orcabus_id').reverse()
 
         # Combine search across multiple fields (worfkflow run name, comment, library_id, orcabus_id, workflow name)
         if search_params:
