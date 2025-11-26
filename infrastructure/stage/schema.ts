@@ -2,6 +2,7 @@ import { Construct } from 'constructs';
 import { aws_eventschemas } from 'aws-cdk-lib';
 import { readFileSync } from 'fs';
 import path from 'path';
+import { EVENT_SCHEMA_REGISTRY_NAME } from '@orcabus/platform-cdk-constructs/shared-config/event-bridge';
 
 export interface SchemaProps {
   schemaName: string;
@@ -10,31 +11,20 @@ export interface SchemaProps {
 }
 
 export class WorkflowManagerSchemaRegistry extends Construct {
-  private readonly SCHEMA_REGISTRY_NAME = 'orcabus.workflowmanager';
   private readonly SCHEMA_TYPE = 'JSONSchemaDraft4';
 
   constructor(scope: Construct, id: string) {
     super(scope, id);
 
-    // Create EventBridge schema registry
-    const registry = new aws_eventschemas.CfnRegistry(this, this.SCHEMA_REGISTRY_NAME, {
-      registryName: this.SCHEMA_REGISTRY_NAME,
-      description: 'Schema Registry for ' + this.SCHEMA_REGISTRY_NAME,
-    });
-
     // Publish schema into the registry
     getSchemas().forEach((s) => {
-      const schema = new aws_eventschemas.CfnSchema(this, s.schemaName, {
+      new aws_eventschemas.CfnSchema(this, s.schemaName, {
         content: readFileSync(s.schemaLocation, 'utf-8'),
         type: this.SCHEMA_TYPE,
-        registryName: registry.registryName as string,
+        registryName: EVENT_SCHEMA_REGISTRY_NAME,
         description: s.schemaDescription,
         schemaName: s.schemaName,
       });
-
-      // Make Schema component depends on the Registry component
-      // Essentially, it forms the deployment dependency at CloudFormation
-      schema.addDependency(registry);
     });
   }
 }
@@ -42,7 +32,7 @@ export class WorkflowManagerSchemaRegistry extends Construct {
 export const getSchemas = (): Array<SchemaProps> => {
   const docBase: string = '../../docs/events';
 
-  // Add new schema to the list
+  // Add a new schema to the list
   return [
     {
       schemaName: 'orcabus.workflowmanager@WorkflowRunStateChange',
