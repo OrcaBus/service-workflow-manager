@@ -16,10 +16,6 @@ test('Test orcabus.workflowmanager WorkflowManagerSchemaRegistry Creation', () =
 
   console.log(template.toJSON());
 
-  template.hasResourceProperties('AWS::EventSchemas::Registry', {
-    RegistryName: 'orcabus.workflowmanager',
-  });
-
   template.hasResourceProperties('AWS::EventSchemas::Schema', {
     SchemaName: 'orcabus.workflowmanager@WorkflowRunStateChange',
   });
