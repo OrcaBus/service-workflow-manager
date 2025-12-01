@@ -143,6 +143,7 @@ jobs:
         working-directory: ./app
         env:
           DJANGO_SETTINGS_MODULE: workflow_manager.settings.it
+          DB_HOSTNAME: localhost
+          DB_PORT: 5435
         run: |
-          pip3 install -r deps/requirements-test.txt
-          python3 manage.py test
+          make test

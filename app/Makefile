@@ -276,9 +276,6 @@ run-mock: reset-db migrate mock start
 test: install test-up suite test-down
 
 suite:
-	@DJANGO_SETTINGS_MODULE=workflow_manager.settings.it \
-	DB_HOSTNAME=localhost \
-	DB_PORT=5435 \
 	python manage.py test
 
 coverage: install up migrate
