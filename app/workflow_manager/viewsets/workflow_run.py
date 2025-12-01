@@ -3,7 +3,6 @@ from django.db.models import Q, Max, F, Value
 from django.db.models.functions import Coalesce
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import action
-from rest_framework import filters
 
 from workflow_manager.models.workflow_run import WorkflowRun
 from workflow_manager.serializers.workflow_run import WorkflowRunListParamSerializer, WorkflowRunDetailSerializer, WorkflowRunSerializer
@@ -16,38 +15,10 @@ class WorkflowRunViewSet(BaseViewSet):
     queryset = WorkflowRun.objects.prefetch_related("libraries").all()
     termination_statuses = ["FAILED", "ABORTED", "SUCCEEDED", "RESOLVED", "DEPRECATED"]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._has_custom_ordering = False
-
     @extend_schema(parameters=[WorkflowRunListParamSerializer])
     def list(self, request, *args, **kwargs):
         self.serializer_class = WorkflowRunSerializer  # use simple view for record listing
         return super().list(request, *args, **kwargs)
-
-    def filter_queryset(self, queryset):
-        """
-        Override to prevent OrderingFilter from applying default ordering
-        when we have a custom order_by parameter.
-        """
-        # Check if we have custom ordering (stored in instance variable from get_queryset)
-        if self._has_custom_ordering:
-            # We have custom ordering, so we need to prevent OrderingFilter from applying default ordering
-            # Temporarily store original filter_backends
-            original_backends = self.filter_backends
-            # Filter out OrderingFilter by checking the class type
-            self.filter_backends = [f for f in self.filter_backends if f != filters.OrderingFilter]
-            try:
-                # Apply filters without OrderingFilter
-                queryset = super().filter_queryset(queryset)
-            finally:
-                # Restore original filter_backends
-                self.filter_backends = original_backends
-        else:
-            # No custom ordering, use default behavior
-            queryset = super().filter_queryset(queryset)
-
-        return queryset
 
     def get_queryset(self):
         """
@@ -80,9 +51,6 @@ class WorkflowRunViewSet(BaseViewSet):
 
         # get order_by and normalize it
         order_by = self.request.query_params.get('order_by', '').strip()
-
-        # Store flag for filter_queryset to know if we have custom ordering
-        self._has_custom_ordering = bool(order_by)
 
         # exclude the custom query params from the rest of the query params
         def exclude_params(params):
@@ -136,12 +104,16 @@ class WorkflowRunViewSet(BaseViewSet):
             )
 
         if order_by:
+            # Apply custom ordering - this will override any default ordering
+            # Clear any existing ordering first to ensure our ordering takes precedence
+            result_set = result_set.order_by()
+
             if order_by == 'timestamp':
                 # Ascending order: oldest first
                 result_set = result_set.order_by('latest_state_time', '-orcabus_id')
             elif order_by == '-timestamp':
                 # Descending order: newest first
-                result_set = result_set.order_by('-latest_state_time', '-orcabus_id')
+                result_set = result_set.order_by('latest_state_time', '-orcabus_id').reverse()
 
         # Combine search across multiple fields (worfkflow run name, comment, library_id, orcabus_id, workflow name)
         if search_params:

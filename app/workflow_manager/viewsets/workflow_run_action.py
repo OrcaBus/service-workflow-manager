@@ -35,7 +35,7 @@ class WorkflowRunActionViewSet(ViewSet):
     @action(detail=True, methods=['get'], url_name='validate_rerun_workflows', url_path='validate_rerun_workflows')
     def validate_rerun_workflows(self, request, *args, **kwargs):
         wfl_run = get_object_or_404(self.queryset, pk=kwargs.get('pk'))
-        is_valid = wfl_run.workflow.name in [member.value for member in AllowedRerunWorkflow]
+        is_valid = wfl_run.workflow.name in AllowedRerunWorkflow
 
         # Get allowed dataset choice for the workflow
         wfl_name = wfl_run.workflow.name
@@ -46,7 +46,7 @@ class WorkflowRunActionViewSet(ViewSet):
         response = {
             'is_valid': is_valid,
             'allowed_dataset_choice': allowed_dataset_choice,
-            'valid_workflows': [member.value for member in AllowedRerunWorkflow],
+            'valid_workflows': AllowedRerunWorkflow,
         }
         return Response(response, status=status.HTTP_200_OK)
 
@@ -74,7 +74,7 @@ class WorkflowRunActionViewSet(ViewSet):
         wfl_run = get_object_or_404(self.queryset, pk=pk)
 
         # Only approved workflow name is allowed
-        if wfl_run.workflow.name not in [member.value for member in AllowedRerunWorkflow]:
+        if wfl_run.workflow.name not in AllowedRerunWorkflow:
             return Response(f"This workflow type is not allowed: {wfl_run.workflow.name}",
                             status=status.HTTP_400_BAD_REQUEST)
 
