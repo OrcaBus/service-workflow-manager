@@ -4,17 +4,26 @@ services:
     # https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Updates.LTS.html
     # See container image doc https://gallery.ecr.aws/docker/library/postgres for more settings
     image: public.ecr.aws/docker/library/postgres:16
-    container_name: orcabus_db
+    container_name: orcabus_db_test
     restart: always
     environment:
       - POSTGRES_DB=workflow_manager
       - POSTGRES_USER=orcabus
       - POSTGRES_PASSWORD=orcabus
     ports:
-      - '5432:5432'
+      - '5435:5432'
+    volumes:
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -d workflow_manager -U orcabus']
       interval: 10s
       timeout: 60s
       retries: 5
       start_period: 90s
+
+  localstack:
+    # Use a version that align with upper bound of AWS LocalStack LTS
+    image: public.ecr.aws/localstack/localstack:3
+    container_name: orcabus_localstack_test
+    ports:
+      - '4566:4566'
