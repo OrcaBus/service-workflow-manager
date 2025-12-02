@@ -1,0 +1,41 @@
+services:
+  orcabus_db:
+    # Use a version that align with upper bound of AWS Aurora PostgreSQL LTS
+    # https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Updates.LTS.html
+    # See container image doc https://gallery.ecr.aws/docker/library/postgres for more settings
+    image: public.ecr.aws/docker/library/postgres:16
+    container_name: orcabus_db
+    restart: always
+    environment:
+      - POSTGRES_DB=workflow_manager
+      - POSTGRES_USER=orcabus
+      - POSTGRES_PASSWORD=orcabus
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -d workflow_manager -U orcabus']
+      interval: 10s
+      timeout: 60s
+      retries: 5
+      start_period: 90s
+
+  workflow_manager:
+    environment:
+      - DB_HOSTNAME=orcabus_db
+      - DB_PORT=5432
+      - PYTHONUNBUFFERED=1
+    ports:
+      - '8200:8000'
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    depends_on:
+      - orcabus_db
+    healthcheck:
+      test: "curl --fail --silent --write-out 'HTTP CODE : %{http_code}\n' --output /dev/null http://localhost:8000/api/v1"
+      start_period: 30s
+      interval: 10s
+      timeout: 2s
+      retries: 5
