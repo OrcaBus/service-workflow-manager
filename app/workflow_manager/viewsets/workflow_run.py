@@ -20,7 +20,10 @@ class WorkflowRunViewSet(BaseViewSet):
         super().__init__(*args, **kwargs)
         self._has_custom_ordering = False
 
-    @extend_schema(parameters=[WorkflowRunListParamSerializer])
+    @extend_schema(
+        parameters=[WorkflowRunListParamSerializer],
+        responses=WorkflowRunSerializer(many=True),
+    )
     def list(self, request, *args, **kwargs):
         self.serializer_class = WorkflowRunSerializer  # use simple view for record listing
         return super().list(request, *args, **kwargs)
