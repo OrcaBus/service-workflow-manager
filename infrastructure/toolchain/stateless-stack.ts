@@ -21,6 +21,12 @@ export class StatelessStack extends cdk.Stack {
       pipelineName: 'OrcaBus-StatelessWorkflowManager',
       cdkSynthCmd: ['pnpm install --frozen-lockfile --ignore-scripts', 'pnpm cdk synth'],
       enableSlackNotification: true,
+      unitAppTestConfig: {
+        command: [
+          'cd app',
+          'DJANGO_SETTINGS_MODULE=workflow_manager.settings.it DB_PORT=5435 make test',
+        ],
+      },
     });
   }
 }
