@@ -13,7 +13,13 @@ fix:
 audit-fix:
 	@pnpm audit --fix
 
-install:
+toolchain:
+	@npm install --global corepack@latest
+	@corepack enable pnpm
+	@echo node version `node --version`
+	@echo pnpm version `pnpm --version`
+
+install: toolchain
 	@pnpm install --frozen-lockfile
 
 test:
