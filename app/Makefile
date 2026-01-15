@@ -277,7 +277,7 @@ run-mock: reset-db migrate mock start
 test: install suite
 
 # on AWS CICD pipeline, need to pull docker image from the aws ecr public registry to avoid the rate limit
-testaws: install test-up suite test-down
+test-aws: install test-up suite test-down
 
 suite:
 	python manage.py test
