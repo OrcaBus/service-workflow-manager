@@ -270,10 +270,14 @@ run-mock: reset-db migrate mock start
 
 
 # Test commands
-.PHONY: test suite
+.PHONY: test suite test-aws
 
-# alias to test suite
-test: install test-up suite test-down
+# on local dev, you need to `make up` yourself
+# on github action, it leverages github built-in service container (cache docker image) to avoid rate limit
+test: install suite
+
+# on AWS CICD pipeline, need to pull docker image from the aws ecr public registry to avoid the rate limit
+test-aws: install test-up suite test-down
 
 suite:
 	python manage.py test
