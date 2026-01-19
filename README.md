@@ -1,6 +1,10 @@
 Workflow Manager
 ================================================================================
 
+[![codecov.io](https://codecov.io/gh/OrcaBus/service-workflow-manager/coverage.svg?branch=main)](https://codecov.io/gh/OrcaBus/service-workflow-manager?branch=main)
+[![Pull Request Build Status](https://github.com/OrcaBus/service-workflow-manager/workflows/Pull%20Request%20Tests/badge.svg)](https://github.com/OrcaBus/service-workflow-manager/actions/workflows/prbuild.yml)
+
+
 <!-- TOC -->
 - [Workflow Manager](#workflow-manager)
   - [Service Description](#service-description)

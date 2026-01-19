@@ -284,11 +284,12 @@ suite:
 
 coverage: install up migrate
 	@echo $$DJANGO_SETTINGS_MODULE
-	@coverage run --source='.' manage.py test
+	@coverage run --rcfile .coveragerc --source='.' manage.py test
 
 report:
 	@coverage report -m
 	@coverage html
+	@coverage xml
 
 # Bring up test stack
 test-up:
