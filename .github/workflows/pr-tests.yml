@@ -24,9 +24,10 @@ permissions: read-all
 #  https://github.com/marketplace/actions/checkout
 #  https://github.com/marketplace/actions/setup-python
 #  https://github.com/marketplace/actions/trufflehog-oss
-#  https://github.com/marketplace/actions/checkout
 #  https://github.com/marketplace/actions/cache
-#  https://github.com/actions-rust-lang/setup-rust-toolchain
+#  https://github.com/marketplace/actions/setup-node-js-environment
+#  https://github.com/marketplace/actions/setup-pnpm
+#  https://github.com/marketplace/actions/codecov
 
 jobs:
   pre-commit-lint-security:
@@ -34,15 +35,15 @@ jobs:
     if: ${{ !github.event.pull_request.draft }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: '20.x'
+          node-version: '22.x'
           cache: 'pnpm'
 
       - run: corepack enable
@@ -60,7 +61,7 @@ jobs:
           pip3 install pre-commit detect-secrets black ggshield
 
       - name: TruffleHog OSS
-        uses: trufflesecurity/trufflehog@v3.34.0
+        uses: trufflesecurity/trufflehog@v3.92.5
         with:
           path: ./
           base: ${{ github.event.repository.default_branch }}
@@ -79,13 +80,13 @@ jobs:
     runs-on: ubuntu-22.04-arm
     if: ${{ !github.event.pull_request.draft }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: '20.x'
+          node-version: '22.x'
           cache: 'pnpm'
 
       - run: corepack enable
@@ -118,9 +119,9 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
