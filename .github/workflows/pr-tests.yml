@@ -97,6 +97,8 @@ jobs:
   test-app:
     runs-on: ubuntu-22.04-arm
     if: ${{ !github.event.pull_request.draft }}
+    permissions:
+      id-token: write
 
     services:
       postgres:
@@ -146,4 +148,15 @@ jobs:
           DB_HOSTNAME: localhost
           DB_PORT: 5432
         run: |
-          make test
+          make install
+          make migrate
+          coverage run --rcfile .coveragerc --source='.' manage.py test
+          coverage xml
+
+      - name: Publish coverage to to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          use_oidc: true
+          file: ./coverage.xml
+          flags: unittests
+          name: orcabus-workflow-manager

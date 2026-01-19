@@ -1,0 +1,2 @@
+[report]
+omit = */tests/*,*test*,*/aws_event_bridge/*,*/migrations/*
