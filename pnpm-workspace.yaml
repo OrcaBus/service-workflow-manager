@@ -2,4 +2,5 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  ajv@<8.18.0: '>=8.18.0'
   diff@<8.0.3: '>=8.0.3'

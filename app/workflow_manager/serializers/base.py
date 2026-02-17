@@ -1,5 +1,44 @@
 import re
+from typing import Optional, Tuple
+
 from rest_framework import serializers
+
+
+def parse_version(version_str: str) -> Optional[Tuple[int, int, int]]:
+    """
+    Parse version string in format X.Y.Z.
+    Returns tuple (major, minor, patch) or None if invalid.
+    """
+    if not version_str:
+        return None
+    match = re.match(r"^(\d+)\.(\d+)\.(\d+)$", str(version_str).strip())
+    if match:
+        return tuple(int(x) for x in match.groups())
+    return None
+
+
+def version_sort_key(version_str: str) -> Tuple[int, int, int]:
+    """
+    Return a sort key for version comparison.
+    Valid XX.XX.XX versions sort by (major, minor, patch).
+    Non-conforming versions return (0, 0, 0) so they sort lowest.
+    """
+    parsed = parse_version(version_str)
+    return parsed if parsed is not None else (0, 0, 0)
+
+
+def compare_versions(a: str, b: str) -> int:
+    """
+    Compare two version strings.
+    Returns: positive if a > b, negative if a < b, 0 if equal.
+    """
+    key_a = version_sort_key(a)
+    key_b = version_sort_key(b)
+    if key_a > key_b:
+        return 1
+    if key_a < key_b:
+        return -1
+    return 0
 
 
 def to_camel_case(snake_str):
@@ -48,3 +87,38 @@ class OrcabusIdSerializerMetaMixin:
         - https://github.com/tfranzel/drf-spectacular/issues/1299#issuecomment-2599856679
     """
     extra_kwargs = {"orcabus_id": {"read_only": True}}
+
+
+class OrcabusIdListUtils:
+    """
+    Utilities for normalizing orcabus_id list input from various payload formats.
+    """
+
+    @staticmethod
+    def normalize(ids):
+        """
+        Normalize ID input to a list of strings.
+        Handles form-urlencoded, Swagger payloads, and JSON.
+        """
+        if ids is None:
+            return []
+        if isinstance(ids, str):
+            return [x.strip() for x in ids.split(",") if x.strip()]
+        if isinstance(ids, list) and len(ids) == 1 and "," in str(ids[0]):
+            return [x.strip() for x in str(ids[0]).split(",") if x.strip()]
+        if isinstance(ids, list):
+            return [x for x in ids if x and str(x).strip()]
+        return [str(ids)] if ids else []
+
+
+class OrcabusIdListField(serializers.ListField):
+    """
+    Accepts orcabus_ids as list or comma-separated string (form-urlencoded/Swagger).
+    Uses OrcabusIdListUtils.normalize for input parsing.
+    """
+
+    def to_internal_value(self, data):
+        normalized = OrcabusIdListUtils.normalize(data)
+        if normalized != data or not isinstance(data, list):
+            return normalized
+        return super().to_internal_value(data)

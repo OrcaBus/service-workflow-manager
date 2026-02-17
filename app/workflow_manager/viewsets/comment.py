@@ -1,23 +1,23 @@
-from rest_framework import mixins, status
-from rest_framework.viewsets import GenericViewSet
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 
-from workflow_manager.models import WorkflowRunComment, WorkflowRun
-from workflow_manager.serializers.workflow_run_comment import WorkflowRunCommentSerializer
+from workflow_manager.models import Comment, WorkflowRun
+from workflow_manager.serializers.comment import CommentSerializer
+from .base import NoDeleteViewSet
 
 
-class WorkflowRunCommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.ListModelMixin,
-                                GenericViewSet):
-    serializer_class = WorkflowRunCommentSerializer
-    search_fields = WorkflowRunComment.get_base_fields()
-    http_method_names = ['get', 'post', 'patch', 'delete']
+class CommentViewSet(NoDeleteViewSet):
+    serializer_class = CommentSerializer
+    search_fields = Comment.get_base_fields()
     pagination_class = None
-    lookup_value_regex = "[^/]+" # to allow id prefix
+    # Use distinct kwarg to avoid clash with parent path's orcabus_id
+    lookup_url_kwarg = "comment_orcabus_id"
+    lookup_value_regex = "[^/]+"  # to allow id prefix
 
     def get_queryset(self):
-        return WorkflowRunComment.objects.filter(
+        return Comment.objects.filter(
             workflow_run=self.kwargs["orcabus_id"],
             is_deleted=False
         )
@@ -70,7 +70,7 @@ class WorkflowRunCommentViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin
     def perform_update(self, serializer):
         serializer.save()
 
-    @action(detail=True, methods=['delete'])
+    @action(detail=True, methods=["post"], url_path="soft_delete")
     def soft_delete(self, request, *args, **kwargs):
         instance = self.get_object()
 
