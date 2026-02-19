@@ -5,6 +5,20 @@ from workflow_manager.models import WorkflowRun, AnalysisRun
 from workflow_manager.serializers.state import StateMinSerializer
 
 
+class WorkflowRunAnalysisRunPatchSerializer(serializers.Serializer):
+    """
+    Serializer for PATCH workflow_run: only allows updating analysis_run linkage.
+    Use analysis_run orcabus_id to add/replace; use null to remove linkage.
+    """
+    analysis_run = serializers.SlugRelatedField(
+        slug_field='orcabus_id',
+        queryset=AnalysisRun.objects.all(),
+        required=False,
+        allow_null=True,
+        help_text="AnalysisRun orcabus_id to link; set null to remove linkage.",
+    )
+
+
 class WorkflowRunBaseSerializer(SerializersBase):
     # we only want to include the current state
     # all states are available via a dedicated endpoint
