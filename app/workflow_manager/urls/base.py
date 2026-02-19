@@ -12,8 +12,8 @@ from workflow_manager.viewsets.payload import PayloadViewSet
 from workflow_manager.viewsets.analysis_context import AnalysisContextViewSet
 from workflow_manager.viewsets.state import StateViewSet
 from workflow_manager.viewsets.workflow_run_action import WorkflowRunActionViewSet
-# from workflow_manager.viewsets.library import LibraryViewSet
-from workflow_manager.viewsets.workflow_run_comment import WorkflowRunCommentViewSet
+from workflow_manager.viewsets.library import LibraryViewSet
+from workflow_manager.viewsets.comment import CommentViewSet
 from workflow_manager.viewsets.workflow_run_stats import WorkflowRunStatsViewSet
 from workflow_manager.settings.base import API_VERSION
 
@@ -32,6 +32,7 @@ router.register(r"workflowrun", WorkflowRunViewSet, basename="workflowrun")
 router.register(r"workflowrun", WorkflowRunActionViewSet, basename="workflowrun-action")
 router.register(r"payload", PayloadViewSet, basename="payload")
 router.register(r"runcontext", RunContextViewSet, basename="runcontext")
+router.register(r"library", LibraryViewSet, basename="library")
 
 router.register(
     "workflowrun/(?P<orcabus_id>[^/]+)/state",
@@ -47,7 +48,7 @@ router.register(
 
 router.register(
     "workflowrun/(?P<orcabus_id>[^/]+)/comment",
-    WorkflowRunCommentViewSet,
+    CommentViewSet,
     basename="workflowrun-comment",
 )
 
