@@ -4,17 +4,14 @@ from django.db.models import Q, Max, F, Value
 from django.db.models.functions import Coalesce
 from django.utils.dateparse import parse_datetime
 from drf_spectacular.utils import extend_schema
-from rest_framework import filters, status
+from rest_framework import filters
 from rest_framework.decorators import action
-from rest_framework.mixins import UpdateModelMixin
-from rest_framework.response import Response
 
 from workflow_manager.models.workflow_run import WorkflowRun
 from workflow_manager.serializers.workflow_run import (
     WorkflowRunListParamSerializer,
     WorkflowRunDetailSerializer,
     WorkflowRunSerializer,
-    WorkflowRunAnalysisRunPatchSerializer,
 )
 from workflow_manager.viewsets.base import BaseViewSet
 
@@ -31,16 +28,15 @@ ALLOWED_ORDER_FIELDS = frozenset([
 ])
 
 
-class WorkflowRunViewSet(UpdateModelMixin, BaseViewSet):
+class WorkflowRunViewSet(BaseViewSet):
     """
-    Read-only WorkflowRun API with one exception: PATCH to update analysis_run linkage only.
-    Other attributes are not patchable.
+    Read-only WorkflowRun API. Analysis_run linkage is updated automatically by the system.
     """
     serializer_class = WorkflowRunDetailSerializer
     search_fields = WorkflowRun.get_base_fields()
     queryset = WorkflowRun.objects.prefetch_related("libraries").all()
     termination_statuses = ["FAILED", "ABORTED", "SUCCEEDED", "RESOLVED", "DEPRECATED"]
-    http_method_names = ['get', 'patch', 'head', 'options', 'trace']
+    http_method_names = ['get', 'head', 'options', 'trace']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -59,52 +55,6 @@ class WorkflowRunViewSet(UpdateModelMixin, BaseViewSet):
         if not value or not isinstance(value, str):
             return None
         return parse_datetime(value.strip())
-
-    @extend_schema(
-        request=WorkflowRunAnalysisRunPatchSerializer,
-        responses={status.HTTP_200_OK: WorkflowRunDetailSerializer},
-        summary="Update analysis_run linkage",
-        description="Add, replace, or remove the analysis_run linked to this workflow_run. "
-        "Only analysis_run can be patched; other attributes are read-only. "
-        "Use {\"analysis_run\": \"anr_xxx\"} to add/replace, {\"analysis_run\": null} to remove.",
-    )
-    def partial_update(self, request, *args, **kwargs):
-        """
-        PATCH workflow_run: only analysis_run linkage can be updated.
-        Add/replace: {"analysis_run": "anr_xxx"}
-        Remove: {"analysis_run": null}
-        """
-        instance = self.get_object()
-
-        # Reject if payload contains fields other than analysis_run
-        allowed = {'analysis_run'}
-        extra = set(request.data.keys()) - allowed
-        if extra:
-            return Response(
-                {'detail': f'Only analysis_run can be patched. Invalid fields: {", ".join(sorted(extra))}'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # No-op if analysis_run not in request
-        if 'analysis_run' not in request.data:
-            output = WorkflowRun.objects.select_related(
-                'workflow', 'analysis_run'
-            ).prefetch_related('states', 'libraries').get(pk=instance.pk)
-            return Response(WorkflowRunDetailSerializer(output).data)
-
-        patch_serializer = WorkflowRunAnalysisRunPatchSerializer(
-            data=request.data, partial=True
-        )
-        patch_serializer.is_valid(raise_exception=True)
-
-        analysis_run = patch_serializer.validated_data.get('analysis_run')
-        instance.analysis_run = analysis_run
-        instance.save(update_fields=['analysis_run'])
-
-        output = WorkflowRun.objects.select_related(
-            'workflow', 'analysis_run'
-        ).prefetch_related('states', 'libraries').get(pk=instance.pk)
-        return Response(WorkflowRunDetailSerializer(output).data)
 
     @extend_schema(
         parameters=[WorkflowRunListParamSerializer],

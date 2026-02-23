@@ -4,40 +4,42 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 
 from workflow_manager.models import Comment, WorkflowRun
+from workflow_manager.models.analysis_run import AnalysisRun
 from workflow_manager.serializers.comment import CommentSerializer
 from .base import NoDeleteViewSet
 
 
-class CommentViewSet(NoDeleteViewSet):
+class BaseCommentViewSet(NoDeleteViewSet):
+    """Shared logic for comment CRUD, parameterized by parent model/field."""
     serializer_class = CommentSerializer
     search_fields = Comment.get_base_fields()
     pagination_class = None
-    # Use distinct kwarg to avoid clash with parent path's orcabus_id
     lookup_url_kwarg = "comment_orcabus_id"
-    lookup_value_regex = "[^/]+"  # to allow id prefix
+    lookup_value_regex = "[^/]+"
+
+    parent_model = None
+    parent_field = None
+    parent_not_found_msg = "Parent not found."
 
     def get_queryset(self):
         return Comment.objects.filter(
-            workflow_run=self.kwargs["orcabus_id"],
+            **{self.parent_field: self.kwargs["orcabus_id"]},
             is_deleted=False
         )
 
     def create(self, request, *args, **kwargs):
-        wfr_orcabus_id = self.kwargs["orcabus_id"]
+        parent_orcabus_id = self.kwargs["orcabus_id"]
 
-        # Check if the WorkflowRun exists
         try:
-            WorkflowRun.objects.get(orcabus_id=wfr_orcabus_id)
-        except WorkflowRun.DoesNotExist:
-            return Response({"detail": "WorkflowRun not found."}, status=status.HTTP_404_NOT_FOUND)
+            self.parent_model.objects.get(orcabus_id=parent_orcabus_id)
+        except self.parent_model.DoesNotExist:
+            return Response({"detail": self.parent_not_found_msg}, status=status.HTTP_404_NOT_FOUND)
 
-        # Check if created_by and comment are provided
         if not request.data.get('created_by') or not request.data.get('comment'):
             return Response({"detail": "created_by and comment are required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Add workflow_run_id to the request data
         mutable_data = request.data.copy()
-        mutable_data['workflow_run'] = wfr_orcabus_id
+        mutable_data[self.parent_field] = parent_orcabus_id
 
         serializer = self.get_serializer(data=mutable_data)
         serializer.is_valid(raise_exception=True)
@@ -46,17 +48,15 @@ class CommentViewSet(NoDeleteViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
-        serializer.save()  # Assuming you're using email as the user identifier
+        serializer.save()
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
 
-        # Check if the user updating the comment is the same as the one who created it
         if instance.created_by != request.data.get('created_by'):
             raise PermissionDenied("You don't have permission to update this comment.")
 
-        # Ensure only the comment field can be updated
         if set(request.data.keys()) - {'comment', 'created_by'}:
             return Response({"detail": "Only the comment field can be updated."},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -74,7 +74,6 @@ class CommentViewSet(NoDeleteViewSet):
     def soft_delete(self, request, *args, **kwargs):
         instance = self.get_object()
 
-        # Check if the user deleting the comment is the same as the one who created it
         if instance.created_by != request.data.get('created_by'):
             raise PermissionDenied("You don't have permission to delete this comment.")
 
@@ -82,3 +81,17 @@ class CommentViewSet(NoDeleteViewSet):
         instance.save()
 
         return Response({"detail": "Comment successfully marked as deleted."}, status=status.HTTP_204_NO_CONTENT)
+
+
+class CommentViewSet(BaseCommentViewSet):
+    """Comments nested under WorkflowRun."""
+    parent_model = WorkflowRun
+    parent_field = "workflow_run"
+    parent_not_found_msg = "WorkflowRun not found."
+
+
+class AnalysisRunCommentViewSet(BaseCommentViewSet):
+    """Comments nested under AnalysisRun."""
+    parent_model = AnalysisRun
+    parent_field = "analysis_run"
+    parent_not_found_msg = "AnalysisRun not found."
