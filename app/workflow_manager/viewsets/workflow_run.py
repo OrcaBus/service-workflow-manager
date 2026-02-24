@@ -20,6 +20,16 @@ CUSTOM_QUERY_PARAMS = frozenset([
     'start_time', 'end_time', 'is_ongoing', 'status', 'search', 'order_by'
 ])
 
+
+def _build_keyword_params(query_params):
+    """Build keyword params using getlist to preserve multiple values per key (e.g. workflow__orcabus_id=id1&workflow__orcabus_id=id2)."""
+    return {
+        k: query_params.getlist(k)
+        for k in query_params
+        if k not in CUSTOM_QUERY_PARAMS
+        and query_params.getlist(k)
+    }
+
 # Allowed ordering fields for ongoing/unresolved actions (with optional - prefix)
 ALLOWED_ORDER_FIELDS = frozenset([
     'orcabus_id', '-orcabus_id', 'portal_run_id', '-portal_run_id',
@@ -116,11 +126,8 @@ class WorkflowRunViewSet(BaseViewSet):
 
         self._has_custom_ordering = bool(order_by)
 
-        # Use filtered params (do not mutate request.query_params)
-        keyword_params = {
-            k: v for k, v in self.request.query_params.items()
-            if k not in CUSTOM_QUERY_PARAMS
-        }
+        # Use filtered params with getlist to preserve multiple values (e.g. workflow__orcabus_id=id1,id2,id3)
+        keyword_params = _build_keyword_params(self.request.query_params)
 
         result_set = (
             WorkflowRun.objects.get_by_keyword(**keyword_params)
@@ -192,10 +199,7 @@ class WorkflowRunViewSet(BaseViewSet):
             default='-orcabus_id'
         )
 
-        keyword_params = {
-            k: v for k, v in request.query_params.items()
-            if k not in CUSTOM_QUERY_PARAMS
-        }
+        keyword_params = _build_keyword_params(request.query_params)
         if "status" in request.query_params:
             keyword_params['states__status'] = request.query_params.get('status')
 

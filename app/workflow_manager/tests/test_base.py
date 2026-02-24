@@ -34,6 +34,15 @@ class OrcaBusBaseManagerTestCase(TestCase):
         self.assertIsInstance(q, Q)
         self.assertIn(Q.AND, str(q))
 
+    def test_reduce_multi_values_qor_comma_separated(self):
+        """Comma-separated string is expanded into OR of individual values."""
+        q = OrcaBusBaseManager.reduce_multi_values_qor(
+            'workflow__orcabus_id', "id1,id2,wfl.id3"
+        )
+        self.assertIsNotNone(q)
+        self.assertIsInstance(q, Q)
+        self.assertIn(Q.OR, str(q))
+
     def test_base_model_must_abstract(self):
         """
         python manage.py test workflow_manager.tests.test_base.OrcaBusBaseManagerTestCase.test_base_model_must_abstract

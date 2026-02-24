@@ -21,17 +21,29 @@ class OrcaBusBaseManager(models.Manager):
         return self.get_model_fields_query(qs, **kwargs)
 
     @staticmethod
-    def reduce_multi_values_qor(key: str, values: List[str]):
-        if not isinstance(
-                values,
-                list,
-        ):
+    def reduce_multi_values_qor(key: str, values):
+        """
+        Build Q objects for OR filter across multiple values.
+        Handles: single value, list of values, and comma-separated string (e.g. id1,id2,id3).
+        """
+        if values is None:
+            return Q()
+        if not isinstance(values, list):
             values = [values]
+        # Expand comma-separated strings (e.g. "id1,id2,id3" -> ["id1", "id2", "id3"])
+        expanded = []
+        for v in values:
+            if isinstance(v, str) and "," in v:
+                expanded.extend(x.strip() for x in v.split(",") if x.strip())
+            else:
+                expanded.append(v)
+        values = expanded
+        if not values:
+            return Q()
         return reduce(
             # Apparently the `get_prep_value` from the custom fields.py is not called prior hitting the Db but,
             # the regular `__exact` still execute that function.
-            operator.or_, (Q(**{"%s__exact" % key: value})
-                           for value in values)
+            operator.or_, (Q(**{"%s__exact" % key: value}) for value in values)
         )
 
     def get_model_fields_query(self, qs: QuerySet, **kwargs) -> QuerySet:
