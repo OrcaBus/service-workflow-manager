@@ -35,8 +35,8 @@ class BaseCommentViewSet(NoDeleteViewSet):
         except self.parent_model.DoesNotExist:
             return Response({"detail": self.parent_not_found_msg}, status=status.HTTP_404_NOT_FOUND)
 
-        if not request.data.get('created_by') or not request.data.get('comment'):
-            return Response({"detail": "created_by and comment are required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not request.data.get('created_by') or not request.data.get('text'):
+            return Response({"detail": "created_by and text are required."}, status=status.HTTP_400_BAD_REQUEST)
 
         mutable_data = request.data.copy()
         mutable_data[self.parent_field] = parent_orcabus_id
@@ -57,8 +57,8 @@ class BaseCommentViewSet(NoDeleteViewSet):
         if instance.created_by != request.data.get('created_by'):
             raise PermissionDenied("You don't have permission to update this comment.")
 
-        if set(request.data.keys()) - {'comment', 'created_by'}:
-            return Response({"detail": "Only the comment field can be updated."},
+        if set(request.data.keys()) - {'text', 'created_by'}:
+            return Response({"detail": "Only the text field can be updated."},
                             status=status.HTTP_400_BAD_REQUEST)
 
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
