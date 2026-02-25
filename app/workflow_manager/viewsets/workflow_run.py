@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from django.db.models import Q, Max, F, Value
+from django.db.models import Q, Max, F, Value, Exists, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.utils.dateparse import parse_datetime
 from drf_spectacular.utils import extend_schema
@@ -8,6 +8,7 @@ from rest_framework import filters
 from rest_framework.decorators import action
 
 from workflow_manager.models.workflow_run import WorkflowRun
+from workflow_manager.models.state import State
 from workflow_manager.serializers.workflow_run import (
     WorkflowRunListParamSerializer,
     WorkflowRunDetailSerializer,
@@ -203,13 +204,25 @@ class WorkflowRunViewSet(BaseViewSet):
         if "status" in request.query_params:
             keyword_params['states__status'] = request.query_params.get('status')
 
+        # Exclude runs where the latest state (by timestamp) is in a terminal status.
+        # Annotate with latest timestamp, then exclude where that state is terminal.
+        # Using annotate+OuterRef avoids nested Subquery/OuterRef correlation issues.
+        latest_ts_subq = State.objects.filter(
+            workflow_run=OuterRef('pk'),
+        ).order_by('-timestamp').values('timestamp')[:1]
+
+        has_terminal_latest = Exists(
+            State.objects.filter(
+                workflow_run=OuterRef('pk'),
+                timestamp=OuterRef('latest_state_time'),
+                status__in=self.termination_statuses,
+            )
+        )
+
         result_set = (
             WorkflowRun.objects.get_by_keyword(**keyword_params)
-            .annotate(latest_state_time=Coalesce(Max('states__timestamp'), Value(datetime.min)))
-            .exclude(
-                states__timestamp=F('latest_state_time'),
-                states__status__in=self.termination_statuses,
-            )
+            .annotate(latest_state_time=Subquery(latest_ts_subq))
+            .exclude(has_terminal_latest)
             .order_by(ordering)
             .prefetch_related('states', 'libraries')
             .select_related('workflow', 'analysis_run')
@@ -231,13 +244,21 @@ class WorkflowRunViewSet(BaseViewSet):
             default='-orcabus_id'
         )
 
-        result_set = (
-            WorkflowRun.objects.all()
-            .annotate(latest_state_time=Coalesce(Max('states__timestamp'), Value(datetime.min)))
-            .filter(
-                states__timestamp=F('latest_state_time'),
-                states__status='FAILED',
+        latest_ts_subq = State.objects.filter(
+            workflow_run=OuterRef('pk'),
+        ).order_by('-timestamp').values('timestamp')[:1]
+
+        has_failed_latest = Exists(
+            State.objects.filter(
+                workflow_run=OuterRef('pk'),
+                timestamp=OuterRef('latest_state_time'),
+                status='FAILED',
             )
+        )
+
+        result_set = (
+            WorkflowRun.objects.annotate(latest_state_time=Subquery(latest_ts_subq))
+            .filter(has_failed_latest)
             .order_by(ordering)
             .prefetch_related('states', 'libraries')
             .select_related('workflow', 'analysis_run')

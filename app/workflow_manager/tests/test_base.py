@@ -52,3 +52,21 @@ class OrcaBusBaseManagerTestCase(TestCase):
         except TypeError as e:
             logger.exception(f"THIS ERROR EXCEPTION IS INTENTIONAL FOR TEST. NOT ACTUAL ERROR. \n{e}")
         self.assertRaises(TypeError)
+
+    def test_get_fields_returns_field_names(self):
+        """OrcaBusBaseModel.get_fields returns list of field names."""
+        from workflow_manager.models import Library
+
+        fields = Library.get_fields()
+        self.assertIsInstance(fields, list)
+        self.assertIn("orcabus_id", fields)
+        self.assertIn("library_id", fields)
+
+    def test_get_base_fields_excludes_relations(self):
+        """OrcaBusBaseModel.get_base_fields excludes ForeignKey/M2M relations."""
+        from workflow_manager.models import Library
+
+        base_fields = Library.get_base_fields()
+        self.assertIsInstance(base_fields, list)
+        self.assertIn("orcabus_id", base_fields)
+        self.assertIn("library_id", base_fields)
