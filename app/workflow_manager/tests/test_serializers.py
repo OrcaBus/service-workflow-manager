@@ -80,6 +80,15 @@ class OrcabusIdListUtilsTests(TestCase):
             ["id1", "id2"],
         )
 
+    def test_normalize_single_non_list_non_string_truthy(self):
+        """When ids is not None, not str, not list - returns [str(ids)] if truthy."""
+        self.assertEqual(OrcabusIdListUtils.normalize(123), ["123"])
+
+    def test_normalize_single_non_list_non_string_falsy(self):
+        """When ids is falsy and not None/str/list - returns []."""
+        self.assertEqual(OrcabusIdListUtils.normalize(0), [])
+        self.assertEqual(OrcabusIdListUtils.normalize(False), [])
+
 
 class OrcabusIdListFieldTests(TestCase):
     def test_to_internal_value_normalizes_string(self):
@@ -91,6 +100,12 @@ class OrcabusIdListFieldTests(TestCase):
         field = OrcabusIdListField(child=serializers.CharField())
         result = field.to_internal_value(["id1,id2,id3"])
         self.assertEqual(result, ["id1", "id2", "id3"])
+
+    def test_to_internal_value_passthrough_when_list_unchanged_by_normalize(self):
+        """When data is a list and normalize returns it unchanged, uses super().to_internal_value."""
+        field = OrcabusIdListField(child=serializers.CharField())
+        result = field.to_internal_value(["id1", "id2"])
+        self.assertEqual(result, ["id1", "id2"])
 
 
 class UpdatableAnalysisSerializerTests(TestCase):

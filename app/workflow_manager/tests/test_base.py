@@ -43,6 +43,27 @@ class OrcaBusBaseManagerTestCase(TestCase):
         self.assertIsInstance(q, Q)
         self.assertIn(Q.OR, str(q))
 
+    def test_reduce_multi_values_qor_none_returns_empty_q(self):
+        """When values is None, returns empty Q()."""
+        q = OrcaBusBaseManager.reduce_multi_values_qor('subject_id', None)
+        self.assertIsNotNone(q)
+        self.assertIsInstance(q, Q)
+        self.assertEqual(q, Q())
+
+    def test_reduce_multi_values_qor_empty_list_returns_empty_q(self):
+        """When values is empty list, returns empty Q()."""
+        q = OrcaBusBaseManager.reduce_multi_values_qor('subject_id', [])
+        self.assertIsNotNone(q)
+        self.assertIsInstance(q, Q)
+        self.assertEqual(q, Q())
+
+    def test_reduce_multi_values_qor_empty_after_expansion_returns_empty_q(self):
+        """When values expand to empty (only comma-separated strings with no valid parts), returns empty Q()."""
+        q = OrcaBusBaseManager.reduce_multi_values_qor('subject_id', ["  ,  ", ","])
+        self.assertIsNotNone(q)
+        self.assertIsInstance(q, Q)
+        self.assertEqual(q, Q())
+
     def test_base_model_must_abstract(self):
         """
         python manage.py test workflow_manager.tests.test_base.OrcaBusBaseManagerTestCase.test_base_model_must_abstract
