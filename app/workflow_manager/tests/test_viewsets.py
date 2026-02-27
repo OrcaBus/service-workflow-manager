@@ -34,7 +34,7 @@ class WorkflowViewSetTestCase(TestCase):
 
     def test_list_groups_by_name_returns_highest_version_with_history(self):
         """
-        List API groups workflows by name, returns only highest version, includes history.
+        Grouped API groups workflows by name, returns only highest version, includes history.
         python manage.py test workflow_manager.tests.test_viewsets.WorkflowViewSetTestCase.test_list_groups_by_name_returns_highest_version_with_history
         """
         from workflow_manager.models.workflow import ExecutionEngine, ValidationState
@@ -57,7 +57,7 @@ class WorkflowViewSetTestCase(TestCase):
             execution_engine=ExecutionEngine.ICA, validation_state=ValidationState.VALIDATED
         )
 
-        response = self.client.get(f"{self.endpoint}/")
+        response = self.client.get(f"{self.endpoint}/grouped/")
         self.assertEqual(response.status_code, 200)
         data = response.json()
         results = data.get("results", data) if "results" in data else data
@@ -92,7 +92,7 @@ class WorkflowViewSetTestCase(TestCase):
             execution_engine=ExecutionEngine.ICA, validation_state=ValidationState.VALIDATED
         )
 
-        response = self.client.get(f"{self.endpoint}/")
+        response = self.client.get(f"{self.endpoint}/grouped/")
         self.assertEqual(response.status_code, 200)
         data = response.json()
         results = data.get("results", data)

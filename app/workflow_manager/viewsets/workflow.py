@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 from drf_spectacular.utils import extend_schema
+from rest_framework.decorators import action
 
 from workflow_manager.models.workflow import Workflow
 from workflow_manager.serializers.workflow import (
@@ -44,9 +45,18 @@ class WorkflowViewSet(PostOnlyViewSet):
 
     @extend_schema(
         parameters=[WorkflowListParamSerializer],
-        responses=WorkflowListSerializer(many=True),
+        responses=WorkflowSerializer(many=True),
     )
     def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        parameters=[WorkflowListParamSerializer],
+        responses=WorkflowListSerializer(many=True),
+    )
+    @action(detail=False, methods=["get"], url_path="grouped")
+    def grouped(self, request, *args, **kwargs):
+        """List workflows grouped by name, returning the latest version with full version history."""
         queryset = self.filter_queryset(self.get_queryset())
         latest_list, history_map = self._get_latest_workflows_with_history(queryset)
         page = self.paginate_queryset(latest_list)
