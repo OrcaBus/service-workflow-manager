@@ -13,4 +13,4 @@ from .state import State
 from .utils import WorkflowRunUtil
 from .workflow import Workflow
 from .workflow_run import WorkflowRun, LibraryAssociation
-from .workflow_run_comment import WorkflowRunComment
+from .comment import Comment

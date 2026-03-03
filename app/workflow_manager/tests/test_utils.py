@@ -6,7 +6,38 @@ from django.test import TestCase
 from django.utils.timezone import make_aware
 
 from workflow_manager.models import WorkflowRun, State, WorkflowRunUtil, utils
+from workflow_manager.serializers.base import parse_version, version_sort_key, compare_versions
 from workflow_manager.tests.factories import WorkflowRunFactory
+
+
+class VersionUtilsTests(TestCase):
+    """Tests for workflow version parsing and comparison."""
+
+    def test_parse_version_valid(self):
+        """Valid XX.XX.XX format parses correctly."""
+        self.assertEqual(parse_version("1.2.3"), (1, 2, 3))
+        self.assertEqual(parse_version("4.2.4"), (4, 2, 4))
+        self.assertEqual(parse_version("0.6.0"), (0, 6, 0))
+
+    def test_parse_version_invalid(self):
+        """Non-conforming formats return None."""
+        self.assertIsNone(parse_version("4-2-4--v2"))
+        self.assertIsNone(parse_version("4-4-4"))
+        self.assertIsNone(parse_version("2.1"))
+        self.assertIsNone(parse_version(""))
+
+    def test_version_sort_key(self):
+        """Valid versions get tuple key; invalid get (0,0,0)."""
+        self.assertEqual(version_sort_key("2.3.1"), (2, 3, 1))
+        self.assertEqual(version_sort_key("4-2-4"), (0, 0, 0))
+
+    def test_compare_versions(self):
+        """Version comparison returns correct sign."""
+        self.assertGreater(compare_versions("2.1.0", "2.0.0"), 0)
+        self.assertLess(compare_versions("1.1.0", "2.0.0"), 0)
+        self.assertEqual(compare_versions("0.7.0", "0.7.0"), 0)
+        # Invalid formats sort lowest
+        self.assertGreater(compare_versions("1.0.0", "4-2-4"), 0)
 
 
 class UtilsTests(TestCase):

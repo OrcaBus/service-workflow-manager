@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin, OrcabusIdSerializerMetaMixin
-from workflow_manager.models import WorkflowRun, AnalysisRun
+from workflow_manager.models import WorkflowRun
 from workflow_manager.serializers.state import StateMinSerializer
 
 

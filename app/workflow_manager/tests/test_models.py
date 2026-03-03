@@ -5,11 +5,20 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
 
-from workflow_manager.models import Library, WorkflowRun, LibraryAssociation, Analysis, AnalysisContext, Readset, \
-    RunContext
+from workflow_manager.models import (
+    Analysis,
+    AnalysisContext,
+    AnalysisRun,
+    Comment,
+    Library,
+    LibraryAssociation,
+    Readset,
+    RunContext,
+    Workflow,
+    WorkflowRun,
+)
 from workflow_manager.models.analysis_context import AnalysisContextUseCase
 from workflow_manager.models.run_context import RunContextUseCase
-from workflow_manager.models.workflow import Workflow
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -194,3 +203,46 @@ class WorkflowModelTests(TestCase):
         self.assertEqual(rs.rgid, "CAGCAGTC+ACGCCAAC.4.999999_A00130_0999_BH7TVMDSX7")
         self.assertEqual(rs.library_id, "L2400001")
         self.assertEqual(rs.library_orcabus_id, "lib.01J8ES4ZDRQAP2BN3SDYYV5PKW")
+
+
+class CommentModelTests(TestCase):
+    def setUp(self):
+        from workflow_manager.tests.factories import WorkflowRunFactory
+
+        self.wfr = WorkflowRunFactory()
+        self.analysis_run = AnalysisRun.objects.create(analysis_run_name="TestRun")
+
+    def test_comment_requires_exactly_one_parent(self):
+        """Comment must be linked to exactly one of workflow_run or analysis_run."""
+        with self.assertRaises(ValidationError):
+            Comment(workflow_run=None, analysis_run=None, text="x", created_by="u").save()
+
+        with self.assertRaises(ValidationError):
+            Comment(
+                workflow_run=self.wfr,
+                analysis_run=self.analysis_run,
+                text="x",
+                created_by="u",
+            ).save()
+
+    def test_comment_workflow_run_valid(self):
+        c = Comment.objects.create(
+            workflow_run=self.wfr, text="test", created_by="user1"
+        )
+        self.assertEqual(c.workflow_run, self.wfr)
+        self.assertIsNone(c.analysis_run)
+        self.assertIn("cmt", str(c.orcabus_id))
+
+    def test_comment_analysis_run_valid(self):
+        c = Comment.objects.create(
+            analysis_run=self.analysis_run, text="test", created_by="user1"
+        )
+        self.assertEqual(c.analysis_run, self.analysis_run)
+        self.assertIsNone(c.workflow_run)
+
+    def test_comment_str(self):
+        c = Comment.objects.create(
+            workflow_run=self.wfr, text="hello", created_by="u"
+        )
+        self.assertIn("ID:", str(c))
+        self.assertIn("hello", str(c))

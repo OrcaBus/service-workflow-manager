@@ -2,7 +2,12 @@ from rest_framework import serializers
 
 from workflow_manager.models import Analysis, AnalysisContext, Workflow
 from workflow_manager.serializers.analysis_context import AnalysisContextSerializer
-from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin, OrcabusIdSerializerMetaMixin
+from workflow_manager.serializers.base import (
+    SerializersBase,
+    OptionalFieldsMixin,
+    OrcabusIdSerializerMetaMixin,
+    OrcabusIdListUtils,
+)
 from workflow_manager.serializers.workflow import WorkflowSerializer
 
 
@@ -59,30 +64,16 @@ class UpdatableAnalysisSerializer(AnalysisBaseSerializer):
         model = Analysis
         fields = ["contexts", "workflows", "description", "status"]
 
-    @staticmethod
-    def handle_swagger_form_payload_format(ids):
-        if isinstance(ids, list) and len(ids) == 1:
-            if "," in ids[0]:
-                return str(ids[0]).split(",")
-        return ids
-
     def update(self, instance, validated_data):
-        # If the description is just an empty string, skip.
         if validated_data.get("description", None) == "":
             validated_data.pop("description")
 
-        # If the contexts present, update the analysis contexts linking
         if validated_data.get("contexts", None):
-            context_ids = validated_data.pop("contexts")
-            context_ids = self.handle_swagger_form_payload_format(context_ids)
-            contexts = AnalysisContext.objects.filter(pk__in=context_ids)
-            instance.contexts.set(contexts)
+            context_ids = OrcabusIdListUtils.normalize(validated_data.pop("contexts"))
+            instance.contexts.set(AnalysisContext.objects.filter(pk__in=context_ids))
 
-        # If the workflows present, update the workflows linking
         if validated_data.get("workflows", None):
-            workflow_ids = validated_data.pop("workflows")
-            workflow_ids = self.handle_swagger_form_payload_format(workflow_ids)
-            workflows = Workflow.objects.filter(pk__in=workflow_ids)
-            instance.workflows.set(workflows)
+            workflow_ids = OrcabusIdListUtils.normalize(validated_data.pop("workflows"))
+            instance.workflows.set(Workflow.objects.filter(pk__in=workflow_ids))
 
         return super().update(instance, validated_data)
