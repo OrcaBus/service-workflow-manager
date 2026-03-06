@@ -419,7 +419,7 @@ class CommentViewSetTestCase(TestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn("created_by and text are required", response.json()["detail"])
+        self.assertIn("createdBy and text fields are required", response.json()["detail"])
 
     def test_update_comment_success(self):
         c = Comment.objects.create(

@@ -36,7 +36,7 @@ class BaseCommentViewSet(NoDeleteViewSet):
             return Response({"detail": self.parent_not_found_msg}, status=status.HTTP_404_NOT_FOUND)
 
         if not request.data.get('created_by') or not request.data.get('text'):
-            return Response({"detail": "created_by and text are required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "createdBy and text fields are required."}, status=status.HTTP_400_BAD_REQUEST)
 
         mutable_data = request.data.copy()
         mutable_data[self.parent_field] = parent_orcabus_id
