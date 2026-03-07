@@ -45,8 +45,8 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         """
         _ = WorkflowFactory()
 
-        # First DRAFT
-        logger.info("1, DRAFT")
+        # First DRAFT (minimal / empty payload)
+        logger.info("1. DRAFT")
         self.load_mock_wru_min()
         out_wrsc = workflow_run.create_workflow_run(self.mock_wru_min)
         self.assertIsNotNone(out_wrsc)
@@ -62,11 +62,11 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         print("-" * 128)
 
-        # Second DRAFT
+        # Second DRAFT (with full payload)
         logger.info("2. DRAFT")
         self.load_mock_wru_max()
 
-        # Temporary override the event to simulate the second DRAFT
+        # Temporary override the event status to simulate the second DRAFT
         self.mock_wru_max.status = 'DRAFT'
         self.mock_wru_max.timestamp = timezone.now()
         self.mock_wru_max.payload.refId = None
@@ -77,13 +77,12 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(WorkflowRun.objects.count(), 1)
         self.assertEqual(State.objects.count(), 2)
         self.assertEqual(Payload.objects.count(), 1)
-        # Evaluate the following
-        self.assertEqual(Readset.objects.count(), 4)
+        self.assertEqual(Readset.objects.count(), 4)  # 2 libs x 2 readsets each
         self.assertEqual(RunContext.objects.count(), 2)
 
         print("-" * 128)
 
-        # Third DRAFT
+        # Third DRAFT (simulate duplicate / repeated DRAFT, e.g. due to retry of the same event)
         logger.info("3. DRAFT")
         self.load_mock_wru_max()
 
@@ -93,12 +92,14 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.mock_wru_max.payload.refId = None
 
         out_wrsc = workflow_run.create_workflow_run(self.mock_wru_max)
-        self.assertIsNotNone(out_wrsc)
+        # No output WRSC is expected since the third DRAFT should be ignored as duplicate
+        self.assertIsNone(out_wrsc)
+        # We don't expect a new state to be created since there's no change in state or payload
+        self.assertEqual(State.objects.count(), 2)
+        # The rest should also be unchanged
         self.assertEqual(Workflow.objects.count(), 1)
         self.assertEqual(WorkflowRun.objects.count(), 1)
-        self.assertEqual(State.objects.count(), 3)
-        self.assertEqual(Payload.objects.count(), 1)  # The payload did not change, so we don't expect a new entry
-        # Evaluate the following - make sure Readset and RunContext count should be the same since the second draft
+        self.assertEqual(Payload.objects.count(), 1)
         self.assertEqual(Readset.objects.count(), 4)
         self.assertEqual(RunContext.objects.count(), 2)
 

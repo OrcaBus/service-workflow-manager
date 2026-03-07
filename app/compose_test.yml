@@ -20,7 +20,6 @@ services:
       timeout: 60s
       retries: 5
       start_period: 90s
-
 # FIXME don't think the localstack is needed  ~victor
 #  localstack:
 #    # Use a version that align with upper bound of AWS LocalStack LTS

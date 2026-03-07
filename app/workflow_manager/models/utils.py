@@ -1,5 +1,6 @@
 import logging
 import uuid
+import hashlib
 from datetime import timedelta, datetime, timezone
 from typing import List
 
@@ -65,6 +66,19 @@ class WorkflowRunUtil:
         """
         # enforce status conventions on new state
         new_state.status = Status.get_convention(new_state.status)  # TODO: encapsulate into State ?!
+
+        logger.debug(f"Transitioning WorkflowRun {self.workflow_run.orcabus_id} from: {self.get_current_state() if self.get_current_state() else 'None'} to: {new_state.status}")
+
+        # Check that new state is actually different from current state
+        # The hash of new state should be different from current state to avoid duplicates (e.g. due to retries)
+        new_state_hash = StateUtil.create_state_hash(new_state)
+        current_state_hash = StateUtil.create_state_hash(self.get_current_state()) if self.get_current_state() else None
+        logger.info(f"New state hash: {new_state_hash}, Current state hash: {current_state_hash}")
+
+        if current_state_hash == new_state_hash:
+            logger.warning(f"New state has same hash as current state, ignoring: {new_state}")
+            return False
+
 
         # If it's a brand new WorkflowRun we expect the first state to be DRAFT
         # TODO: handle exceptions;
@@ -145,6 +159,33 @@ class WorkflowRunUtil:
             if s.timestamp > last.timestamp:
                 last = s
         return last
+
+
+class StateUtil:
+    """ Utility methods for a State. """
+
+    @staticmethod
+    def create_state_hash(state: State) -> str:
+        # collect all relevant fields into a string and hash it to create a unique identifier for the state
+        # this can be used to detect duplicate states (e.g. due to retries)
+        keywords = list()
+        keywords.append(str(state.status))
+        keywords.append(str(state.comment))
+        if state.payload:
+            keywords.append(str(state.payload.payload_ref_id))
+
+        # filter out any None values
+        keywords = list(filter(None, keywords))
+        # sort the list of keywords to avoid issues with record order
+        keywords.sort()
+
+        # create hash value
+        md5_object = hashlib.md5()
+        for key in keywords:
+            md5_object.update(key.encode("utf-8"))
+
+        return md5_object.hexdigest()
+
 
 
 def create_portal_run_id() -> str:

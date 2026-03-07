@@ -6,32 +6,31 @@ Workflow Manager
 
 
 <!-- TOC -->
-- [Workflow Manager](#workflow-manager)
-  - [Service Description](#service-description)
-    - [Name \& responsibility](#name--responsibility)
-    - [Description](#description)
-    - [API Endpoints](#api-endpoints)
-    - [Consumed Events](#consumed-events)
-    - [Published Events](#published-events)
-    - [Data Model \& States](#data-model--states)
-      - [Data Model](#data-model)
-      - [States](#states)
-    - [Major Business Rules](#major-business-rules)
-    - [Permissions \& Access Control](#permissions--access-control)
-  - [Infrastructure \& Deployment](#infrastructure--deployment)
-    - [Stateful](#stateful)
-    - [Stateless](#stateless)
-  - [Development](#development)
-    - [Project Structure](#project-structure)
-    - [Setup](#setup)
-      - [Requirements](#requirements)
-      - [Install Dependencies](#install-dependencies)
-      - [CDK](#cdk)
-      - [Stacks](#stacks)
-    - [Conventions](#conventions)
-    - [Linting \& Formatting](#linting--formatting)
-    - [Testing](#testing)
-  - [Glossary \& References](#glossary--references)
+- [Service Description](#service-description)
+  - [Name \& responsibility](#name--responsibility)
+  - [Description](#description)
+  - [API Endpoints](#api-endpoints)
+  - [Consumed Events](#consumed-events)
+  - [Published Events](#published-events)
+  - [Data Model \& States](#data-model--states)
+    - [Data Model](#data-model)
+    - [States](#states)
+  - [Major Business Rules](#major-business-rules)
+  - [Permissions \& Access Control](#permissions--access-control)
+- [Infrastructure \& Deployment](#infrastructure--deployment)
+  - [Stateful](#stateful)
+  - [Stateless](#stateless)
+- [Development](#development)
+  - [Project Structure](#project-structure)
+  - [Setup](#setup)
+    - [Requirements](#requirements)
+    - [Install Dependencies](#install-dependencies)
+    - [CDK](#cdk)
+    - [Stacks](#stacks)
+  - [Conventions](#conventions)
+  - [Linting \& Formatting](#linting--formatting)
+  - [Testing](#testing)
+- [Glossary \& References](#glossary--references)
 <!-- TOC -->
 
 Service Description
@@ -78,12 +77,12 @@ Supported `WorkflowRun` states
 | State         | Description                                      |
 |---------------|--------------------------------------------------|
 | DRAFT         | The initial registration of a `WorkflowRun`. This may only be the intent of execution, way before a decision of execution is / can be made. |
-| READY         | The indication that the requirement for execution are fulfilled and execution can proceed. Should include all the data needed to make the "readyness" decission and required for actual workflow execution. |
+| READY         | The indication that the requirement for execution are fulfilled and execution can proceed. Should include all the data needed to make the "ready-ness" decision and required for actual workflow execution. |
 | RUNNING       | Indicating that the workflow is running / progressing. |
 | ABORTED       | Indicating that a `WorkflowRun` was aborted (usually due to manual intervention). |
 | FAILED        | Emitted when a `WorkflowRun` execution has failed. |
 | SUCCEDED      | Emitted when a `WorkflowRun` execution was successful. Usually taken as the signal for further dependent processes to be activated. |
-| DEPRECATED    | Singalling that a successful `WorkflowRun` has been deemed no longer valid / needed and been deprecated. Also, see Workflow deprection [SOP](https://github.com/OrcaBus/wiki/blob/main/operational/SOPs/workflow-run-deprecation.md). |
+| DEPRECATED    | Signalling that a successful `WorkflowRun` has been deemed no longer valid / needed and been deprecated. Also, see Workflow deprecation [SOP](https://github.com/OrcaBus/wiki/blob/main/operational/SOPs/workflow-run-deprecation.md). |
 
 Supported `AnalysisRun` states
 
@@ -95,7 +94,7 @@ Supported `AnalysisRun` states
 
 ### Major Business Rules
 
-The Workflow Manager is acting as an interface and gatekeeper for workflow/workload related events. It abstracts the interaction between execution services and orchestration logic allowing servics to remain fairly independent without having to know of each others implementation details.
+The Workflow Manager is acting as an interface and gatekeeper for workflow/workload related events. It abstracts the interaction between execution services and orchestration logic allowing services to remain fairly independent without having to know of each others implementation details.
 
 To that effect the Workflow Manager exposes a set of interfaces that are uses to facilitate those communications: \
 `WorkflowRunUpdate` and `AnalysisRunUpdate` events are consumed to ingest change notifications from external services in a predictable and structured format, while `WorkflowRunStateChange` and `AnalysisRunStateChange` are emitted to announce any relevant changes to the OrcaBus platform services in a known and controlled format.
