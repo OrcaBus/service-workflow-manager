@@ -339,6 +339,7 @@ def get_wrsc_hash(out_wrsc: wrsc.WorkflowRunStateChange) -> str:
     keywords = list()
 
     # out_wrsc values
+    # TODO: we may want to add the field names as well to avoid potential issues same values in different fields. Though very unlikely.
     keywords.append(out_wrsc.version)
     # keywords.append(out_wrsc.timestamp.isoformat())  # ignoring time changes for now
     keywords.append(out_wrsc.orcabusId)
