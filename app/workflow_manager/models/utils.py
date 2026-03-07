@@ -169,10 +169,10 @@ class StateUtil:
         # collect all relevant fields into a string and hash it to create a unique identifier for the state
         # this can be used to detect duplicate states (e.g. due to retries)
         keywords = list()
-        keywords.append(str(state.status))
-        keywords.append(str(state.comment))
+        keywords.append(str(f"status={state.status}"))
+        keywords.append(str(f"comment={state.comment}"))
         if state.payload:
-            keywords.append(str(state.payload.payload_ref_id))
+            keywords.append(str(f"payload_ref_id={state.payload.payload_ref_id}"))
 
         # filter out any None values
         keywords = list(filter(None, keywords))
