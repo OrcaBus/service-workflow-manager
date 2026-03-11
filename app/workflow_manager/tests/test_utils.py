@@ -5,9 +5,11 @@ from typing import List
 from django.test import TestCase
 from django.utils.timezone import make_aware
 
-from workflow_manager.models import WorkflowRun, State, WorkflowRunUtil, utils
+from workflow_manager.models import WorkflowRun, State, Payload
+from workflow_manager.models.utils import WorkflowRunUtil, StateUtil, create_portal_run_id
+
 from workflow_manager.serializers.base import parse_version, version_sort_key, compare_versions
-from workflow_manager.tests.factories import WorkflowRunFactory
+from workflow_manager.tests.factories import WorkflowRunFactory, PayloadFactory
 
 
 class VersionUtilsTests(TestCase):
@@ -46,11 +48,11 @@ class UtilsTests(TestCase):
         """
         python manage.py test workflow_manager.tests.test_utils.UtilsTests.test_create_portal_run_id
         """
-        portal_run_id_1 = utils.create_portal_run_id()
+        portal_run_id_1 = create_portal_run_id()
 
         # making sure portal_run_id is different generated in different time
         time.sleep(1)
-        portal_run_id_2 = utils.create_portal_run_id()
+        portal_run_id_2 = create_portal_run_id()
 
         self.assertIsNotNone(portal_run_id_1)
         self.assertEqual(len(portal_run_id_1), 16)
@@ -117,3 +119,71 @@ class WorkflowRunUtilUnitTests(TestCase):
         delta = t1 - t2  # = 2 days
         window = timedelta(hours=1)
         self.assertTrue(delta > window, "delta > 1h")
+
+
+class StateUtilTests(TestCase):
+    """
+    python manage.py test workflow_manager.tests.test_utils.StateUtilTests
+    """
+
+    def test_create_state_hash_identical(self):
+        # two distinct objects with the same fields must yield the same hash
+        s1 = State(status="READY", comment="foo")
+        s2 = State(status="READY", comment="foo")
+        h1 = StateUtil.create_state_hash(s1)
+        h2 = StateUtil.create_state_hash(s2)
+        self.assertEqual(h1, h2)
+
+    def test_create_state_hash_different(self):
+        # changing any of the relevant fields should change the hash
+        s1 = State(status="READY", comment="foo")
+        s2 = State(status="READY", comment="bar")
+        self.assertNotEqual(
+            StateUtil.create_state_hash(s1),
+            StateUtil.create_state_hash(s2),
+        )
+
+    def test_create_state_hash_payload_and_none_handling(self):
+        # payload payload_ref_id is taken into account; None values are ignored
+        mock_payload1 = PayloadFactory(payload_ref_id="abc")
+        mock_payload2 = PayloadFactory(payload_ref_id="def")
+
+        base = State(status="DRAFT", comment=None, payload=None)
+        # should complete without error and be reproducible
+        base_hash = StateUtil.create_state_hash(base)
+        self.assertIsInstance(base_hash, str)
+        self.assertEqual(base_hash, StateUtil.create_state_hash(base))
+
+        with_payload1 = State(
+            status="DRAFT",
+            comment=None,
+            payload=mock_payload1,
+        )
+        with_payload1_dup = State(
+            status="DRAFT",
+            comment=None,
+            payload=mock_payload1,
+        )
+        self.assertEqual(
+            StateUtil.create_state_hash(with_payload1),
+            StateUtil.create_state_hash(with_payload1_dup),
+        )
+
+        with_payload2 = State(
+            status="DRAFT",
+            comment=None,
+            payload=mock_payload2,
+        )
+        self.assertNotEqual(
+            StateUtil.create_state_hash(with_payload1),
+            StateUtil.create_state_hash(with_payload2),
+        )
+
+    def test_create_state_hash_order(self):
+        # the hash takes field names into account, not just values
+        s1 = State(status="Z", comment="A")
+        s2 = State(status="A", comment="Z")
+        self.assertNotEqual(
+            StateUtil.create_state_hash(s1),
+            StateUtil.create_state_hash(s2),
+        )
