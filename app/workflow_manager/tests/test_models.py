@@ -232,6 +232,7 @@ class CommentModelTests(TestCase):
         self.assertEqual(c.workflow_run, self.wfr)
         self.assertIsNone(c.analysis_run)
         self.assertIn("cmt", str(c.orcabus_id))
+        self.assertEqual(c.severity, "INFO")
 
     def test_comment_analysis_run_valid(self):
         c = Comment.objects.create(

@@ -1,8 +1,9 @@
+import json
 import logging
 import os
 import uuid
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 from django.utils.timezone import make_aware
@@ -400,6 +401,23 @@ class CommentViewSetTestCase(TestCase):
         data = response.json()
         self.assertEqual(data["text"], "New comment")
         self.assertEqual(data.get("createdBy", data.get("created_by")), "tester")
+        self.assertEqual(data.get("severity"), "INFO")
+
+    def test_create_comment_with_optional_severity(self):
+        url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/"
+        response = self.client.post(
+            url,
+            data={
+                "text": "Error comment",
+                "created_by": "tester",
+                "severity": "ERROR",
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data["text"], "Error comment")
+        self.assertEqual(data.get("severity"), "ERROR")
 
     def test_create_comment_parent_not_found(self):
         url = f"{self.endpoint}/wfr.nonexistent123/comment/"
@@ -447,7 +465,7 @@ class CommentViewSetTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
-    def test_update_comment_only_text_allowed(self):
+    def test_update_comment_extra_fields_ignored(self):
         c = Comment.objects.create(
             workflow_run=self.wfr, text="original", created_by="tester"
         )
@@ -457,34 +475,76 @@ class CommentViewSetTestCase(TestCase):
             data={"text": "ok", "created_by": "tester", "extra_field": "x"},
             content_type="application/json",
         )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("Only the text field can be updated", response.json()["detail"])
+        self.assertEqual(response.status_code, 200)
+        c.refresh_from_db()
+        self.assertEqual(c.text, "ok")
 
-    def test_soft_delete_success(self):
+    def test_update_comment_severity_ignored(self):
+        """Severity is not on the update serializer; extra keys are ignored (audit)."""
         c = Comment.objects.create(
-            workflow_run=self.wfr, text="to delete", created_by="tester"
+            workflow_run=self.wfr,
+            text="original",
+            created_by="tester",
+            severity="WARNING",
         )
-        url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/soft_delete/"
-        response = self.client.post(
+        url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/"
+        response = self.client.patch(
             url,
-            data={"created_by": "tester"},
+            data={
+                "text": "updated",
+                "created_by": "tester",
+                "severity": "ERROR",
+            },
             content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        c.refresh_from_db()
+        self.assertEqual(c.severity, "WARNING")
+        self.assertEqual(c.text, "updated")
+
+    @patch(
+        "workflow_manager.viewsets.base.decode_rs256_jwt_payload_without_verification",
+        return_value={"email": "tester"},
+    )
+    def test_soft_delete_success(self, _mock_decode):
+        c = Comment.objects.create(
+            workflow_run=self.wfr,
+            text="to delete",
+            created_by="tester",
+            severity="ERROR",
+        )
+        url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/"
+        response = self.client.delete(
+            url,
+            HTTP_AUTHORIZATION="Bearer fake.jwt.token",
         )
         self.assertEqual(response.status_code, 204)
         c.refresh_from_db()
         self.assertTrue(c.is_deleted)
+        self.assertEqual(c.severity, "ERROR")
 
-    def test_soft_delete_permission_denied(self):
+    @patch(
+        "workflow_manager.viewsets.base.decode_rs256_jwt_payload_without_verification",
+        return_value={"email": "other_user"},
+    )
+    def test_soft_delete_permission_denied(self, _mock_decode):
         c = Comment.objects.create(
             workflow_run=self.wfr, text="x", created_by="creator"
         )
-        url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/soft_delete/"
-        response = self.client.post(
+        url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/"
+        response = self.client.delete(
             url,
-            data={"created_by": "other_user"},
-            content_type="application/json",
+            HTTP_AUTHORIZATION="Bearer fake.jwt.token",
         )
         self.assertEqual(response.status_code, 403)
+
+    def test_soft_delete_requires_bearer_token(self):
+        c = Comment.objects.create(
+            workflow_run=self.wfr, text="x", created_by="tester"
+        )
+        url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/"
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, 401)
 
 
 class AnalysisRunCommentViewSetTestCase(TestCase):
