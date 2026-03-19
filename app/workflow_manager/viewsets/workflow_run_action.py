@@ -20,7 +20,7 @@ from workflow_manager.models.utils import create_portal_run_id
 from workflow_manager.serializers.library import LibrarySerializer
 from workflow_manager.serializers.payload import PayloadSerializer
 from workflow_manager.serializers.workflow_run_action import AllowedRerunWorkflow, RERUN_INPUT_SERIALIZERS, \
-    AllowedRerunWorkflowSerializer
+    AllowedRerunWorkflowSerializer, RnasumRerunInputSerializer
 from workflow_manager.models import (
     WorkflowRun,
     State,
@@ -51,11 +51,7 @@ class WorkflowRunActionViewSet(ViewSet):
         return Response(response, status=status.HTTP_200_OK)
 
     @extend_schema(
-        request=PolymorphicProxySerializer(
-            component_name='WorkflowRunRerun',
-            serializers=list(RERUN_INPUT_SERIALIZERS.values()),
-            resource_type_field_name=None
-        ),
+        request=RnasumRerunInputSerializer,
         responses=OpenApiTypes.OBJECT,
         description="Trigger a workflow run rerun by emitting an event to EventBridge with an overridden workflow "
                     "input payload. Current supported workflow: 'rnasum'"

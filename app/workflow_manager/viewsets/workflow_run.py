@@ -10,7 +10,7 @@ from rest_framework.decorators import action
 from workflow_manager.models.workflow_run import WorkflowRun
 from workflow_manager.models.state import State
 from workflow_manager.serializers.workflow_run import (
-    WorkflowRunListParamSerializer,
+    WorkflowRunListQueryParamSerializer,
     WorkflowRunDetailSerializer,
     WorkflowRunSerializer,
 )
@@ -68,7 +68,7 @@ class WorkflowRunViewSet(BaseViewSet):
         return parse_datetime(value.strip())
 
     @extend_schema(
-        parameters=[WorkflowRunListParamSerializer],
+        parameters=[WorkflowRunListQueryParamSerializer],
         responses=WorkflowRunSerializer(many=True),
     )
     def list(self, request, *args, **kwargs):
