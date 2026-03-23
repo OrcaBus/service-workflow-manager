@@ -24,7 +24,9 @@
   3. RunContextUseCase choices include EXECUTION_MODE alongside COMPUTE and STORAGE, and a RunContext with `usecase=EXECUTION_MODE` can be created
   4. Two RunContext records with the same `name` and `usecase` but different `platform` values can coexist (unique constraint is `name + usecase + platform`)
   5. Existing RunContext records are unaffected by the migration — row count and all field values are preserved, with `platform` backfilled to NULL on legacy rows
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 01-01-PLAN.md — Model enrichment (platform enum, data JSONField, EXECUTION_MODE, UniqueConstraint, migration, serializer update, tests)
 
 ### Phase 2: AnalysisContext Unification
 **Goal**: AnalysisContext table is fully retired and all historical context associations are preserved under RunContext
@@ -64,7 +66,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. RunContext Model Enrichment | 0/? | Not started | - |
+| 1. RunContext Model Enrichment | 0/1 | Planned | - |
 | 2. AnalysisContext Unification | 0/? | Not started | - |
 | 3. Event Schema Evolution | 0/? | Not started | - |
 | 4. ExecutionPolicy Model | 0/? | Not started | - |
