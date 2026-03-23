@@ -64,38 +64,36 @@
 
 ## Traceability
 
-Populated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RCM-01 | — | Pending |
-| RCM-02 | — | Pending |
-| RCM-03 | — | Pending |
-| RCM-04 | — | Pending |
-| RCM-05 | — | Pending |
-| ACU-01 | — | Pending |
-| ACU-02 | — | Pending |
-| ACU-03 | — | Pending |
-| ACU-04 | — | Pending |
-| EVT-01 | — | Pending |
-| EVT-02 | — | Pending |
-| EVT-03 | — | Pending |
-| EVT-04 | — | Pending |
-| EVT-05 | — | Pending |
-| EVT-06 | — | Pending |
-| EVT-07 | — | Pending |
-| EVT-08 | — | Pending |
-| EVT-09 | — | Pending |
-| EXP-01 | — | Pending |
-| EXP-02 | — | Pending |
-| EXP-03 | — | Pending |
-| EXP-04 | — | Pending |
+| RCM-01 | Phase 1 | Pending |
+| RCM-02 | Phase 1 | Pending |
+| RCM-03 | Phase 1 | Pending |
+| RCM-04 | Phase 1 | Pending |
+| RCM-05 | Phase 1 | Pending |
+| ACU-01 | Phase 2 | Pending |
+| ACU-02 | Phase 2 | Pending |
+| ACU-03 | Phase 2 | Pending |
+| ACU-04 | Phase 2 | Pending |
+| EVT-01 | Phase 3 | Pending |
+| EVT-02 | Phase 3 | Pending |
+| EVT-03 | Phase 3 | Pending |
+| EVT-04 | Phase 3 | Pending |
+| EVT-05 | Phase 3 | Pending |
+| EVT-06 | Phase 3 | Pending |
+| EVT-07 | Phase 3 | Pending |
+| EVT-08 | Phase 3 | Pending |
+| EVT-09 | Phase 3 | Pending |
+| EXP-01 | Phase 4 | Pending |
+| EXP-02 | Phase 4 | Pending |
+| EXP-03 | Phase 4 | Pending |
+| EXP-04 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 22 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 22 ⚠️
+- Mapped to phases: 22
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-23*
-*Last updated: 2026-03-23 after initial definition*
+*Last updated: 2026-03-23 after roadmap creation*
