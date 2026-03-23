@@ -26,7 +26,7 @@
   5. Existing RunContext records are unaffected by the migration — row count and all field values are preserved, with `platform` backfilled to NULL on legacy rows
 **Plans:** 1 plan
 Plans:
-- [ ] 01-01-PLAN.md — Model enrichment (platform enum, data JSONField, EXECUTION_MODE, UniqueConstraint, migration, serializer update, tests)
+- [x] 01-01-PLAN.md — Model enrichment (platform enum, data JSONField, EXECUTION_MODE, UniqueConstraint, migration, serializer update, tests)
 
 ### Phase 2: AnalysisContext Unification
 **Goal**: AnalysisContext table is fully retired and all historical context associations are preserved under RunContext

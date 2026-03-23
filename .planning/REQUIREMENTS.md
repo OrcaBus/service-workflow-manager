@@ -7,11 +7,11 @@
 
 ### RunContext Model Enrichment
 
-- [ ] **RCM-01**: RunContext model exposes a `platform` field (extensible enum: ICAV2, SEQERA, AWS_BATCH, AWS_ECS) identifying the execution platform
-- [ ] **RCM-02**: RunContext model exposes a `data` JSONField for platform-specific structured properties (e.g. projectId, workspaceId, jobQueue)
-- [ ] **RCM-03**: RunContextUseCase enum includes `EXECUTION_MODE` alongside existing COMPUTE and STORAGE values
-- [ ] **RCM-04**: RunContext unique constraint is expanded from `(name, usecase)` to `(name, usecase, platform)` via a safe migration that backfills `platform` on existing rows before tightening the constraint
-- [ ] **RCM-05**: `platform` field is optional (nullable) to accommodate use cases where platform is not applicable (e.g. EXECUTION_MODE)
+- [x] **RCM-01**: RunContext model exposes a `platform` field (extensible enum: ICAV2, SEQERA, AWS_BATCH, AWS_ECS) identifying the execution platform
+- [x] **RCM-02**: RunContext model exposes a `data` JSONField for platform-specific structured properties (e.g. projectId, workspaceId, jobQueue)
+- [x] **RCM-03**: RunContextUseCase enum includes `EXECUTION_MODE` alongside existing COMPUTE and STORAGE values
+- [x] **RCM-04**: RunContext unique constraint is expanded from `(name, usecase)` to `(name, usecase, platform)` via a safe migration that backfills `platform` on existing rows before tightening the constraint
+- [x] **RCM-05**: `platform` field is optional (nullable) to accommodate use cases where platform is not applicable (e.g. EXECUTION_MODE)
 
 ### AnalysisContext Unification
 
@@ -66,11 +66,11 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RCM-01 | Phase 1 | Pending |
-| RCM-02 | Phase 1 | Pending |
-| RCM-03 | Phase 1 | Pending |
-| RCM-04 | Phase 1 | Pending |
-| RCM-05 | Phase 1 | Pending |
+| RCM-01 | Phase 1 | Complete |
+| RCM-02 | Phase 1 | Complete |
+| RCM-03 | Phase 1 | Complete |
+| RCM-04 | Phase 1 | Complete |
+| RCM-05 | Phase 1 | Complete |
 | ACU-01 | Phase 2 | Pending |
 | ACU-02 | Phase 2 | Pending |
 | ACU-03 | Phase 2 | Pending |
