@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import uuid
@@ -479,8 +478,7 @@ class CommentViewSetTestCase(TestCase):
         c.refresh_from_db()
         self.assertEqual(c.text, "ok")
 
-    def test_update_comment_severity_ignored(self):
-        """Severity is not on the update serializer; extra keys are ignored (audit)."""
+    def test_update_comment_severity_updated(self):
         c = Comment.objects.create(
             workflow_run=self.wfr,
             text="original",
@@ -499,8 +497,69 @@ class CommentViewSetTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         c.refresh_from_db()
-        self.assertEqual(c.severity, "WARNING")
+        self.assertEqual(c.severity, "ERROR")
         self.assertEqual(c.text, "updated")
+
+    def test_update_comment_severity_only(self):
+        c = Comment.objects.create(
+            workflow_run=self.wfr,
+            text="unchanged",
+            created_by="tester",
+            severity="INFO",
+        )
+        url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/"
+        response = self.client.patch(
+            url,
+            data={"severity": "WARNING", "created_by": "tester"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        c.refresh_from_db()
+        self.assertEqual(c.severity, "WARNING")
+        self.assertEqual(c.text, "unchanged")
+
+    def test_update_comment_requires_text_or_severity(self):
+        c = Comment.objects.create(
+            workflow_run=self.wfr, text="x", created_by="tester"
+        )
+        url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/"
+        response = self.client.patch(
+            url,
+            data={"created_by": "tester"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    @patch(
+        "workflow_manager.viewsets.base.decode_rs256_jwt_payload_without_verification",
+        return_value={"email": "tester"},
+    )
+    def test_update_comment_uses_bearer_when_created_by_omitted(self, _mock_decode):
+        c = Comment.objects.create(
+            workflow_run=self.wfr, text="original", created_by="tester"
+        )
+        url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/"
+        response = self.client.patch(
+            url,
+            data={"text": "via jwt"},
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Bearer fake.jwt.token",
+        )
+        self.assertEqual(response.status_code, 200)
+        c.refresh_from_db()
+        self.assertEqual(c.text, "via jwt")
+
+    def test_update_comment_requires_bearer_when_created_by_omitted(self):
+        c = Comment.objects.create(
+            workflow_run=self.wfr, text="original", created_by="tester"
+        )
+        url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/"
+        response = self.client.patch(
+            url,
+            data={"text": "no auth"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 401)
 
     @patch(
         "workflow_manager.viewsets.base.decode_rs256_jwt_payload_without_verification",

@@ -27,8 +27,9 @@ from .base import PatchOnlyViewSet, get_email_from_bearer_authorization
         request=CommentUpdateRequestSerializer,
         responses={200: CommentSerializer},
         description=(
-            "Update comment text only. Must send created_by matching the author. "
-            "Severity cannot be changed (audit)."
+            "Update comment text and/or severity. At least one of text or severity is required. "
+            "Send created_by matching the author, or omit it and use Authorization: Bearer <jwt> "
+            "(email claim must match author). Unknown body keys are ignored."
         ),
     ),
     destroy=extend_schema(
@@ -88,22 +89,31 @@ class BaseCommentViewSet(PatchOnlyViewSet, mixins.DestroyModelMixin):
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
-        required_fields = {"text", "created_by"}
-        provided_fields = set(request.data.keys())
+        allowed_fields = {"text", "created_by", "severity"}
+        filtered_data = {
+            key: value for key, value in request.data.items() if key in allowed_fields
+        }
 
-        if required_fields - provided_fields:
-            return Response({"detail": "createdBy and text fields are required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        body = CommentUpdateRequestSerializer(data=request.data, partial=partial)
+        body = CommentUpdateRequestSerializer(data=filtered_data, partial=partial)
         body.is_valid(raise_exception=True)
         vd = body.validated_data
 
-        if instance.created_by != vd["created_by"]:
+        if "created_by" in vd:
+            actor = vd["created_by"].strip().lower()
+        else:
+            actor = get_email_from_bearer_authorization(request)
+        author = (instance.created_by or "").strip().lower()
+        if author != actor:
             raise PermissionDenied("You don't have permission to update this comment.")
 
+        update_fields = ["updated_at"]
         if "text" in vd:
             instance.text = vd["text"]
-            instance.save(update_fields=["text"])
+            update_fields.append("text")
+        if "severity" in vd:
+            instance.severity = vd["severity"]
+            update_fields.append("severity")
+        instance.save(update_fields=update_fields)
 
         data = CommentSerializer(instance).data
         headers = self.get_success_headers(data)
@@ -118,7 +128,7 @@ class BaseCommentViewSet(PatchOnlyViewSet, mixins.DestroyModelMixin):
 
         # Soft-delete only flips is_deleted; severity (and text) stay for audit/UI history.
         instance.is_deleted = True
-        instance.save(update_fields=["is_deleted"])
+        instance.save(update_fields=["is_deleted", "updated_at"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
