@@ -15,7 +15,7 @@ class RunContextListParamSerializer(OptionalFieldsMixin, RunContextBaseSerialize
 class RunContextMinSerializer(RunContextBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
         model = RunContext
-        fields = ["orcabus_id", "name", "usecase"]
+        fields = ["orcabus_id", "name", "usecase", "platform"]
 
 
 class RunContextSerializer(RunContextBaseSerializer):
