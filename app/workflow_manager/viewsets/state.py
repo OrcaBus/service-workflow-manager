@@ -66,19 +66,12 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
         Create a custom new state for a workflow run.
         Currently we support "Resolved", "Deprecated"
         """
-        allowed_fields = {"status", "comment"}
         required_fields = {"status", "comment"}
         provided_fields = set(request.data.keys())
 
         if required_fields - provided_fields:
             return Response(
                 {"detail": "status and comment fields are required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if provided_fields - allowed_fields:
-            return Response(
-                {"detail": "Only status and comment fields are allowed."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -120,7 +113,6 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
 
-        allowed_fields = {"comment"}
         required_fields = {"comment"}
         provided_fields = set(request.data.keys())
 
@@ -130,15 +122,9 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if provided_fields - allowed_fields:
-            return Response(
-                {"detail": "Only comment field can be updated."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         # Check if the state being updated is in the validation map
         if instance.status not in self.states_transition_validation_map:
-            return Response({"detail": "Invalid state status."},
+            return Response({"detail": "Invalid state status to update comment."},
                             status=status.HTTP_400_BAD_REQUEST)
 
         body = StateUpdateRequestSerializer(data=request.data, partial=partial)
