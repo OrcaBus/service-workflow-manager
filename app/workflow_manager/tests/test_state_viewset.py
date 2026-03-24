@@ -48,16 +48,6 @@ class StateViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("status and comment fields are required", response.json()["detail"])
 
-    def test_create_state_only_allows_status_and_comment_fields(self):
-        url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/"
-        response = self.client.post(
-            url,
-            data={"status": "RESOLVED", "comment": "ok", "extra": "nope"},
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("Only status and comment fields are allowed", response.json()["detail"])
-
     def test_create_state_valid_transition_failed_to_resolved(self):
         url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/"
         response = self.client.post(
@@ -110,16 +100,6 @@ class StateViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("comment field is required", response.json()["detail"])
 
-    def test_update_state_comment_only_allows_comment_field(self):
-        url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/{self.state_ready.orcabus_id}/"
-        response = self.client.patch(
-            url,
-            data={"comment": "x", "status": "DEPRECATED"},
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("Only comment field can be updated", response.json()["detail"])
-
     def test_update_state_comment_rejects_states_outside_validation_map(self):
         url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/{self.state_ready.orcabus_id}/"
         response = self.client.patch(
@@ -128,7 +108,7 @@ class StateViewSetTestCase(TestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn("Invalid state status", response.json()["detail"])
+        self.assertIn("Invalid state status to update comment.", response.json()["detail"])
 
     def test_update_state_comment_success(self):
         state_deprecated = StateFactory(

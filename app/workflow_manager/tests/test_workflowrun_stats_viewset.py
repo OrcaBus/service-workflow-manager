@@ -95,3 +95,8 @@ class WorkflowRunStatsViewSetTestCase(TestCase):
         dt = WorkflowRunStatsViewSet._parse_datetime_safe("2024-01-15T10:30:00")
         self.assertIsNotNone(dt)
         self.assertTrue(is_aware(dt))
+
+        aware_dt = WorkflowRunStatsViewSet._parse_datetime_safe("2024-01-15T10:30:00+10:00")
+        self.assertIsNotNone(aware_dt)
+        self.assertTrue(is_aware(aware_dt))
+        self.assertEqual(aware_dt.utcoffset(), timedelta(hours=10))
