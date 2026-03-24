@@ -1,69 +1,90 @@
-from django.db.models import Q, Max, F
+from datetime import datetime, timezone as dt_timezone
+from django.db.models import Q, Max, F, Value
+from django.db.models.functions import Coalesce
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import mixins
-from rest_framework.viewsets import GenericViewSet
 from rest_framework.decorators import action
-from drf_spectacular.utils import extend_schema
 from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
 from workflow_manager.models import WorkflowRun
-from workflow_manager.serializers.workflow_run import WorkflowRunDetailSerializer, WorkflowRunCountByStatusSerializer
+from workflow_manager.serializers.workflow_run import (
+    WorkflowRunCountByStatusSerializer,
+    WorkflowRunDetailSerializer,
+    WorkflowRunListQueryParamSerializer,
+)
+from workflow_manager.viewsets.workflow_run import _build_keyword_params
 
 
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[WorkflowRunListQueryParamSerializer],
+        responses=WorkflowRunDetailSerializer(many=True),
+    ),
+)
 class WorkflowRunStatsViewSet(mixins.ListModelMixin, GenericViewSet):
     serializer_class = WorkflowRunDetailSerializer
     pagination_class = None  # No pagination by default
     http_method_names = ['get']
-    lookup_value_regex = "[^/]+" # to allow id prefix
+    lookup_value_regex = "[^/]+"  # to allow id prefix
     termination_statuses = ["FAILED", "ABORTED", "SUCCEEDED", "RESOLVED", "DEPRECATED"]
+
+    @staticmethod
+    def _parse_datetime_safe(value: str):
+        """Parse datetime string; return None if invalid or empty.
+
+        Naive values (e.g. ISO strings without offset) are interpreted as UTC so
+        queryset comparisons stay consistent with USE_TZ=True.
+        """
+        if not value or not isinstance(value, str):
+            return None
+        dt = parse_datetime(value.strip())
+        if dt is None:
+            return None
+        if timezone.is_naive(dt):
+            return timezone.make_aware(dt, dt_timezone.utc)
+        return dt
 
     def get_queryset(self):
         """
-        custom queryset:
-        add filter by:
-        start_time, end_time : range of latest state timestamp
-        is_ongoing : filter by ongoing workflow runs
-        status : filter by latest state status
-
-        add search terms:
-        library_id: filter by library_id
-        orcabus_id: filter by orcabus_id
+        Same filtering semantics as WorkflowRunViewSet.list (time range, is_ongoing, status,
+        search, order_by, and get_by_keyword field filters).
         """
-        # default time is 0
-        start_time = self.request.query_params.get('start_time', 0)
-        end_time = self.request.query_params.get('end_time', 0)
+        start_time = self.request.query_params.get('start_time', '')
+        end_time = self.request.query_params.get('end_time', '')
+        start_dt = self._parse_datetime_safe(start_time) if start_time else None
+        end_dt = self._parse_datetime_safe(end_time) if end_time else None
 
-        # get is ongoing flag
         is_ongoing = self.request.query_params.get('is_ongoing', 'false')
-
-        # get status
         status = self.request.query_params.get('status', '')
-
-        # get search query params
         search_params = self.request.query_params.get('search', '')
+        order_by = self.request.query_params.get('order_by', '').strip()
 
-        # exclude the custom query params from the rest of the query params
-        def exclude_params(params):
-            for param in params:
-                self.request.query_params.pop(param) if param in self.request.query_params.keys() else None
+        keyword_params = _build_keyword_params(self.request.query_params)
 
-        exclude_params([
-            'start_time',
-            'end_time',
-            'is_ongoing',
-            'status',
-            'search'
-        ])
+        result_set = (
+            WorkflowRun.objects.get_by_keyword(**keyword_params)
+            .distinct()
+            .prefetch_related('states')
+            .prefetch_related('libraries')
+            .select_related('workflow', 'analysis_run')
+        )
 
-        # get all workflow runs with rest of the query params
-        # add prefetch_related & select_related to reduce the number of queries
-        result_set = WorkflowRun.objects.get_by_keyword(**self.request.query_params).distinct()\
-                                        .prefetch_related('states')\
-                                        .prefetch_related('libraries')\
-                                        .select_related('workflow')
+        needs_annotation = bool(start_dt and end_dt) or bool(status) or bool(order_by)
 
-        if start_time and end_time:
-            result_set = result_set.annotate(latest_state_time=Max('states__timestamp')).filter(
-                latest_state_time__range=[start_time, end_time]
+        if needs_annotation:
+            if order_by:
+                result_set = result_set.annotate(
+                    latest_state_time=Coalesce(Max('states__timestamp'), Value(datetime.min.replace(tzinfo=dt_timezone.utc)))
+                )
+            else:
+                result_set = result_set.annotate(latest_state_time=Max('states__timestamp'))
+
+        if start_dt and end_dt:
+            result_set = result_set.filter(
+                latest_state_time__range=[start_dt, end_dt]
             )
 
         if is_ongoing.lower() == 'true':
@@ -72,12 +93,17 @@ class WorkflowRunStatsViewSet(mixins.ListModelMixin, GenericViewSet):
             )
 
         if status:
-            result_set = result_set.annotate(latest_state_time=Max('states__timestamp')).filter(
+            result_set = result_set.filter(
                 states__timestamp=F('latest_state_time'),
                 states__status=status.upper()
             )
 
-        # Combine search across multiple fields (worfkflow run name, comment, library_id, orcabus_id, workflow name)
+        if order_by:
+            if order_by == 'timestamp':
+                result_set = result_set.order_by('latest_state_time', '-orcabus_id')
+            elif order_by == '-timestamp':
+                result_set = result_set.order_by('-latest_state_time', '-orcabus_id')
+
         if search_params:
             result_set = result_set.filter(
                 Q(workflow_run_name__icontains=search_params) |
@@ -89,21 +115,25 @@ class WorkflowRunStatsViewSet(mixins.ListModelMixin, GenericViewSet):
 
         return result_set
 
-    @extend_schema(responses=WorkflowRunDetailSerializer(many=True))
+    @extend_schema(
+        parameters=[WorkflowRunListQueryParamSerializer],
+        responses=WorkflowRunDetailSerializer(many=True),
+    )
     @action(detail=False, methods=['GET'], url_path='list_all')
     def list_all(self, request):
         return self.list(request)
 
-
-    @extend_schema(responses=WorkflowRunCountByStatusSerializer)
+    @extend_schema(
+        parameters=[WorkflowRunListQueryParamSerializer],
+        responses=WorkflowRunCountByStatusSerializer,
+        description=(
+            "Returns counts for each bucket: all, succeeded, aborted, failed, resolved, "
+            "deprecated, and ongoing (latest state not terminal), using the same filters as "
+            "the workflow run list."
+        ),
+    )
     @action(detail=False, methods=['GET'])
     def count_by_status(self, request):
-        """
-        Returns the count of records for each status: 'SUCCEEDED', 'ABORTED', 'FAILED', and 'Onging' State based on the query params.
-        """
-        start_time = self.request.query_params.get('start_time', 0)
-        end_time = self.request.query_params.get('end_time', 0)
-
         base_queryset = self.get_queryset()
 
         all_count = base_queryset.count()

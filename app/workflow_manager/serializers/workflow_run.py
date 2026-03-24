@@ -22,6 +22,56 @@ class WorkflowRunListParamSerializer(OptionalFieldsMixin, WorkflowRunBaseSeriali
                   "comment", ]
 
 
+class WorkflowRunListQueryParamSerializer(WorkflowRunListParamSerializer):
+    """
+    Full query parameter schema for workflow run list and stats endpoints (OpenAPI / drf-spectacular).
+
+    Includes model field filters from WorkflowRunListParamSerializer plus the custom filters
+    implemented in WorkflowRunViewSet and WorkflowRunStatsViewSet.
+    """
+
+    start_time = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="ISO 8601 datetime; start of range on latest state timestamp (use with end_time).",
+    )
+    end_time = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="ISO 8601 datetime; end of range on latest state timestamp (use with start_time).",
+    )
+    is_ongoing = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="If 'true', only runs whose latest state is not terminal.",
+    )
+    status = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="Filter by latest state status (e.g. SUCCEEDED, FAILED).",
+    )
+    search = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="Search workflow run name, comment, library_id, orcabus_id, and workflow name.",
+    )
+    order_by = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="Sort by latest state time: 'timestamp' (ascending) or '-timestamp' (descending).",
+    )
+
+    class Meta(WorkflowRunListParamSerializer.Meta):
+        fields = WorkflowRunListParamSerializer.Meta.fields + [
+            "start_time",
+            "end_time",
+            "is_ongoing",
+            "status",
+            "search",
+            "order_by",
+        ]
+
+
 class WorkflowRunSerializer(WorkflowRunBaseSerializer):
     from .workflow import WorkflowMinSerializer
 

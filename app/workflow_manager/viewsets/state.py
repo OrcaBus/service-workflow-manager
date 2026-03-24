@@ -1,5 +1,5 @@
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, PolymorphicProxySerializer
 from rest_framework.decorators import action
 from rest_framework import mixins, status
 from rest_framework.response import Response
@@ -7,9 +7,25 @@ from rest_framework.viewsets import GenericViewSet
 from django.utils import timezone
 
 from workflow_manager.models import State, WorkflowRun
-from workflow_manager.serializers.state import StateSerializer
+from workflow_manager.serializers.state import StateSerializer, StateCreateRequestSerializer, StateUpdateRequestSerializer
 
 
+@extend_schema_view(
+    create=extend_schema(
+        request=StateCreateRequestSerializer,
+        responses={201: StateSerializer},
+        description=(
+            "Create a state (body: status, comment; JSON uses camelCase per API settings)."
+        ),
+    ),
+    partial_update=extend_schema(
+        request=StateUpdateRequestSerializer,
+        responses={200: StateSerializer},
+        description=(
+            "Update state comment only."
+        ),
+    )
+)
 class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.ListModelMixin,  GenericViewSet):
     serializer_class = StateSerializer
     search_fields = State.get_base_fields()
@@ -47,21 +63,33 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
 
     def create(self, request, *args, **kwargs):
         """
-        Create a customed new state for a workflow run.
+        Create a custom new state for a workflow run.
         Currently we support "Resolved", "Deprecated"
         """
+        required_fields = {"status", "comment"}
+        provided_fields = set(request.data.keys())
+
+        if required_fields - provided_fields:
+            return Response(
+                {"detail": "status and comment fields are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         wfr_orcabus_id = self.kwargs.get("orcabus_id")
         workflow_run = WorkflowRun.objects.get(orcabus_id=wfr_orcabus_id)
 
-        latest_state = workflow_run.get_latest_state()
-        request_status = request.data.get('status', '').upper()
+        body = StateCreateRequestSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        vd = body.validated_data
+        request_status = vd["status"].upper()
+        request_comment = vd["comment"]
 
+        latest_state = workflow_run.get_latest_state()
         # Handle case when there's no latest state - only allow DEPRECATED
         if not latest_state:
             if request_status != 'DEPRECATED':
                 return Response({"detail": "No state found for workflow run '{}'. Only DEPRECATED is allowed when there are no states.".format(wfr_orcabus_id)},
                                 status=status.HTTP_400_BAD_REQUEST)
-            # Allow DEPRECATED when there's no state (it's not in excluded states)
             latest_status = None
         else:
             latest_status = latest_state.status
@@ -70,47 +98,49 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
                 return Response({"detail": "Invalid state request. Can't add state '{}' to '{}'".format(request_status, latest_status)},
                                 status=status.HTTP_400_BAD_REQUEST)
 
-        # comment is required when request change state
-        if not request.data.get('comment'):
-            return Response({"detail": "Comment is required when request status is '{}'".format(request_status)},
-                            status=status.HTTP_400_BAD_REQUEST)
+        instance = State.objects.create(
+            workflow_run=workflow_run,
+            status=request_status,
+            timestamp=timezone.now(),
+            comment=request_comment,
+        )
 
-        # Prepare data for serializer
-        data = request.data.copy()
-        data['timestamp'] = timezone.now()
-        data['workflow_run'] = wfr_orcabus_id
-        data['status'] = request_status
-
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        data = StateSerializer(instance).data
+        headers = self.get_success_headers(data)
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
 
+        required_fields = {"comment"}
+        provided_fields = set(request.data.keys())
+
+        if required_fields - provided_fields:
+            return Response(
+                {"detail": "comment field is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Check if the state being updated is in the validation map
         if instance.status not in self.states_transition_validation_map:
-            return Response({"detail": "Invalid state status."},
+            return Response({"detail": "Invalid state status to update comment."},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        # Check if only the comment field is being updated
-        if set(request.data.keys()) != {'comment'}:
-            return Response({"detail": "Only the comment field can be updated."},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+        body = StateUpdateRequestSerializer(data=request.data, partial=partial)
+        body.is_valid(raise_exception=True)
+        vd = body.validated_data
+        instance.comment = vd["comment"]
+        instance.save(update_fields=["comment"])
 
         if getattr(instance, '_prefetched_objects_cache', None):
             # If 'prefetch_related' has been applied to a queryset, we need to
             # forcibly invalidate the prefetch cache on the instance.
             instance._prefetched_objects_cache = {}
 
-        return Response(serializer.data)
+        data = StateSerializer(instance).data
+        headers = self.get_success_headers(data)
+        return Response(data, status=status.HTTP_200_OK, headers=headers)
 
     def is_valid_next_state(self, current_status, request_status: str) -> bool:
         """

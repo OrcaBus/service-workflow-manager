@@ -127,7 +127,7 @@ make suite
 ### Unit test
 
 ```
-python manage.py test workflow_manager.tests.test_viewsets.WorkflowViewSetTestCase.test_get_api
+make test
 ```
 
 ## Tear Down

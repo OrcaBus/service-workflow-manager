@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 
 from django.db.models import Q, Max, F, Value, Exists, OuterRef, Subquery
 from django.db.models.functions import Coalesce
@@ -10,7 +10,7 @@ from rest_framework.decorators import action
 from workflow_manager.models.workflow_run import WorkflowRun
 from workflow_manager.models.state import State
 from workflow_manager.serializers.workflow_run import (
-    WorkflowRunListParamSerializer,
+    WorkflowRunListQueryParamSerializer,
     WorkflowRunDetailSerializer,
     WorkflowRunSerializer,
 )
@@ -68,7 +68,7 @@ class WorkflowRunViewSet(BaseViewSet):
         return parse_datetime(value.strip())
 
     @extend_schema(
-        parameters=[WorkflowRunListParamSerializer],
+        parameters=[WorkflowRunListQueryParamSerializer],
         responses=WorkflowRunSerializer(many=True),
     )
     def list(self, request, *args, **kwargs):
@@ -145,7 +145,10 @@ class WorkflowRunViewSet(BaseViewSet):
             if order_by:
                 # Use Coalesce when ordering to handle NULL values (WorkflowRuns with no states)
                 result_set = result_set.annotate(
-                    latest_state_time=Coalesce(Max('states__timestamp'), Value(datetime.min))
+                    latest_state_time=Coalesce(
+                        Max('states__timestamp'),
+                        Value(datetime.min.replace(tzinfo=dt_timezone.utc))
+                    )
                 )
             else:
                 # Simple annotation for filtering
