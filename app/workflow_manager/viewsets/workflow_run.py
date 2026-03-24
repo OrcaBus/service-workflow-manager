@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 
 from django.db.models import Q, Max, F, Value, Exists, OuterRef, Subquery
 from django.db.models.functions import Coalesce
@@ -145,7 +145,10 @@ class WorkflowRunViewSet(BaseViewSet):
             if order_by:
                 # Use Coalesce when ordering to handle NULL values (WorkflowRuns with no states)
                 result_set = result_set.annotate(
-                    latest_state_time=Coalesce(Max('states__timestamp'), Value(datetime.min))
+                    latest_state_time=Coalesce(
+                        Max('states__timestamp'),
+                        Value(datetime.min.replace(tzinfo=dt_timezone.utc))
+                    )
                 )
             else:
                 # Simple annotation for filtering

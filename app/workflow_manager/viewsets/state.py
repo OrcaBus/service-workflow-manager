@@ -63,7 +63,7 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
 
     def create(self, request, *args, **kwargs):
         """
-        Create a customed new state for a workflow run.
+        Create a custom new state for a workflow run.
         Currently we support "Resolved", "Deprecated"
         """
         allowed_fields = {"status", "comment"}

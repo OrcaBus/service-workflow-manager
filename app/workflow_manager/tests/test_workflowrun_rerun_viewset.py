@@ -20,7 +20,7 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         TestData().create_primary()
 
         self._real_emit_event = libeb.emit_event
-        libeb.emit_events = MagicMock()
+        libeb.emit_event = MagicMock()
 
     def tearDown(self) -> None:
         libeb.emit_event = self._real_emit_event
@@ -54,7 +54,7 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
 
         response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "PANCAN"})
         self.assertIn(response.status_code, [200], "Expected a successful response")
-        self.assertTrue(wfl_run.portal_run_id not in str(response.content), "expect old portal_rub_id replaced")
+        self.assertTrue(wfl_run.portal_run_id not in str(response.content), "expect old portal_run_id replaced")
 
         response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "BRCA"})
         self.assertIn(response.status_code, [400], "Rerun duplication with same input error expected")

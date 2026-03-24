@@ -1,7 +1,7 @@
-from datetime import datetime
-
+from datetime import datetime, timezone as dt_timezone
 from django.db.models import Q, Max, F, Value
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import mixins
@@ -33,10 +33,19 @@ class WorkflowRunStatsViewSet(mixins.ListModelMixin, GenericViewSet):
 
     @staticmethod
     def _parse_datetime_safe(value: str):
-        """Parse datetime string; return None if invalid or empty."""
+        """Parse datetime string; return None if invalid or empty.
+
+        Naive values (e.g. ISO strings without offset) are interpreted as UTC so
+        queryset comparisons stay consistent with USE_TZ=True.
+        """
         if not value or not isinstance(value, str):
             return None
-        return parse_datetime(value.strip())
+        dt = parse_datetime(value.strip())
+        if dt is None:
+            return None
+        if timezone.is_naive(dt):
+            return timezone.make_aware(dt, dt_timezone.utc)
+        return dt
 
     def get_queryset(self):
         """
@@ -68,7 +77,7 @@ class WorkflowRunStatsViewSet(mixins.ListModelMixin, GenericViewSet):
         if needs_annotation:
             if order_by:
                 result_set = result_set.annotate(
-                    latest_state_time=Coalesce(Max('states__timestamp'), Value(datetime.min))
+                    latest_state_time=Coalesce(Max('states__timestamp'), Value(datetime.min.replace(tzinfo=dt_timezone.utc)))
                 )
             else:
                 result_set = result_set.annotate(latest_state_time=Max('states__timestamp'))

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from django.test import TestCase
-from django.utils.timezone import make_aware
+from django.utils.timezone import is_aware, make_aware
 
 from workflow_manager.models import Workflow, WorkflowRun
 from workflow_manager.tests.factories import WorkflowRunFactory
@@ -94,3 +94,4 @@ class WorkflowRunStatsViewSetTestCase(TestCase):
 
         dt = WorkflowRunStatsViewSet._parse_datetime_safe("2024-01-15T10:30:00")
         self.assertIsNotNone(dt)
+        self.assertTrue(is_aware(dt))
