@@ -12,6 +12,7 @@ from workflow_manager.urls.base import api_base
 
 class StateViewSetTestCase(TestCase):
     endpoint = f"/{api_base}workflowrun"
+    batch_endpoint = f"/{api_base}workflowrun/state/batch-state-transition/"
 
     def setUp(self):
         TestData().create_primary()
@@ -184,3 +185,147 @@ class StateViewSetTestCase(TestCase):
         self.assertEqual(state_deprecated._prefetched_objects_cache, {})
         state_deprecated.refresh_from_db()
         self.assertEqual(state_deprecated.comment, "new")
+
+    def test_batch_state_transition_success_returns_summary(self):
+        response = self.client.post(
+            self.batch_endpoint,
+            data={
+                "workflowrun_orcabus_id": [
+                    self.wfr_succeeded.orcabus_id,
+                    self.wfr_empty.orcabus_id,
+                ],
+                "status": "DEPRECATED",
+                "comment": "bulk deprecated",
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data["createdCount"], 2)
+        self.assertCountEqual(
+            data["workflowrunOrcabusIds"],
+            [self.wfr_succeeded.orcabus_id, self.wfr_empty.orcabus_id],
+        )
+        self.assertTrue(
+            State.objects.filter(
+                workflow_run=self.wfr_succeeded,
+                status="DEPRECATED",
+                comment="bulk deprecated",
+            ).exists()
+        )
+        self.assertTrue(
+            State.objects.filter(
+                workflow_run=self.wfr_empty,
+                status="DEPRECATED",
+                comment="bulk deprecated",
+            ).exists()
+        )
+
+    def test_batch_state_transition_rejects_when_any_transition_invalid(self):
+        response = self.client.post(
+            self.batch_endpoint,
+            data={
+                "workflowrun_orcabus_id": [
+                    self.wfr_failed.orcabus_id,
+                    self.wfr_succeeded.orcabus_id,
+                ],
+                "status": "RESOLVED",
+                "comment": "bulk resolve",
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Invalid state request", response.json()["detail"])
+        self.assertFalse(
+            State.objects.filter(
+                workflow_run=self.wfr_failed,
+                status="RESOLVED",
+                comment="bulk resolve",
+            ).exists()
+        )
+        self.assertFalse(
+            State.objects.filter(
+                workflow_run=self.wfr_succeeded,
+                status="RESOLVED",
+                comment="bulk resolve",
+            ).exists()
+        )
+
+    def test_batch_state_transition_requires_fields(self):
+        response = self.client.post(
+            self.batch_endpoint, data={}, content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_batch_state_transition_rejects_unknown_workflowrun(self):
+        response = self.client.post(
+            self.batch_endpoint,
+            data={
+                "workflowrun_orcabus_id": ["wfr.non-existing-id"],
+                "status": "DEPRECATED",
+                "comment": "bulk deprecated",
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("not found", response.json()["detail"].lower())
+
+    def test_batch_state_transition_accepts_ids_without_prefix_and_returns_prefixed_ids(self):
+        response = self.client.post(
+            self.batch_endpoint,
+            data={
+                "workflowrun_orcabus_id": [
+                    self.wfr_succeeded.orcabus_id.replace("wfr.", "", 1),
+                    self.wfr_empty.orcabus_id.replace("wfr.", "", 1),
+                ],
+                "status": "DEPRECATED",
+                "comment": "bulk deprecated no prefix",
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertCountEqual(
+            data["workflowrunOrcabusIds"],
+            [self.wfr_succeeded.orcabus_id, self.wfr_empty.orcabus_id],
+        )
+
+    def test_batch_state_transition_accepts_csv_orcabus_ids(self):
+        response = self.client.post(
+            self.batch_endpoint,
+            data={
+                "workflowrun_orcabus_id": "{},{}".format(
+                    self.wfr_succeeded.orcabus_id.replace("wfr.", "", 1),
+                    self.wfr_empty.orcabus_id.replace("wfr.", "", 1),
+                ),
+                "status": "DEPRECATED",
+                "comment": "bulk deprecated csv ids",
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data["createdCount"], 2)
+        self.assertCountEqual(
+            data["workflowrunOrcabusIds"],
+            [self.wfr_succeeded.orcabus_id, self.wfr_empty.orcabus_id],
+        )
+
+    def test_batch_state_transition_accepts_form_urlencoded_camelcase_csv_orcabus_ids(self):
+        response = self.client.post(
+            self.batch_endpoint,
+            data="workflowrunOrcabusId={}&status=Deprecated&comment=Second%20batch%20state%20transition.".format(
+                "{},{}".format(
+                    self.wfr_succeeded.orcabus_id.replace("wfr.", "", 1),
+                    self.wfr_empty.orcabus_id.replace("wfr.", "", 1),
+                )
+            ),
+            content_type="application/x-www-form-urlencoded",
+        )
+        self.assertEqual(response.status_code, 201, response.content.decode())
+        data = response.json()
+        self.assertEqual(data["createdCount"], 2)
+        self.assertCountEqual(
+            data["workflowrunOrcabusIds"],
+            [self.wfr_succeeded.orcabus_id, self.wfr_empty.orcabus_id],
+        )
