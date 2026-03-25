@@ -190,7 +190,7 @@ class StateViewSetTestCase(TestCase):
         response = self.client.post(
             self.batch_endpoint,
             data={
-                "workflowrun_orcabus_id": [
+                "workflowrun_orcabus_ids": [
                     self.wfr_succeeded.orcabus_id,
                     self.wfr_empty.orcabus_id,
                 ],
@@ -225,7 +225,7 @@ class StateViewSetTestCase(TestCase):
         response = self.client.post(
             self.batch_endpoint,
             data={
-                "workflowrun_orcabus_id": [
+                "workflowrun_orcabus_ids": [
                     self.wfr_failed.orcabus_id,
                     self.wfr_succeeded.orcabus_id,
                 ],
@@ -261,7 +261,7 @@ class StateViewSetTestCase(TestCase):
         response = self.client.post(
             self.batch_endpoint,
             data={
-                "workflowrun_orcabus_id": ["wfr.non-existing-id"],
+                "workflowrun_orcabus_ids": ["wfr.non-existing-id"],
                 "status": "DEPRECATED",
                 "comment": "bulk deprecated",
             },
@@ -274,7 +274,7 @@ class StateViewSetTestCase(TestCase):
         response = self.client.post(
             self.batch_endpoint,
             data={
-                "workflowrun_orcabus_id": [
+                "workflowrun_orcabus_ids": [
                     self.wfr_succeeded.orcabus_id.replace("wfr.", "", 1),
                     self.wfr_empty.orcabus_id.replace("wfr.", "", 1),
                 ],
@@ -294,7 +294,7 @@ class StateViewSetTestCase(TestCase):
         response = self.client.post(
             self.batch_endpoint,
             data={
-                "workflowrun_orcabus_id": "{},{}".format(
+                "workflowrun_orcabus_ids": "{},{}".format(
                     self.wfr_succeeded.orcabus_id.replace("wfr.", "", 1),
                     self.wfr_empty.orcabus_id.replace("wfr.", "", 1),
                 ),
@@ -314,7 +314,7 @@ class StateViewSetTestCase(TestCase):
     def test_batch_state_transition_accepts_form_urlencoded_camelcase_csv_orcabus_ids(self):
         response = self.client.post(
             self.batch_endpoint,
-            data="workflowrunOrcabusId={}&status=Deprecated&comment=Second%20batch%20state%20transition.".format(
+            data="workflowrunOrcabusIds={}&status=Deprecated&comment=Second%20batch%20state%20transition.".format(
                 "{},{}".format(
                     self.wfr_succeeded.orcabus_id.replace("wfr.", "", 1),
                     self.wfr_empty.orcabus_id.replace("wfr.", "", 1),

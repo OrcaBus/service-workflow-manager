@@ -214,7 +214,7 @@ class WorkflowRunBatchStateTransitionViewSet(StateTransitionValidationMixin, Gen
         body.is_valid(raise_exception=True)
         vd = body.validated_data
 
-        workflowrun_orcabus_ids = vd["workflowrun_orcabus_id"]
+        workflowrun_orcabus_ids = vd["workflowrun_orcabus_ids"]
         request_status = vd["status"].upper()
         request_comment = vd["comment"]
 

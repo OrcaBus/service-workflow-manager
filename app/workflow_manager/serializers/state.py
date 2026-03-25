@@ -63,9 +63,10 @@ class StateUpdateRequestSerializer(serializers.Serializer):
 class StateBatchTransitionRequestSerializer(serializers.Serializer):
     """
     Schema contract for POST /workflowrun/state/batch-state-transition/.
+    Request body: workflowrun_orcabus_ids (list or CSV string), status, comment.
     """
 
-    workflowrun_orcabus_id = OrcabusIdListField(
+    workflowrun_orcabus_ids = OrcabusIdListField(
         child=serializers.CharField(allow_blank=False),
         required=True,
         allow_empty=False,
