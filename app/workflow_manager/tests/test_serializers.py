@@ -71,6 +71,18 @@ class OrcabusIdListUtilsTests(TestCase):
             ["id1", "id2", "id3"],
         )
 
+    def test_normalize_list_splits_comma_in_any_element(self):
+        self.assertEqual(
+            OrcabusIdListUtils.normalize(["id1,id2", "id3"]),
+            ["id1", "id2", "id3"],
+        )
+
+    def test_normalize_tuple_treated_like_list(self):
+        self.assertEqual(
+            OrcabusIdListUtils.normalize(("id1", "id2")),
+            ["id1", "id2"],
+        )
+
     def test_normalize_single_non_list_value(self):
         self.assertEqual(OrcabusIdListUtils.normalize("single_id"), ["single_id"])
 
@@ -106,6 +118,11 @@ class OrcabusIdListFieldTests(TestCase):
         field = OrcabusIdListField(child=serializers.CharField())
         result = field.to_internal_value(["id1", "id2"])
         self.assertEqual(result, ["id1", "id2"])
+
+    def test_to_internal_value_splits_comma_in_list_elements(self):
+        field = OrcabusIdListField(child=serializers.CharField())
+        result = field.to_internal_value(["id1,id2", "id3"])
+        self.assertEqual(result, ["id1", "id2", "id3"])
 
 
 class UpdatableAnalysisSerializerTests(TestCase):

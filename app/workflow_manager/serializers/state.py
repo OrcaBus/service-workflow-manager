@@ -1,27 +1,10 @@
-from workflow_manager.serializers.base import SerializersBase, OrcabusIdSerializerMetaMixin
+from workflow_manager.serializers.base import (
+    SerializersBase,
+    OrcabusIdSerializerMetaMixin,
+    OrcabusIdListField,
+)
 from workflow_manager.models import State
 from rest_framework import serializers
-
-
-class OrcabusIdListField(serializers.ListField):
-    """
-    Accept either:
-    - JSON array/list of IDs
-    - comma-separated string of IDs (e.g. form payload)
-    """
-
-    def to_internal_value(self, data):
-        if isinstance(data, str):
-            data = [item.strip() for item in data.split(",") if item.strip()]
-        elif isinstance(data, (list, tuple)):
-            expanded_data = []
-            for item in data:
-                if isinstance(item, str) and "," in item:
-                    expanded_data.extend([token.strip() for token in item.split(",") if token.strip()])
-                else:
-                    expanded_data.append(item)
-            data = expanded_data
-        return super().to_internal_value(data)
 
 
 class StateBaseSerializer(SerializersBase):

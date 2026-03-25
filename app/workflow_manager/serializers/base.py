@@ -104,10 +104,19 @@ class OrcabusIdListUtils:
             return []
         if isinstance(ids, str):
             return [x.strip() for x in ids.split(",") if x.strip()]
-        if isinstance(ids, list) and len(ids) == 1 and "," in str(ids[0]):
-            return [x.strip() for x in str(ids[0]).split(",") if x.strip()]
-        if isinstance(ids, list):
-            return [x for x in ids if x and str(x).strip()]
+        if isinstance(ids, (list, tuple)):
+            expanded = []
+            for item in ids:
+                if item is None:
+                    continue
+                s = str(item).strip()
+                if not s:
+                    continue
+                if "," in s:
+                    expanded.extend([token.strip() for token in s.split(",") if token.strip()])
+                else:
+                    expanded.append(s)
+            return expanded
         return [str(ids)] if ids else []
 
 
@@ -119,6 +128,4 @@ class OrcabusIdListField(serializers.ListField):
 
     def to_internal_value(self, data):
         normalized = OrcabusIdListUtils.normalize(data)
-        if normalized != data or not isinstance(data, list):
-            return normalized
-        return super().to_internal_value(data)
+        return super().to_internal_value(normalized)
