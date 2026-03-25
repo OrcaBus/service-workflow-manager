@@ -13,6 +13,7 @@ from workflow_manager.serializers.state import (
     StateCreateRequestSerializer,
     StateUpdateRequestSerializer,
     StateBatchTransitionRequestSerializer,
+    StateBatchTransitionResponseSerializer,
 )
 
 
@@ -200,7 +201,7 @@ class StateViewSet(StateTransitionValidationMixin, mixins.CreateModelMixin, mixi
 @extend_schema_view(
     batch_state_transition=extend_schema(
         request=StateBatchTransitionRequestSerializer,
-        responses={201: OpenApiTypes.OBJECT},
+        responses={201: StateBatchTransitionResponseSerializer},
         description="Batch transition workflow runs to a target state.",
     )
 )
@@ -261,10 +262,10 @@ class WorkflowRunBatchStateTransitionViewSet(StateTransitionValidationMixin, Gen
                     comment=request_comment,
                 )
 
-        return Response(
-            {
+        summary = StateBatchTransitionResponseSerializer(
+            instance={
                 "created_count": len(workflow_runs),
                 "workflowrun_orcabus_ids": [wfr.orcabus_id for wfr in workflow_runs],
-            },
-            status=status.HTTP_201_CREATED,
+            }
         )
+        return Response(summary.data, status=status.HTTP_201_CREATED)
