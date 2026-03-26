@@ -10,7 +10,7 @@ from workflow_manager.viewsets.workflow import WorkflowViewSet
 from workflow_manager.viewsets.workflow_run import WorkflowRunViewSet
 from workflow_manager.viewsets.payload import PayloadViewSet
 from workflow_manager.viewsets.analysis_context import AnalysisContextViewSet
-from workflow_manager.viewsets.state import StateViewSet
+from workflow_manager.viewsets.state import StateViewSet, WorkflowRunBatchStateTransitionViewSet
 from workflow_manager.viewsets.workflow_run_action import WorkflowRunActionViewSet
 from workflow_manager.viewsets.library import LibraryViewSet
 from workflow_manager.viewsets.comment import WorkflowRunCommentViewSet, AnalysisRunCommentViewSet
@@ -38,6 +38,12 @@ router.register(
     "workflowrun/(?P<orcabus_id>[^/]+)/state",
     StateViewSet,
     basename="workflowrun-state",
+)
+
+router.register(
+    "workflowrun/state",
+    WorkflowRunBatchStateTransitionViewSet,
+    basename="workflowrun-state-batch-transition",
 )
 
 # router.register(

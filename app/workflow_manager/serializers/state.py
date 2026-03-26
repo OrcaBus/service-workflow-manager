@@ -1,4 +1,8 @@
-from workflow_manager.serializers.base import SerializersBase, OrcabusIdSerializerMetaMixin
+from workflow_manager.serializers.base import (
+    SerializersBase,
+    OrcabusIdSerializerMetaMixin,
+    OrcabusIdListField,
+)
 from workflow_manager.models import State
 from rest_framework import serializers
 
@@ -37,3 +41,31 @@ class StateUpdateRequestSerializer(serializers.Serializer):
     """
 
     comment = serializers.CharField(required=True, allow_blank=False)
+
+
+class StateBatchTransitionRequestSerializer(serializers.Serializer):
+    """
+    Schema contract for POST /workflowrun/state/batch-state-transition/.
+    Request body: workflowrun_orcabus_ids (list or CSV string), status, comment.
+    """
+
+    workflowrun_orcabus_ids = OrcabusIdListField(
+        child=serializers.CharField(allow_blank=False),
+        required=True,
+        allow_empty=False,
+    )
+    status = serializers.CharField(required=True, allow_blank=False)
+    comment = serializers.CharField(required=True, allow_blank=False)
+
+
+class StateBatchTransitionResponseSerializer(serializers.Serializer):
+    """
+    Schema contract for 201 response from batch-state-transition.
+    JSON responses use camelCase (createdCount, workflowrunOrcabusIds).
+    """
+
+    created_count = serializers.IntegerField()
+    workflowrun_orcabus_ids = serializers.ListField(
+        child=serializers.CharField(),
+        allow_empty=True,
+    )
