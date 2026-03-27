@@ -1,4 +1,5 @@
 import os
+import uuid
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock
 
@@ -7,7 +8,7 @@ from django.utils.timezone import make_aware
 from libumccr.aws import libeb
 
 from workflow_manager.models import LibraryAssociation, Payload, Workflow, WorkflowRun
-from workflow_manager.tests.factories import StateFactory, WorkflowRunFactory
+from workflow_manager.tests.factories import StateFactory, WorkflowRunFactory, PayloadFactory
 from workflow_manager.tests.fixtures.sim_workflow import TestData
 from workflow_manager.urls.base import api_base
 
@@ -141,3 +142,87 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
 
         response = self.client.post(f"{self.endpoint}/{wfl_run1.orcabus_id}/rerun", data={"dataset": "PANCAN"})
         self.assertIn(response.status_code, [200], "Expected a successful response")
+
+    def test_rerun_wfr_same_deprecated_payload(self):
+        """The exact same rnasum payload but the old one has deprecated and now expected to rerun the same thing"""
+
+        # Both wfr_run used below use the same workflow, and need to change to rnasum to allow rerun and trigger the
+        # duplication logic
+        wfl = Workflow.objects.all().first()
+        wfl.name = "rnasum"
+        wfl.save()
+
+        # The workflowrun that needs to exist as part of rerun
+        wfl_run1 = WorkflowRun.objects.get(workflow_run_name="TestWorkflowPrimaryRun1")
+        payload = wfl_run1.states.get(status="READY").payload
+        payload.data = {
+            "inputs": {
+                "someUri": "s3://random/prefix/",
+                "dataset": "BRCA",
+            },
+            "engineParameters": {
+                "sourceUri": f"s3://bucket/{wfl_run1.portal_run_id}/",
+            },
+        }
+        payload.save()
+
+        wfl_run2 = WorkflowRun.objects.get(workflow_run_name="TestWorkflowPrimaryRun2")
+
+        response = self.client.post(f"{self.endpoint}/{wfl_run1.orcabus_id}/rerun", data={"dataset": "PANCAN"})
+        self.assertIn(response.status_code, [200], "Expected a successful response")
+
+        new_payload2 = Payload.objects.create(
+            version="1.0.0",
+            payload_ref_id=str(uuid.uuid4()),
+            data={
+                "inputs": {
+                    "someUri": "s3://random/prefix/",
+                    "dataset": "PANCAN",
+                },
+                "engineParameters": {
+                    "sourceUri": f"s3://bucket/{wfl_run1.portal_run_id}/",
+                },
+            },
+        )
+        ready_state2 = wfl_run2.states.get(status="READY")
+        ready_state2.payload = new_payload2
+        ready_state2.save()
+
+        StateFactory(
+            workflow_run=wfl_run2,
+            status="DEPRECATED",
+            payload=PayloadFactory(payload_ref_id=str(uuid.uuid4())),
+            timestamp=make_aware(datetime.now())
+        )
+        response = self.client.post(f"{self.endpoint}/{wfl_run1.orcabus_id}/rerun", data={"dataset": "PANCAN"})
+        self.assertIn(response.status_code, [200], "Expected a successful response")
+
+    def test_disable_rerun_deprecated_wfr(self):
+        """Test that a workflow run marked as DEPRECATED cannot be rerun."""
+        wfl = Workflow.objects.all().first()
+        wfl.name = "rnasum"
+        wfl.save()
+
+        # The workflowrun that needs to exist as part of rerun
+        wfl_run1 = WorkflowRun.objects.get(workflow_run_name="TestWorkflowPrimaryRun1")
+        payload = wfl_run1.states.get(status="READY").payload
+        payload.data = {
+            "inputs": {
+                "someUri": "s3://random/prefix/",
+                "dataset": "BRCA",
+            },
+            "engineParameters": {
+                "sourceUri": f"s3://bucket/{wfl_run1.portal_run_id}/",
+            },
+        }
+        payload.save()
+
+        # Test if existing wfr is deprecated, it will not allow for rerun
+        StateFactory(
+            workflow_run=wfl_run1,
+            status="DEPRECATED",
+            payload=PayloadFactory(payload_ref_id=str(uuid.uuid4())),
+            timestamp=make_aware(datetime.now())
+        )
+        response = self.client.post(f"{self.endpoint}/{wfl_run1.orcabus_id}/rerun", data={"dataset": "BRCA"})
+        self.assertIn(response.status_code, [400], "Expected a fail response")
