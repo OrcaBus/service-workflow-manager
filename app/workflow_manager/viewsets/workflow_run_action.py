@@ -144,10 +144,14 @@ def construct_rnasum_rerun_payload(wfl_run: WorkflowRun, input_body: dict) -> di
 
         past_dataset = set()
         for run in wfl_runs:
-            # Get the payload where the state is 'READY'
-            ready_state: State = run.states.get(status='READY')
-            ready_data_payload = PayloadSerializer(ready_state.payload).data
-            past_dataset.add(ready_data_payload.get('data', {}).get("inputs", {}).get("dataset", ''))
+            try:
+                # Get the payload where the state is 'READY'
+                ready_state: State = run.states.get(status='READY')
+                ready_data_payload = PayloadSerializer(ready_state.payload).data
+                past_dataset.add(ready_data_payload.get('data', {}).get("inputs", {}).get("dataset", ''))
+            except State.DoesNotExist:
+                # Skip runs without a READY state
+                continue
 
         if input_body["dataset"] in past_dataset:
             raise RerunDuplicationError(f"Dataset '{input_body['dataset']}' has been run in the past. "
