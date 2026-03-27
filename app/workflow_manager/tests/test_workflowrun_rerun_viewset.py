@@ -109,3 +109,35 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
             [200],
             "Rerun with the same input is allowed when using a different library set",
         )
+
+    def test_rerun_duplication_skips_runs_without_ready_state(self):
+        """
+        Ensure rerun duplication logic skips workflow runs that do not have a READY state (i.e., when the READY state does not exist for a run).
+        This test verifies that the rerun process continues correctly and does not fail or duplicate runs when a related WorkflowRun is missing the READY state.
+        """
+        # Both wfr_run used below use the same workflow, and need to change to rnasum to allow rerun and trigger the
+        # duplication logic
+        wfl = Workflow.objects.all().first()
+        wfl.name = "rnasum"
+        wfl.save()
+
+        # The workflowrun that needs to exist as part of rerun
+        wfl_run1 = WorkflowRun.objects.get(workflow_run_name="TestWorkflowPrimaryRun1")
+        payload = wfl_run1.states.get(status="READY").payload
+        payload.data = {
+            "inputs": {
+                "someUri": "s3://random/prefix/",
+                "dataset": "BRCA",
+            },
+            "engineParameters": {
+                "sourceUri": f"s3://bucket/{wfl_run1.portal_run_id}/",
+            },
+        }
+        payload.save()
+
+        # The workflowrun that exists with the same libraries but has the READY state removed
+        wfl_run2 = WorkflowRun.objects.get(workflow_run_name="TestWorkflowPrimaryRun2")
+        wfl_run2.states.get(status="READY").delete()
+
+        response = self.client.post(f"{self.endpoint}/{wfl_run1.orcabus_id}/rerun", data={"dataset": "PANCAN"})
+        self.assertIn(response.status_code, [200], "Expected a successful response")
