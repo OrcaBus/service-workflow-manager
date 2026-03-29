@@ -78,6 +78,13 @@ class WorkflowRunActionViewSet(ViewSet):
         if not serializer.is_valid():
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if rerun is deprecated
+        is_wfr_deprecated = wfl_run.states.filter(status='DEPRECATED').exists()
+        if is_wfr_deprecated:
+            return Response({"detail": "Workflow run has been deprecated and rerun is not allowed."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
         try:
             detail = construct_rerun_eb_detail(wfl_run, serializer.data)
         except RerunDuplicationError as e:
@@ -141,14 +148,21 @@ def construct_rnasum_rerun_payload(wfl_run: WorkflowRun, input_body: dict) -> di
             workflow=wfl_run.workflow,
             library_ids=library_ids_string
         )
-
         past_dataset = set()
         for run in wfl_runs:
-            # Get the payload where the state is 'READY'
-            ready_state: State = run.states.get(status='READY')
-            ready_data_payload = PayloadSerializer(ready_state.payload).data
-            past_dataset.add(ready_data_payload.get('data', {}).get("inputs", {}).get("dataset", ''))
+            try:
+                # We will ignore deprecated runs
+                is_wfr_run_deprecated = run.states.filter(status='DEPRECATED').exists()
+                if is_wfr_run_deprecated:
+                    continue
 
+                # Get the payload where the state is 'READY'
+                ready_state: State = run.states.get(status='READY')
+                ready_data_payload = PayloadSerializer(ready_state.payload).data
+                past_dataset.add(ready_data_payload.get('data', {}).get("inputs", {}).get("dataset", ''))
+            except State.DoesNotExist:
+                # Skip runs without a READY state
+                continue
         if input_body["dataset"] in past_dataset:
             raise RerunDuplicationError(f"Dataset '{input_body['dataset']}' has been run in the past. "
                                         f"Set 'allow_duplication' manually to True to proceed.")
