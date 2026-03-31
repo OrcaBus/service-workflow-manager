@@ -72,6 +72,15 @@ class WorkflowManagerProcUnitTestCase(TestCase):
         mock_obj_with_envelope: aru.AWSEvent = aru.AWSEvent.model_validate(self.event)
         self.mock_aru_ready_max: aru.AnalysisRunUpdate = mock_obj_with_envelope.detail
 
+    def load_mock_wru_draft_1(self):
+        self.load_mock_file(rel_path="fixtures/WRU_draft_1.json")
+        mock_obj_with_envelope: wru.AWSEvent = wru.AWSEvent.model_validate(self.event)
+        self.mock_wru_draft_1: wru.WorkflowRunUpdate = mock_obj_with_envelope.detail
+
+    def load_mock_wru_draft_2(self):
+        self.load_mock_file(rel_path="fixtures/WRU_draft_2.json")
+        mock_obj_with_envelope: wru.AWSEvent = wru.AWSEvent.model_validate(self.event)
+        self.mock_wru_draft_2: wru.WorkflowRunUpdate = mock_obj_with_envelope.detail
 
 class WorkflowManagerProcIntegrationTestCase(TestCase):
     pass
