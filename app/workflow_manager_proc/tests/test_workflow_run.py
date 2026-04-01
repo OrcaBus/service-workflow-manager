@@ -586,14 +586,14 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         The Payload of a WorkflowRun is generally expected to be uniquely defined by its content. This is reflected in the `payload_ref_id`
         field of the Payload model, which is a hash of the data content.
-        An effect of this is that muliple WorkflowRuns can share the same Payload, especially in the case of DRAFTs, as the payload data then
+        An effect of this is that multiple WorkflowRuns can share the same Payload, especially in the case of DRAFTs, as the payload data then
         may not contain run-specific information yet.
         This is OK and beneficial. However, if the Payload version (which is under the control of the producer) changes without any content change,
         this can lead to existing Payload objects being re-assigned to new WorkflowRuns based on the Payload content hash and thereby overwriting
         the version, leading to unexpected behaviour.
         See related: https://github.com/OrcaBus/service-workflow-manager/issues/151
 
-        Here we test that the new uniqueness contstraint, using the Payload hash and the version together, is correctly enforced to ensure that
+        Here we test that the new uniqueness constraint, using the Payload hash and the version together, is correctly enforced to ensure that
         a new Payload is created when the version changes, even if the content is the same.
         """
         _ = WorkflowFactory()
