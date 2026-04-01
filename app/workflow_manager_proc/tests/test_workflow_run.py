@@ -578,3 +578,77 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         mock_wrsc.id = "FooBar"
         provided_hash = workflow_run.get_wrsc_hash(mock_wrsc)
         self.assertEqual(provided_hash, "FooBar")
+
+    def test_get_unique_payload(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_get_unique_payload
+
+
+        The Payload of a WorkflowRun is generally expected to be uniquely defined by its content. This is reflected in the `payload_ref_id`
+        field of the Payload model, which is a hash of the data content.
+        An effect of this is that multiple WorkflowRuns can share the same Payload, especially in the case of DRAFTs, as the payload data then
+        may not contain run-specific information yet.
+        This is OK and beneficial. However, if the Payload version (which is under the control of the producer) changes without any content change,
+        this can lead to existing Payload objects being re-assigned to new WorkflowRuns based on the Payload content hash and thereby overwriting
+        the version, leading to unexpected behaviour.
+        See related: https://github.com/OrcaBus/service-workflow-manager/issues/151
+
+        Here we test that the new uniqueness constraint, using the Payload hash and the version together, is correctly enforced to ensure that
+        a new Payload is created when the version changes, even if the content is the same.
+        """
+        _ = WorkflowFactory()
+
+        # First WorkflowRun in DRAFT state
+        logger.info("1. WRU")
+        self.load_mock_wru_draft_1()
+
+        # We expect the new objects to be presisted in the database
+        out_wrsc = workflow_run.create_workflow_run(self.mock_wru_draft_1)
+        self.assertIsNotNone(out_wrsc)
+        self.assertEqual(Workflow.objects.count(), 1)
+        self.assertEqual(WorkflowRun.objects.count(), 1)
+        self.assertEqual(State.objects.count(), 1)
+        self.assertEqual(Payload.objects.count(), 1)
+
+        print("-" * 128)
+
+        # Second WorkflowRun in DRAFT state, with the same Payload.
+        logger.info("2. WRU")
+        self.load_mock_wru_draft_2()
+
+        print("-" * 128)
+
+        # We expect a new WorkflowRun and a new State, but crucially, the same Payload to be re-used.
+        out_wrsc = workflow_run.create_workflow_run(self.mock_wru_draft_2)
+        self.assertIsNotNone(out_wrsc)
+        self.assertEqual(Workflow.objects.count(), 1)
+        self.assertEqual(WorkflowRun.objects.count(), 2)
+        self.assertEqual(State.objects.count(), 2)
+        self.assertEqual(Payload.objects.count(), 1)
+
+
+        # Third WorkflowRun in DRAFT state, with the same Payload content, but a different version.
+        logger.info("3. WRU")
+        self.load_mock_wru_draft_2()
+        self.mock_wru_draft_2.timestamp = timezone.now()
+        self.mock_wru_draft_2.workflowRunName = "TestWorkflowRunNo3"
+        self.mock_wru_draft_2.portalRunId = "302405012397xxxx"
+        self.mock_wru_draft_2.payload.version = "0.1.1"
+
+
+        print("-" * 128)
+
+        # We expect new records for WorkflowRun, State and Payload.
+        out_wrsc = workflow_run.create_workflow_run(self.mock_wru_draft_2)
+        self.assertIsNotNone(out_wrsc)
+        self.assertEqual(Workflow.objects.count(), 1)
+        self.assertEqual(WorkflowRun.objects.count(), 3)
+        self.assertEqual(State.objects.count(), 3)
+        self.assertEqual(Payload.objects.count(), 2)
+
+        # Finally confirm that the Payload content hashes are the same and the records only differ in the version (and orcabus_id)
+        p1 = Payload.objects.all()[0]
+        p2 = Payload.objects.all()[1]
+        self.assertEqual(p1.payload_ref_id, p2.payload_ref_id)
+        self.assertNotEqual(p1.orcabus_id, p2.orcabus_id)
+        self.assertNotEqual(p1.version, p2.version)

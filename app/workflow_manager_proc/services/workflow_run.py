@@ -221,7 +221,7 @@ def update_workflow_run_to_new_state(event: wru.WorkflowRunUpdate, wfr: Workflow
         data_hash =  event.payload.refId if event.payload.refId else calculated_data_hash
         assert calculated_data_hash == data_hash, "Provided Payload data hash does not match expected value"
         try:
-            pld: Payload = Payload.objects.get(payload_ref_id=data_hash)
+            pld: Payload = Payload.objects.get(payload_ref_id=data_hash, version=event.payload.version)
         except Exception:
             pld = Payload(
                 payload_ref_id=hash_payload_data(event.payload.data),  # use a hash of the payload data as refId
