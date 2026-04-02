@@ -1,3 +1,4 @@
+import json
 import os
 import uuid
 from datetime import datetime, timedelta
@@ -102,6 +103,15 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         call_args = libeb.emit_event.call_args[0][0]
         self.assertEqual(call_args["DetailType"], "WorkflowRunUpdate")
         self.assertEqual(call_args["Source"], "orcabus.workflowmanagerapi")
+
+        # EventBridge detail must omit optional fields instead of null (JSON schema: optional string, not nullable)
+        detail_obj = json.loads(call_args["Detail"])
+        for omitted_top_level in ("id", "version", "orcabusId", "analysisRun", "computeEnv", "storageEnv"):
+            self.assertNotIn(
+                omitted_top_level,
+                detail_obj,
+                f"Optional WRU field {omitted_top_level!r} should be omitted, not emitted as null",
+            )
 
         response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "BRCA"})
         self.assertEqual(response.status_code, 400, "Rerun duplication with same input error expected")
