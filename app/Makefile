@@ -313,16 +313,16 @@ psql:
 schema-gen: schema-gen-wrsc schema-gen-arsc schema-gen-wru schema-gen-aru
 
 schema-gen-arsc:
-	@datamodel-codegen --input ../docs/events/WorkflowRunStateChange/WorkflowRunStateChange.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/wrsc.py
+	@datamodel-codegen --input ../docs/events/WorkflowRunStateChange/WorkflowRunStateChange.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/wrsc.py --formatters ruff-format ruff-check
 
 schema-gen-wrsc:
-	@datamodel-codegen --input ../docs/events/AnalysisRunStateChange/AnalysisRunStateChange.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/arsc.py
+	@datamodel-codegen --input ../docs/events/AnalysisRunStateChange/AnalysisRunStateChange.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/arsc.py --formatters ruff-format ruff-check
 
 schema-gen-wru:
-	@datamodel-codegen --input ../docs/events/WorkflowRunUpdate/WorkflowRunUpdate.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/wru.py
+	@datamodel-codegen --input ../docs/events/WorkflowRunUpdate/WorkflowRunUpdate.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/wru.py --formatters ruff-format ruff-check
 
 schema-gen-aru:
-	@datamodel-codegen --input ../docs/events/AnalysisRunUpdate/AnalysisRunUpdate.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/aru.py
+	@datamodel-codegen --input ../docs/events/AnalysisRunUpdate/AnalysisRunUpdate.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/aru.py --formatters ruff-format ruff-check
 
 # Help command
 .PHONY: help

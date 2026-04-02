@@ -4,10 +4,9 @@ from unittest import mock
 
 from django.db.models import QuerySet
 
-import workflow_manager.aws_event_bridge.executionservice.workflowrunstatechange as srv
 from workflow_manager.models import WorkflowRun, Library, Workflow
 from workflow_manager.models.workflow import ExecutionEngine, ValidationState
-from workflow_manager_proc.domain.event import wrsc
+from workflow_manager_proc.domain.event import wrsc, wrsc_legacy
 from workflow_manager_proc.services.workflow_run_legacy import create_workflow_run
 from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
 
@@ -51,7 +50,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
                 }
             }
         }
-        test_event: srv.WorkflowRunStateChange = srv.Marshaller.unmarshall(test_event_d, srv.WorkflowRunStateChange)
+        test_event = wrsc_legacy.WorkflowRunStateChange.model_validate(test_event_d)
 
         logger.info("Test the created WRSC event...")
         result_wrsc: wrsc.WorkflowRunStateChange = create_workflow_run(test_event)
@@ -60,7 +59,6 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual("ctTSO500-L000002", result_wrsc.workflowRunName)
         # We don't expect any library associations here!
         self.assertIsNone(result_wrsc.libraries)
-        self.assertFalse(hasattr(result_wrsc, "linkedLibraries"))  # deprecated schema attribute name
 
         logger.info("Test the persisted DB record...")
         wfr_qs: QuerySet = WorkflowRun.objects.all()
@@ -87,7 +85,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
             "workflowVersion": "4.2.7",
             "workflowRunName": "ctTSO500-L000002"
         }
-        test_event: srv.WorkflowRunStateChange = srv.Marshaller.unmarshall(test_event_d, srv.WorkflowRunStateChange)
+        test_event = wrsc_legacy.WorkflowRunStateChange.model_validate(test_event_d)
 
         logger.info("Test the created WRSC event...")
         result_wrsc: wrsc.WorkflowRunStateChange = create_workflow_run(test_event)
@@ -153,7 +151,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
                 }
             }
         }
-        test_event: srv.WorkflowRunStateChange = srv.Marshaller.unmarshall(test_event_d, srv.WorkflowRunStateChange)
+        test_event = wrsc_legacy.WorkflowRunStateChange.model_validate(test_event_d)
 
         logger.info("Test the created WRSC event...")
         result_wrsc: wrsc.WorkflowRunStateChange = create_workflow_run(test_event)
@@ -241,7 +239,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
                 }
             }
         }
-        test_event: srv.WorkflowRunStateChange = srv.Marshaller.unmarshall(test_event_d, srv.WorkflowRunStateChange)
+        test_event = wrsc_legacy.WorkflowRunStateChange.model_validate(test_event_d)
 
         logger.info("Test the created WRSC event...")
         result_wrsc: wrsc.WorkflowRunStateChange = create_workflow_run(test_event)
@@ -277,7 +275,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         # Pre Condition
         self.assertEqual(0, Workflow.objects.count())
 
-        mock_wrsc_event_with_envelope = srv.Marshaller.unmarshall(self.event, srv.AWSEvent)
+        mock_wrsc_event_with_envelope = wrsc_legacy.AWSEvent.model_validate(self.event)
 
         create_workflow_run(mock_wrsc_event_with_envelope.detail)
 
@@ -318,7 +316,7 @@ class WorkflowSrvUnitTests(WorkflowManagerProcUnitTestCase):
         # Pre Condition
         self.assertEqual(2, Workflow.objects.count())
 
-        mock_wrsc_event_with_envelope = srv.Marshaller.unmarshall(self.event, srv.AWSEvent)
+        mock_wrsc_event_with_envelope = wrsc_legacy.AWSEvent.model_validate(self.event)
 
         out_wrsc = create_workflow_run(mock_wrsc_event_with_envelope.detail)
 

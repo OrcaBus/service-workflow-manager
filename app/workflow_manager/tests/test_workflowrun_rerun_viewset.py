@@ -26,6 +26,34 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
     def tearDown(self) -> None:
         libeb.emit_event = self._real_emit_event
 
+    def _assert_wru_response_structure(self, response_data: dict, expected_dataset: str):
+        """Assert the response conforms to the WorkflowRunUpdate (WRU) schema."""
+        self.assertEqual(response_data["status"], "READY")
+        self.assertIn("portalRunId", response_data)
+        self.assertIn("workflowRunName", response_data)
+        self.assertIn("timestamp", response_data)
+
+        # workflow must be a nested object (not flat workflowName/workflowVersion)
+        workflow = response_data["workflow"]
+        self.assertIsInstance(workflow, dict)
+        self.assertIn("orcabusId", workflow)
+        self.assertIn("name", workflow)
+        self.assertIn("version", workflow)
+
+        # libraries (not linkedLibraries)
+        self.assertIn("libraries", response_data)
+        self.assertNotIn("linkedLibraries", response_data)
+        self.assertIsInstance(response_data["libraries"], list)
+        for lib in response_data["libraries"]:
+            self.assertIn("libraryId", lib)
+            self.assertIn("orcabusId", lib)
+
+        # payload with overridden dataset
+        payload = response_data["payload"]
+        self.assertIn("version", payload)
+        self.assertIn("data", payload)
+        self.assertEqual(payload["data"]["inputs"]["dataset"], expected_dataset)
+
     def test_rerun_api(self):
         wfl_run = WorkflowRun.objects.all().first()
         payload = wfl_run.states.get(status="READY").payload
@@ -41,7 +69,7 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         payload.save()
 
         response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun")
-        self.assertIn(response.status_code, [400], "Workflow name associated with the workflow run is not allowed")
+        self.assertEqual(response.status_code, 400, "Workflow name associated with the workflow run is not allowed")
 
         wfl = Workflow.objects.all().first()
         wfl.name = "rnasum"
@@ -51,22 +79,34 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
             f"{self.endpoint}/{wfl_run.orcabus_id}/rerun",
             data={"dataset": "INVALID_CHOICE"},
         )
-        self.assertIn(response.status_code, [400], "Invalid payload expected")
+        self.assertEqual(response.status_code, 400, "Invalid payload expected")
 
         response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "PANCAN"})
-        self.assertIn(response.status_code, [200], "Expected a successful response")
-        self.assertTrue(wfl_run.portal_run_id not in str(response.content), "expect old portal_run_id replaced")
+        self.assertEqual(response.status_code, 200, "Expected a successful response")
+        response_data = response.json()
+
+        # Verify the response conforms to the WRU schema
+        self._assert_wru_response_structure(response_data, expected_dataset="PANCAN")
+
+        # The portalRunId must be a newly generated value, not the original one
+        self.assertNotEqual(response_data["portalRunId"], wfl_run.portal_run_id)
+
+        # Verify libeb.emit_event was called with correct WRU DetailType
+        libeb.emit_event.assert_called()
+        call_args = libeb.emit_event.call_args[0][0]
+        self.assertEqual(call_args["DetailType"], "WorkflowRunUpdate")
+        self.assertEqual(call_args["Source"], "orcabus.workflowmanagerapi")
 
         response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "BRCA"})
-        self.assertIn(response.status_code, [400], "Rerun duplication with same input error expected")
+        self.assertEqual(response.status_code, 400, "Rerun duplication with same input error expected")
 
         response = self.client.post(
             f"{self.endpoint}/{wfl_run.orcabus_id}/rerun",
             data={"dataset": "BRCA", "allow_duplication": True},
         )
-        self.assertIn(
+        self.assertEqual(
             response.status_code,
-            [200],
+            200,
             "Rerun with same input allowed when `allow_duplication` is set to True",
         )
 
@@ -105,11 +145,49 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
 
         # This will trigger the rerun with different library set
         response = self.client.post(f"{self.endpoint}/{wfr_new.orcabus_id}/rerun", data={"dataset": "BRCA"})
-        self.assertIn(
+        self.assertEqual(
             response.status_code,
-            [200],
+            200,
             "Rerun with the same input is allowed when using a different library set",
         )
+
+    def test_rerun_comment_append(self):
+        """Verify that successive reruns append to the existing comment rather than overwriting."""
+        wfl_run = WorkflowRun.objects.all().first()
+        payload = wfl_run.states.get(status="READY").payload
+        payload.data = {
+            "inputs": {"someUri": "s3://random/prefix/", "dataset": "BRCA"},
+            "engineParameters": {"sourceUri": "s3://bucket/test/"},
+        }
+        payload.save()
+
+        wfl = Workflow.objects.all().first()
+        wfl.name = "rnasum"
+        wfl.save()
+
+        original_comment = wfl_run.comment
+
+        # First rerun
+        response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "PANCAN"})
+        self.assertEqual(response.status_code, 200)
+        first_portal_run_id = response.json()["portalRunId"]
+
+        wfl_run.refresh_from_db()
+        if original_comment:
+            self.assertIn(original_comment, wfl_run.comment, "Original comment should be preserved")
+        self.assertIn(first_portal_run_id, wfl_run.comment)
+
+        # Second rerun (allow duplication)
+        response = self.client.post(
+            f"{self.endpoint}/{wfl_run.orcabus_id}/rerun",
+            data={"dataset": "PANCAN", "allow_duplication": True},
+        )
+        self.assertEqual(response.status_code, 200)
+        second_portal_run_id = response.json()["portalRunId"]
+
+        wfl_run.refresh_from_db()
+        self.assertIn(first_portal_run_id, wfl_run.comment, "First rerun comment should still be present")
+        self.assertIn(second_portal_run_id, wfl_run.comment, "Second rerun comment should be appended")
 
     def test_rerun_duplication_skips_runs_without_ready_state(self):
         """

@@ -1,5 +1,3 @@
-import json
-
 from datetime import datetime, timezone
 
 from django.contrib.postgres.aggregates import StringAgg
@@ -14,7 +12,7 @@ from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, PolymorphicProxySerializer
 
-from workflow_manager.aws_event_bridge.event import emit_wrsc_api_event
+from workflow_manager.aws_event_bridge.event import emit_wru_api_event
 from workflow_manager.errors import RerunDuplicationError
 from workflow_manager.models.utils import create_portal_run_id
 from workflow_manager.serializers.library import LibrarySerializer
@@ -87,17 +85,29 @@ class WorkflowRunActionViewSet(ViewSet):
 
         try:
             detail = construct_rerun_eb_detail(wfl_run, serializer.data)
+            new_portal_run_id = detail.get("portalRunId")
         except RerunDuplicationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        emit_wrsc_api_event(detail)
+        emit_wru_api_event(detail)
+
+        # Update the workflow run comment with the new portal run id (this will be used to track the rerun history)
+        rerun_comment = (
+            f"Rerun of {wfl_run.portal_run_id} with new portal run id: {new_portal_run_id}"
+        )
+        existing = (wfl_run.comment or "").strip()
+        wfl_run.comment = (
+            existing + "\n" + rerun_comment if existing else rerun_comment
+        )
+        wfl_run.save()
 
         return Response(detail, status=status.HTTP_200_OK)
 
 
 def construct_rerun_eb_detail(wfl_run: WorkflowRun, input_body: dict) -> dict:
     """
-    Construct event bridge detail for rerun based on the existing workflow run and request body
+    Construct WorkflowRunUpdate event bridge detail for rerun based on the existing workflow run and request body.
+    The returned dict conforms to the WorkflowRunUpdate (WRU) schema.
     """
     new_portal_run_id = create_portal_run_id()
     wfl_name = wfl_run.workflow.name
@@ -110,22 +120,24 @@ def construct_rerun_eb_detail(wfl_run: WorkflowRun, input_body: dict) -> dict:
     else:
         raise ValueError(f"Rerun is not allowed for this workflow: {wfl_name}")
 
-    # FIXME RNAsum rerun UI trigger to update legacy WRSC to WRU schema
-    #  https://github.com/OrcaBus/service-workflow-manager/issues/99
-    # Replace old portal_run_id with new_portal_run_id in any part of the string
-    new_eb_detail = json.loads(
-        json.dumps({
-            "status": 'READY',
-            "payload": new_payload,
-            "portalRunId": new_portal_run_id,
-            "linkedLibraries": LibrarySerializer(wfl_run.libraries.all(), many=True, camel_case_data=True).data,
-            "workflowName": wfl_run.workflow.name,
-            "workflowRunName": wfl_run.workflow_run_name,
-            "workflowVersion": wfl_run.workflow.version,
-            "timestamp": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
-        }).replace(f"{wfl_run.portal_run_id}", f"{new_portal_run_id}"))
-
-    return new_eb_detail
+    # RNAsum rerun UI trigger to update legacy WRSC to WRU schema
+    workflow = wfl_run.workflow
+    return {
+        "status": "READY",
+        "portalRunId": new_portal_run_id,
+        "workflowRunName": wfl_run.workflow_run_name,
+        "workflow": {
+            "orcabusId": workflow.orcabus_id,
+            "name": workflow.name,
+            "version": workflow.version,
+            "codeVersion": workflow.code_version,
+            "executionEngine": workflow.execution_engine,
+            "executionEnginePipelineId": workflow.execution_engine_pipeline_id,
+        },
+        "libraries": LibrarySerializer(wfl_run.libraries.all(), many=True, camel_case_data=True).data,
+        "payload": new_payload,
+        "timestamp": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+    }
 
 
 def construct_rnasum_rerun_payload(wfl_run: WorkflowRun, input_body: dict) -> dict:
@@ -136,7 +148,8 @@ def construct_rnasum_rerun_payload(wfl_run: WorkflowRun, input_body: dict) -> di
 
     if not allow_rerun_duplication:
         # The duplication check is based on the dataset input at the READY state of the workflow run that has the same
-        # linked libraries and Workflow entity. If the dataset has been run in the past, it will raise an error.
+        # linked libraries and Workflow entity.
+        # If the dataset has been run in the past, it will raise an error unless `allow_duplication` is set to True.
         library_ids = wfl_run.libraries.values_list('library_id', flat=True)
         sorted_library_ids = sorted(library_ids)
         library_ids_string = ','.join(sorted_library_ids)
