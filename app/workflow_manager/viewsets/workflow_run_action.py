@@ -122,16 +122,10 @@ def construct_rerun_eb_detail(wfl_run: WorkflowRun, input_body: dict) -> dict:
     else:
         raise ValueError(f"Rerun is not allowed for this workflow: {wfl_name}")
 
-    # Replace references to the old portal_run_id within the payload data, since dynamic payload
-    # fields (e.g. S3 paths) may still reference it.  Scoped to payload only to avoid corrupting
-    # structured fields like orcabusId.
     old_portal_run_id = wfl_run.portal_run_id
-    new_payload = json.loads(
-        json.dumps(new_payload).replace(old_portal_run_id, new_portal_run_id)
-    )
-
     workflow = wfl_run.workflow
-    return {
+
+    event_detail = {
         "status": "READY",
         "portalRunId": new_portal_run_id,
         "workflowRunName": wfl_run.workflow_run_name,
@@ -147,6 +141,9 @@ def construct_rerun_eb_detail(wfl_run: WorkflowRun, input_body: dict) -> dict:
         "payload": new_payload,
         "timestamp": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
     }
+
+    # Replace old portal_run_id with new_portal_run_id in any part of the new event detail
+    return json.loads(json.dumps(event_detail).replace(old_portal_run_id, new_portal_run_id))
 
 
 def construct_rnasum_rerun_payload(wfl_run: WorkflowRun, input_body: dict) -> dict:
