@@ -1,5 +1,3 @@
-import json
-
 from datetime import datetime, timezone
 
 from django.contrib.postgres.aggregates import StringAgg
@@ -122,14 +120,7 @@ def construct_rerun_eb_detail(wfl_run: WorkflowRun, input_body: dict) -> dict:
     else:
         raise ValueError(f"Rerun is not allowed for this workflow: {wfl_name}")
 
-    # Replace references to the old portal_run_id within the payload data, since dynamic payload
-    # fields (e.g. S3 paths) may still reference it.  Scoped to payload only to avoid corrupting
-    # structured fields like orcabusId.
-    old_portal_run_id = wfl_run.portal_run_id
-    new_payload = json.loads(
-        json.dumps(new_payload).replace(old_portal_run_id, new_portal_run_id)
-    )
-
+    # RNAsum rerun UI trigger to update legacy WRSC to WRU schema
     workflow = wfl_run.workflow
     return {
         "status": "READY",

@@ -89,13 +89,7 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         self._assert_wru_response_structure(response_data, expected_dataset="PANCAN")
 
         # The portalRunId must be a newly generated value, not the original one
-        new_portal_run_id = response_data["portalRunId"]
-        self.assertNotEqual(new_portal_run_id, wfl_run.portal_run_id)
-
-        # Verify old portal_run_id in payload data is replaced with new one
-        source_uri = response_data["payload"]["data"]["engineParameters"]["sourceUri"]
-        self.assertNotIn(wfl_run.portal_run_id, source_uri, "Old portal_run_id should be replaced in payload data")
-        self.assertIn(new_portal_run_id, source_uri, "New portal_run_id should appear in payload data")
+        self.assertNotEqual(response_data["portalRunId"], wfl_run.portal_run_id)
 
         # Verify libeb.emit_event was called with correct WRU DetailType
         libeb.emit_event.assert_called()
@@ -225,7 +219,7 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         wfl_run2.states.get(status="READY").delete()
 
         response = self.client.post(f"{self.endpoint}/{wfl_run1.orcabus_id}/rerun", data={"dataset": "PANCAN"})
-        self.assertEqual(response.status_code, 200, "Expected a successful response")
+        self.assertIn(response.status_code, [200], "Expected a successful response")
 
     def test_rerun_wfr_same_deprecated_payload(self):
         """The exact same rnasum payload but the old one has deprecated and now expected to rerun the same thing"""
@@ -253,7 +247,7 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         wfl_run2 = WorkflowRun.objects.get(workflow_run_name="TestWorkflowPrimaryRun2")
 
         response = self.client.post(f"{self.endpoint}/{wfl_run1.orcabus_id}/rerun", data={"dataset": "PANCAN"})
-        self.assertEqual(response.status_code, 200, "Expected a successful response")
+        self.assertIn(response.status_code, [200], "Expected a successful response")
 
         new_payload2 = Payload.objects.create(
             version="1.0.0",
@@ -279,7 +273,7 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
             timestamp=make_aware(datetime.now())
         )
         response = self.client.post(f"{self.endpoint}/{wfl_run1.orcabus_id}/rerun", data={"dataset": "PANCAN"})
-        self.assertEqual(response.status_code, 200, "Expected a successful response")
+        self.assertIn(response.status_code, [200], "Expected a successful response")
 
     def test_disable_rerun_deprecated_wfr(self):
         """Test that a workflow run marked as DEPRECATED cannot be rerun."""
@@ -309,4 +303,4 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
             timestamp=make_aware(datetime.now())
         )
         response = self.client.post(f"{self.endpoint}/{wfl_run1.orcabus_id}/rerun", data={"dataset": "BRCA"})
-        self.assertEqual(response.status_code, 400, "Expected a fail response")
+        self.assertIn(response.status_code, [400], "Expected a fail response")
