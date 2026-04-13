@@ -10,6 +10,7 @@ import uuid
 from django.db import transaction
 from django.utils import timezone
 
+import workflow_manager.aws_event_bridge.executionservice.workflowrunstatechange as srv
 from workflow_manager.models import (
     WorkflowRun,
     Workflow,
@@ -20,7 +21,7 @@ from workflow_manager.models import (
 )
 from workflow_manager.models.utils import WorkflowRunUtil
 from workflow_manager.models.workflow import ValidationState
-from workflow_manager_proc.domain.event import wrsc, wrsc_legacy
+from workflow_manager_proc.domain.event import wrsc
 from workflow_manager_proc.services.event_utils import emit_event, EventType
 from workflow_manager_proc.services.workflow_run import EVENT_BUS_NAME, ASSOCIATION_STATUS, WRSC_SCHEMA_VERSION, \
     sanitize_orcabus_id, get_wrsc_hash
@@ -30,7 +31,7 @@ logger.setLevel(logging.INFO)
 
 
 @transaction.atomic
-def create_workflow_run(event: wrsc_legacy.WorkflowRunStateChange):
+def create_workflow_run(event: srv.WorkflowRunStateChange):
     # check state list
     out_wrsc = _create_workflow_run(event)
     if out_wrsc:
@@ -44,10 +45,10 @@ def create_workflow_run(event: wrsc_legacy.WorkflowRunStateChange):
     return out_wrsc
 
 
-def _create_workflow_run(event: wrsc_legacy.WorkflowRunStateChange):
+def _create_workflow_run(event: srv.WorkflowRunStateChange):
     """
     Parameters:
-        event: JSON event conform to legacy WorkflowRunStateChange (flat fields)
+        event: JSON event conform to <executionservice>.WorkflowRunStateChange
     Procedure:
         - check whether a corresponding Workflow record exists (it should according to the pre-planning approach)
             - if not exist, create (support on-the-fly approach)
@@ -62,7 +63,7 @@ def _create_workflow_run(event: wrsc_legacy.WorkflowRunStateChange):
             NOTE: all events that don't change any state value should be ignored
     """
     logger.info(f"Start processing {event}")
-    srv_wrsc: wrsc_legacy.WorkflowRunStateChange = event
+    srv_wrsc: srv.WorkflowRunStateChange = event
 
     # We expect: a corresponding Workflow has to exist for each workflow run
     # NOTE: for now we allow dynamic workflow creation
@@ -110,7 +111,7 @@ def _create_workflow_run(event: wrsc_legacy.WorkflowRunStateChange):
         wfr.save()
 
         # if the workflow run is linked to library record(s), create the association(s)
-        input_libraries: list[wrsc_legacy.LibraryRecord] = srv_wrsc.linkedLibraries
+        input_libraries: list[srv.LibraryRecord] = srv_wrsc.linkedLibraries
         if input_libraries:
             for input_rec in input_libraries:
                 # make sure OrcaBus ID format is sanitized (without prefix) for lookups

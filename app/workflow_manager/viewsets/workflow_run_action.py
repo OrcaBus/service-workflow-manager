@@ -17,6 +17,7 @@ from drf_spectacular.utils import extend_schema, PolymorphicProxySerializer
 from workflow_manager.aws_event_bridge.event import emit_wru_api_event
 from workflow_manager.errors import RerunDuplicationError
 from workflow_manager.models.utils import create_portal_run_id
+from workflow_manager.models.comment import Comment
 from workflow_manager.serializers.library import LibrarySerializer
 from workflow_manager.serializers.payload import PayloadSerializer
 from workflow_manager.serializers.workflow_run_action import AllowedRerunWorkflow, RERUN_INPUT_SERIALIZERS, \
@@ -25,6 +26,7 @@ from workflow_manager.models import (
     WorkflowRun,
     State,
 )
+from workflow_manager.viewsets.base import get_email_from_bearer_authorization
 
 
 class WorkflowRunActionViewSet(ViewSet):
@@ -93,15 +95,12 @@ class WorkflowRunActionViewSet(ViewSet):
 
         emit_wru_api_event(detail)
 
-        # Update the workflow run comment with the new portal run id (this will be used to track the rerun history)
-        rerun_comment = (
-            f"Rerun of {wfl_run.portal_run_id} with new portal run id: {new_portal_run_id}"
+        user_email = get_email_from_bearer_authorization(request)
+        Comment.objects.create(
+            workflow_run=wfl_run,
+            created_by="workflow manager",
+            text=f"Rerun of {wfl_run.portal_run_id} with new portal run id: {new_portal_run_id} by {user_email}",
         )
-        existing = (wfl_run.comment or "").strip()
-        wfl_run.comment = (
-            existing + "\n" + rerun_comment if existing else rerun_comment
-        )
-        wfl_run.save()
 
         return Response(detail, status=status.HTTP_200_OK)
 

@@ -4,7 +4,7 @@ django.setup()
 
 # --- keep ^^^ at top of the module
 import logging
-from workflow_manager_proc.domain.event import wrsc_legacy
+import workflow_manager.aws_event_bridge.executionservice.workflowrunstatechange as srv
 from workflow_manager_proc.services.workflow_run_legacy import create_workflow_run
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ logger.setLevel(logging.INFO)
 def handler(event, context):
     """
     Parameters:
-        event: JSON event conform to legacy WorkflowRunStateChange (flat fields)
+        event: JSON event conform to <executionservice>.WorkflowRunStateChange
         context: ignored for now (only used to conform to Lambda handler conventions)
     Procedure:
         - Unpack AWS event
@@ -23,9 +23,11 @@ def handler(event, context):
     """
     logger.info(f"Processing {event}, {context}")
 
-    input_event = wrsc_legacy.AWSEvent.model_validate(event)
-    input_wrsc: wrsc_legacy.WorkflowRunStateChange = input_event.detail
+    # remove the AWSEvent wrapper from our WRSC event
+    input_event: srv.AWSEvent = srv.Marshaller.unmarshall(event, srv.AWSEvent)
+    input_wrsc: srv.WorkflowRunStateChange = input_event.detail
 
+    # defensive about the incoming as an WRSC legacy event
     if input_wrsc.workflowName is None or input_wrsc.workflowVersion is None:
         raise ValueError("WRSC legacy schema error. The workflowName and workflowVersion must be defined.")
 

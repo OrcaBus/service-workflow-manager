@@ -9,13 +9,17 @@ from django.utils.timezone import make_aware
 from libumccr.aws import libeb
 
 from workflow_manager.models import LibraryAssociation, Payload, Workflow, WorkflowRun
+from workflow_manager.models.comment import Comment
 from workflow_manager.tests.factories import StateFactory, WorkflowRunFactory, PayloadFactory
 from workflow_manager.tests.fixtures.sim_workflow import TestData
 from workflow_manager.urls.base import api_base
+from workflow_manager.viewsets import workflow_run_action as _wra_module
 
 
 class WorkflowRunRerunViewSetTestCase(TestCase):
     endpoint = f"/{api_base}workflowrun"
+
+    mock_user_email = "testuser@example.com"
 
     def setUp(self):
         os.environ["EVENT_BUS_NAME"] = "mock-bus"
@@ -24,8 +28,12 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         self._real_emit_event = libeb.emit_event
         libeb.emit_event = MagicMock()
 
+        self._real_get_email = _wra_module.get_email_from_bearer_authorization
+        _wra_module.get_email_from_bearer_authorization = MagicMock(return_value=self.mock_user_email)
+
     def tearDown(self) -> None:
         libeb.emit_event = self._real_emit_event
+        _wra_module.get_email_from_bearer_authorization = self._real_get_email
 
     def _assert_wru_response_structure(self, response_data: dict, expected_dataset: str):
         """Assert the response conforms to the WorkflowRunUpdate (WRU) schema."""
@@ -167,8 +175,8 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
             "Rerun with the same input is allowed when using a different library set",
         )
 
-    def test_rerun_comment_append(self):
-        """Verify that successive reruns append to the existing comment rather than overwriting."""
+    def test_rerun_creates_system_comment(self):
+        """Verify that each rerun creates a Comment object linked to the workflow run."""
         wfl_run = WorkflowRun.objects.all().first()
         payload = wfl_run.states.get(status="READY").payload
         payload.data = {
@@ -181,19 +189,22 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         wfl.name = "rnasum"
         wfl.save()
 
-        original_comment = wfl_run.comment
+        self.assertEqual(Comment.objects.filter(workflow_run=wfl_run).count(), 0)
 
         # First rerun
         response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "PANCAN"})
         self.assertEqual(response.status_code, 200)
         first_portal_run_id = response.json()["portalRunId"]
 
-        wfl_run.refresh_from_db()
-        if original_comment:
-            self.assertIn(original_comment, wfl_run.comment, "Original comment should be preserved")
-        self.assertIn(first_portal_run_id, wfl_run.comment)
+        comments = Comment.objects.filter(workflow_run=wfl_run).order_by("created_at")
+        self.assertEqual(comments.count(), 1)
+        first_comment = comments.first()
+        self.assertEqual(first_comment.created_by, "workflow manager")
+        self.assertIn(wfl_run.portal_run_id, first_comment.text)
+        self.assertIn(first_portal_run_id, first_comment.text)
+        self.assertIn(self.mock_user_email, first_comment.text)
 
-        # Second rerun (allow duplication)
+        # Second rerun (allow duplication) — should create a second comment
         response = self.client.post(
             f"{self.endpoint}/{wfl_run.orcabus_id}/rerun",
             data={"dataset": "PANCAN", "allow_duplication": True},
@@ -201,9 +212,12 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         second_portal_run_id = response.json()["portalRunId"]
 
-        wfl_run.refresh_from_db()
-        self.assertIn(first_portal_run_id, wfl_run.comment, "First rerun comment should still be present")
-        self.assertIn(second_portal_run_id, wfl_run.comment, "Second rerun comment should be appended")
+        comments = Comment.objects.filter(workflow_run=wfl_run).order_by("created_at")
+        self.assertEqual(comments.count(), 2)
+        second_comment = comments.last()
+        self.assertEqual(second_comment.created_by, "workflow manager")
+        self.assertIn(second_portal_run_id, second_comment.text)
+        self.assertIn(self.mock_user_email, second_comment.text)
 
     def test_rerun_duplication_skips_runs_without_ready_state(self):
         """
