@@ -312,11 +312,12 @@ psql:
 
 schema-gen: schema-gen-wrsc schema-gen-arsc schema-gen-wru schema-gen-aru
 
+# AnalysisRunStateChange -> arsc.py; WorkflowRunStateChange -> wrsc.py (targets were previously swapped)
 schema-gen-arsc:
-	@datamodel-codegen --input ../docs/events/WorkflowRunStateChange/WorkflowRunStateChange.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/wrsc.py --formatters ruff-format ruff-check
+	@datamodel-codegen --input ../docs/events/AnalysisRunStateChange/AnalysisRunStateChange.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/arsc.py --formatters ruff-format ruff-check
 
 schema-gen-wrsc:
-	@datamodel-codegen --input ../docs/events/AnalysisRunStateChange/AnalysisRunStateChange.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/arsc.py --formatters ruff-format ruff-check
+	@datamodel-codegen --input ../docs/events/WorkflowRunStateChange/WorkflowRunStateChange.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/wrsc.py --formatters ruff-format ruff-check
 
 schema-gen-wru:
 	@datamodel-codegen --input ../docs/events/WorkflowRunUpdate/WorkflowRunUpdate.schema.json --input-file-type jsonschema --output workflow_manager_proc/domain/event/wru.py --formatters ruff-format ruff-check

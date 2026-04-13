@@ -19,11 +19,15 @@ def emit_wru_api_event(event: dict):
 
     validated = wru.WorkflowRunUpdate.model_validate(event)
 
+    # Omit keys with value null: JSON schema marks optional fields as non-required string types,
+    # not as nullable; emitting null violates the schema.
+    detail_json = validated.model_dump_json(exclude_none=True)
+
     logger.info(f"Emitting WRU event to event bus {event_bus_name}: {event}")
     response = libeb.emit_event({
         'Source': source,
         'DetailType': wru.WorkflowRunUpdate.__name__,
-        'Detail': validated.model_dump_json(),
+        'Detail': detail_json,
         'EventBusName': event_bus_name,
     })
 
