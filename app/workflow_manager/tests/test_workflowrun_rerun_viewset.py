@@ -100,6 +100,13 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         # The portalRunId must be a newly generated value, not the original one
         new_portal_run_id = response_data["portalRunId"]
         self.assertNotEqual(new_portal_run_id, wfl_run.portal_run_id)
+        original_workflow_run_name = wfl_run.workflow_run_name
+        if wfl_run.portal_run_id in original_workflow_run_name:
+            self.assertIn(new_portal_run_id, response_data["workflowRunName"])
+            self.assertNotIn(wfl_run.portal_run_id, response_data["workflowRunName"])
+        else:
+            self.assertEqual(response_data["workflowRunName"], original_workflow_run_name)
+        self.assertEqual(response_data["workflow"]["orcabusId"], wfl_run.workflow.orcabus_id)
 
         # Verify old portal_run_id in payload data is replaced with new one
         source_uri = response_data["payload"]["data"]["engineParameters"]["sourceUri"]

@@ -130,10 +130,14 @@ def construct_rerun_eb_detail(wfl_run: WorkflowRun, input_body: dict) -> dict:
     )
 
     workflow = wfl_run.workflow
+    new_workflow_run_name = wfl_run.workflow_run_name.replace(
+        old_portal_run_id,
+        new_portal_run_id,
+    )
     return {
         "status": "READY",
         "portalRunId": new_portal_run_id,
-        "workflowRunName": wfl_run.workflow_run_name,
+        "workflowRunName": new_workflow_run_name,
         "workflow": {
             "orcabusId": workflow.orcabus_id,
             "name": workflow.name,
