@@ -12,7 +12,7 @@ from workflow_manager.serializers.comment import (
     CommentUpdateRequestSerializer,
 )
 from .base import PatchOnlyViewSet
-from .utils import get_email_from_bearer_authorization
+from .auth_utils import get_email_from_bearer_authorization
 
 
 @extend_schema_view(

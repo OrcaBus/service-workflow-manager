@@ -16,7 +16,7 @@ from workflow_manager.serializers.stats import (
     WorkflowStatusCountSerializer,
     AnalysisStatusCountSerializer,
 )
-from workflow_manager.viewsets.utils import get_latest_workflows_by_name_group
+from workflow_manager.viewsets.workflow_utils import get_latest_workflows_by_name_group
 
 # Latest-state "terminal" buckets for workflow runs and analysis runs (ongoing = not in this set).
 RUN_LATEST_STATE_TERMINATION_STATUSES = (
@@ -39,17 +39,20 @@ def _run_latest_state_bucket_counts(parent_model, state_model, *, state_fk_field
         .values("status")[:1]
     )
     qs = parent_model.objects.annotate(latest_status=Subquery(latest_status_sq))
-    all_count = qs.count()
-
-    succeeded = qs.filter(latest_status="SUCCEEDED").count()
-    aborted = qs.filter(latest_status="ABORTED").count()
-    failed = qs.filter(latest_status="FAILED").count()
-    resolved = qs.filter(latest_status="RESOLVED").count()
-    deprecated = qs.filter(latest_status="DEPRECATED").count()
-    ongoing = (
-        qs.filter(latest_status__isnull=False)
-        .exclude(latest_status__in=termination_statuses)
-        .count()
+    grouped_counts = {
+        row["latest_status"]: row["count"]
+        for row in qs.values("latest_status").annotate(count=Count("pk"))
+    }
+    all_count = sum(grouped_counts.values())
+    succeeded = grouped_counts.get("SUCCEEDED", 0)
+    aborted = grouped_counts.get("ABORTED", 0)
+    failed = grouped_counts.get("FAILED", 0)
+    resolved = grouped_counts.get("RESOLVED", 0)
+    deprecated = grouped_counts.get("DEPRECATED", 0)
+    ongoing = sum(
+        count
+        for status, count in grouped_counts.items()
+        if status is not None and status not in termination_statuses
     )
 
     return {

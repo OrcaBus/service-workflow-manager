@@ -8,7 +8,7 @@ from workflow_manager.serializers.workflow import (
     WorkflowListSerializer,
 )
 from workflow_manager.viewsets.base import PostOnlyViewSet
-from workflow_manager.viewsets.utils import get_latest_workflows_by_name_group
+from workflow_manager.viewsets.workflow_utils import get_latest_workflows_by_name_group
 
 
 class WorkflowViewSet(PostOnlyViewSet):
