@@ -1,4 +1,5 @@
 import json
+import logging
 
 from datetime import datetime, timezone
 
@@ -28,6 +29,8 @@ from workflow_manager.models import (
 )
 from workflow_manager.viewsets.base import get_email_from_bearer_authorization
 
+
+logger = logging.getLogger(__name__)
 
 class WorkflowRunActionViewSet(ViewSet):
     lookup_value_regex = "[^/]+"  # to allow orcabus id prefix
@@ -87,20 +90,26 @@ class WorkflowRunActionViewSet(ViewSet):
             return Response({"detail": "Workflow run has been deprecated and rerun is not allowed."},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        # User will be used to create rerun audit comment
+        user_email = get_email_from_bearer_authorization(request)
+
         try:
             detail = construct_rerun_eb_detail(wfl_run, serializer.data)
             new_portal_run_id = detail.get("portalRunId")
         except RerunDuplicationError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"rerun_duplication_error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         emit_wru_api_event(detail)
 
-        user_email = get_email_from_bearer_authorization(request)
-        Comment.objects.create(
-            workflow_run=wfl_run,
-            created_by="workflow manager",
-            text=f"Rerun of {wfl_run.portal_run_id} with new portal run id: {new_portal_run_id} by {user_email}",
-        )
+        try:
+            Comment.objects.create(
+                workflow_run=wfl_run,
+                created_by="workflow manager",
+                text=f"Rerun of {wfl_run.portal_run_id} with new portal run id: {new_portal_run_id} by {user_email}",
+            )
+        except Exception as e:
+            logger.exception("Failed to create rerun audit comment for workflow run %s, user email: %s, new portal run id: %s, error: %s", wfl_run.orcabus_id, user_email, new_portal_run_id, e)
+            return Response({"detail": "Rerun event emitted successfully, but failed to create rerun audit comment."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(detail, status=status.HTTP_200_OK)
 
@@ -186,7 +195,7 @@ def construct_rnasum_rerun_payload(wfl_run: WorkflowRun, input_body: dict) -> di
                 ready_data_payload = PayloadSerializer(ready_state.payload).data
                 past_dataset.add(ready_data_payload.get('data', {}).get("inputs", {}).get("dataset", ''))
             except State.DoesNotExist:
-                # Skip runs without a READY state
+                logger.warning("Workflow run %s has no READY state", run.orcabus_id)
                 continue
         if input_body["dataset"] in past_dataset:
             raise RerunDuplicationError(f"Dataset '{input_body['dataset']}' has been run in the past. "
