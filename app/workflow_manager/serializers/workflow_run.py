@@ -97,17 +97,3 @@ class WorkflowRunDetailSerializer(WorkflowRunBaseSerializer):
         fields = "__all__"
 
 
-class WorkflowRunCountByStatusSerializer(serializers.Serializer):
-    all = serializers.IntegerField()
-    succeeded = serializers.IntegerField()
-    aborted = serializers.IntegerField()
-    failed = serializers.IntegerField()
-    resolved = serializers.IntegerField()
-    ongoing = serializers.IntegerField()
-    deprecated = serializers.IntegerField()
-
-    def update(self, instance, validated_data):
-        pass
-
-    def create(self, validated_data):
-        pass
