@@ -154,7 +154,7 @@ class CommentViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, 400)
 
     @patch(
-        "workflow_manager.viewsets.base.decode_rs256_jwt_payload_without_verification",
+        "workflow_manager.viewsets.utils.decode_rs256_jwt_payload_without_verification",
         return_value={"email": "tester"},
     )
     def test_update_comment_uses_bearer_when_created_by_omitted(self, _mock_decode):
@@ -181,7 +181,7 @@ class CommentViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, 401)
 
     @patch(
-        "workflow_manager.viewsets.base.decode_rs256_jwt_payload_without_verification",
+        "workflow_manager.viewsets.utils.decode_rs256_jwt_payload_without_verification",
         return_value={"email": "tester"},
     )
     def test_soft_delete_success(self, _mock_decode):
@@ -202,7 +202,7 @@ class CommentViewSetTestCase(TestCase):
         self.assertEqual(c.severity, "ERROR")
 
     @patch(
-        "workflow_manager.viewsets.base.decode_rs256_jwt_payload_without_verification",
+        "workflow_manager.viewsets.utils.decode_rs256_jwt_payload_without_verification",
         return_value={"email": "other_user"},
     )
     def test_soft_delete_permission_denied(self, _mock_decode):

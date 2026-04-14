@@ -1,25 +1,66 @@
-from collections import defaultdict
-
-from django.db.models import Q, Max, F, Count
+from django.db.models import Count, OuterRef, Subquery
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from workflow_manager.models import WorkflowRun
+from workflow_manager.models.analysis_run_state import AnalysisRunState
+from workflow_manager.models.state import State
 from workflow_manager.models.analysis import Analysis, AnalysisStatus
 from workflow_manager.models.analysis_run import AnalysisRun
 from workflow_manager.models.workflow import Workflow, ValidationState
-from workflow_manager.serializers.base import version_sort_key
 from workflow_manager.serializers.stats import (
     WorkflowRunStatusCountSerializer,
     AnalysisRunStatusCountSerializer,
     WorkflowStatusCountSerializer,
     AnalysisStatusCountSerializer,
 )
+from workflow_manager.viewsets.utils import get_latest_workflows_by_name_group
 
-WORKFLOW_RUN_TERMINATION_STATUSES = ["FAILED", "ABORTED", "SUCCEEDED", "RESOLVED", "DEPRECATED"]
-ANALYSIS_RUN_TERMINATION_STATUSES = ["FAILED", "ABORTED", "SUCCEEDED", "RESOLVED", "DEPRECATED"]
+# Latest-state "terminal" buckets for workflow runs and analysis runs (ongoing = not in this set).
+RUN_LATEST_STATE_TERMINATION_STATUSES = (
+    "FAILED",
+    "ABORTED",
+    "SUCCEEDED",
+    "RESOLVED",
+    "DEPRECATED",
+)
+
+
+def _run_latest_state_bucket_counts(parent_model, state_model, *, state_fk_field: str, termination_statuses):
+    """Count parent rows (e.g. WorkflowRun) by latest linked state row status (one row per parent).
+
+    Tie-break on equal ``timestamp`` uses ``-orcabus_id`` so each parent contributes to exactly one bucket.
+    """
+    latest_status_sq = (
+        state_model.objects.filter(**{state_fk_field: OuterRef("pk")})
+        .order_by("-timestamp", "-orcabus_id")
+        .values("status")[:1]
+    )
+    qs = parent_model.objects.annotate(latest_status=Subquery(latest_status_sq))
+    all_count = qs.count()
+
+    succeeded = qs.filter(latest_status="SUCCEEDED").count()
+    aborted = qs.filter(latest_status="ABORTED").count()
+    failed = qs.filter(latest_status="FAILED").count()
+    resolved = qs.filter(latest_status="RESOLVED").count()
+    deprecated = qs.filter(latest_status="DEPRECATED").count()
+    ongoing = (
+        qs.filter(latest_status__isnull=False)
+        .exclude(latest_status__in=termination_statuses)
+        .count()
+    )
+
+    return {
+        "all": all_count,
+        "succeeded": succeeded,
+        "aborted": aborted,
+        "failed": failed,
+        "resolved": resolved,
+        "deprecated": deprecated,
+        "ongoing": ongoing,
+    }
 
 
 class StatsViewSet(GenericViewSet):
@@ -30,59 +71,21 @@ class StatsViewSet(GenericViewSet):
 
     def _workflow_run_status_counts(self):
         """Count WorkflowRun records grouped by their latest State status."""
-        qs = WorkflowRun.objects.annotate(latest_state_time=Max("states__timestamp"))
-
-        all_count = qs.count()
-
-        annotated = qs.filter(latest_state_time__isnull=False)
-
-        succeeded = annotated.filter(states__timestamp=F("latest_state_time"), states__status="SUCCEEDED").count()
-        aborted = annotated.filter(states__timestamp=F("latest_state_time"), states__status="ABORTED").count()
-        failed = annotated.filter(states__timestamp=F("latest_state_time"), states__status="FAILED").count()
-        resolved = annotated.filter(states__timestamp=F("latest_state_time"), states__status="RESOLVED").count()
-        deprecated = annotated.filter(states__timestamp=F("latest_state_time"), states__status="DEPRECATED").count()
-        ongoing = annotated.filter(
-            Q(states__timestamp=F("latest_state_time"))
-            & ~Q(states__status__in=WORKFLOW_RUN_TERMINATION_STATUSES)
-        ).count()
-
-        return {
-            "all": all_count,
-            "succeeded": succeeded,
-            "aborted": aborted,
-            "failed": failed,
-            "resolved": resolved,
-            "deprecated": deprecated,
-            "ongoing": ongoing,
-        }
+        return _run_latest_state_bucket_counts(
+            WorkflowRun,
+            State,
+            state_fk_field="workflow_run",
+            termination_statuses=RUN_LATEST_STATE_TERMINATION_STATUSES,
+        )
 
     def _analysis_run_status_counts(self):
         """Count AnalysisRun records grouped by their latest AnalysisRunState status."""
-        qs = AnalysisRun.objects.annotate(latest_state_time=Max("states__timestamp"))
-
-        all_count = qs.count()
-
-        annotated = qs.filter(latest_state_time__isnull=False)
-
-        succeeded = annotated.filter(states__timestamp=F("latest_state_time"), states__status="SUCCEEDED").count()
-        aborted = annotated.filter(states__timestamp=F("latest_state_time"), states__status="ABORTED").count()
-        failed = annotated.filter(states__timestamp=F("latest_state_time"), states__status="FAILED").count()
-        resolved = annotated.filter(states__timestamp=F("latest_state_time"), states__status="RESOLVED").count()
-        deprecated = annotated.filter(states__timestamp=F("latest_state_time"), states__status="DEPRECATED").count()
-        ongoing = annotated.filter(
-            Q(states__timestamp=F("latest_state_time"))
-            & ~Q(states__status__in=ANALYSIS_RUN_TERMINATION_STATUSES)
-        ).count()
-
-        return {
-            "all": all_count,
-            "succeeded": succeeded,
-            "aborted": aborted,
-            "failed": failed,
-            "resolved": resolved,
-            "deprecated": deprecated,
-            "ongoing": ongoing,
-        }
+        return _run_latest_state_bucket_counts(
+            AnalysisRun,
+            AnalysisRunState,
+            state_fk_field="analysis_run",
+            termination_statuses=RUN_LATEST_STATE_TERMINATION_STATUSES,
+        )
 
     @extend_schema(
         responses=WorkflowRunStatusCountSerializer,
@@ -142,19 +145,6 @@ class StatsViewSet(GenericViewSet):
 
         return Response(result, status=200)
 
-    @staticmethod
-    def _get_latest_workflow_per_group():
-        """Group workflows by name (case-insensitive), return only the latest version per group."""
-        grouped: dict[str, list] = defaultdict(list)
-        for w in Workflow.objects.all():
-            grouped[w.name.lower()].append(w)
-
-        latest_workflows = []
-        for group in grouped.values():
-            group.sort(key=lambda w: version_sort_key(w.version), reverse=True)
-            latest_workflows.append(group[0])
-        return latest_workflows
-
     @extend_schema(
         responses=WorkflowStatusCountSerializer,
         description=(
@@ -164,7 +154,7 @@ class StatsViewSet(GenericViewSet):
     )
     @action(detail=False, methods=["GET"], url_path="grouped_workflow/status_counts")
     def grouped_workflow_status_counts(self, request):
-        latest_workflows = self._get_latest_workflow_per_group()
+        latest_workflows, _ = get_latest_workflows_by_name_group(Workflow.objects.all())
 
         result = {
             "all": len(latest_workflows),

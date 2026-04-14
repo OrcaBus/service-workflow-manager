@@ -1,8 +1,11 @@
 import uuid
+from datetime import datetime
 
+import ulid
 from django.test import TestCase
+from django.utils.timezone import make_aware
 
-from workflow_manager.models import Workflow
+from workflow_manager.models import AnalysisRun, AnalysisRunState, State, Workflow
 from workflow_manager.tests.factories import WorkflowRunFactory
 from workflow_manager.tests.fixtures.sim_workflow import TestData
 from workflow_manager.urls.base import api_base
@@ -29,6 +32,75 @@ class StatsViewSetTestCase(TestCase):
             {"all", "succeeded", "aborted", "failed", "resolved", "deprecated", "ongoing"},
         )
         self.assertGreaterEqual(data["all"], 1)
+
+    def test_workflow_run_status_counts_not_inflated_by_same_timestamp_states(self):
+        """Two State rows at the same timestamp must count as one run (tie-break by PK)."""
+        before = self.client.get(f"{self.base_endpoint}/workflow_run/status_counts/").json()
+
+        ts = make_aware(datetime(2024, 6, 15, 10, 0, 0))
+        id_lo, id_hi = ulid.new().str, ulid.new().str
+        if id_lo > id_hi:
+            id_lo, id_hi = id_hi, id_lo
+        while id_lo >= id_hi:
+            id_hi = ulid.new().str
+
+        wfr = WorkflowRunFactory(
+            workflow=self.wf,
+            portal_run_id=f"tie-{uuid.uuid4().hex[:24]}",
+            workflow_run_name="Same timestamp states",
+        )
+        State.objects.create(
+            orcabus_id=f"stt.{id_lo}",
+            status="FAILED",
+            timestamp=ts,
+            workflow_run=wfr,
+        )
+        State.objects.create(
+            orcabus_id=f"stt.{id_hi}",
+            status="SUCCEEDED",
+            timestamp=ts,
+            workflow_run=wfr,
+        )
+
+        after = self.client.get(f"{self.base_endpoint}/workflow_run/status_counts/").json()
+
+        self.assertEqual(after["all"], before["all"] + 1)
+        self.assertEqual(after["succeeded"], before["succeeded"] + 1)
+        self.assertEqual(after["failed"], before["failed"])
+
+    def test_analysis_run_status_counts_not_inflated_by_same_timestamp_states(self):
+        """Two AnalysisRunState rows at the same timestamp must count as one run."""
+        before = self.client.get(f"{self.base_endpoint}/analysis_run/status_counts/").json()
+
+        ts = make_aware(datetime(2024, 6, 15, 11, 0, 0))
+        id_lo, id_hi = ulid.new().str, ulid.new().str
+        if id_lo > id_hi:
+            id_lo, id_hi = id_hi, id_lo
+        while id_lo >= id_hi:
+            id_hi = ulid.new().str
+
+        anr = AnalysisRun.objects.create(
+            orcabus_id=f"anr.{ulid.new().str}",
+            analysis_run_name="Same timestamp ar states",
+        )
+        AnalysisRunState.objects.create(
+            orcabus_id=f"ars.{id_lo}",
+            status="FAILED",
+            timestamp=ts,
+            analysis_run=anr,
+        )
+        AnalysisRunState.objects.create(
+            orcabus_id=f"ars.{id_hi}",
+            status="SUCCEEDED",
+            timestamp=ts,
+            analysis_run=anr,
+        )
+
+        after = self.client.get(f"{self.base_endpoint}/analysis_run/status_counts/").json()
+
+        self.assertEqual(after["all"], before["all"] + 1)
+        self.assertEqual(after["succeeded"], before["succeeded"] + 1)
+        self.assertEqual(after["failed"], before["failed"])
 
     def test_analysis_run_status_counts_returns_200(self):
         response = self.client.get(f"{self.base_endpoint}/analysis_run/status_counts/")
