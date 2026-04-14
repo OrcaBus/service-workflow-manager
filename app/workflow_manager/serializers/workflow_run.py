@@ -95,5 +95,3 @@ class WorkflowRunDetailSerializer(WorkflowRunBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
         model = WorkflowRun
         fields = "__all__"
-
-
