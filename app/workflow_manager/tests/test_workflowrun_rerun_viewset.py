@@ -2,7 +2,7 @@ import json
 import os
 import uuid
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 from django.utils.timezone import make_aware
@@ -225,6 +225,48 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         self.assertEqual(second_comment.created_by, "workflow manager")
         self.assertIn(second_portal_run_id, second_comment.text)
         self.assertIn(self.mock_user_email, second_comment.text)
+
+    @patch("workflow_manager.viewsets.workflow_run_action.Comment.objects.create")
+    def test_rerun_comment_create_failure_returns_500_after_emit(self, mock_comment_create):
+        """Event is emitted first; if audit comment creation fails, client gets 500 with a clear detail."""
+        mock_comment_create.side_effect = RuntimeError("simulated DB failure")
+
+        wfl_run = WorkflowRun.objects.all().first()
+        payload = wfl_run.states.get(status="READY").payload
+        payload.data = {
+            "inputs": {"someUri": "s3://random/prefix/", "dataset": "BRCA"},
+            "engineParameters": {"sourceUri": f"s3://bucket/{wfl_run.portal_run_id}/"},
+        }
+        payload.save()
+
+        wfl = Workflow.objects.all().first()
+        wfl.name = "rnasum"
+        wfl.save()
+
+        libeb.emit_event.reset_mock()
+        response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "PANCAN"})
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            response.json()["detail"],
+            "Rerun event emitted successfully, but failed to create rerun audit comment.",
+        )
+        libeb.emit_event.assert_called()
+
+    def test_construct_rerun_eb_detail_value_error_unsupported_workflow(self):
+        """construct_rerun_eb_detail raises ValueError when workflow name has no rerun implementation."""
+        wfl_run = WorkflowRun.objects.all().first()
+        wfl = wfl_run.workflow
+        saved_name = wfl.name
+        try:
+            wfl.name = "unsupported_rerun_workflow"
+            wfl.save()
+            with self.assertRaises(ValueError) as ctx:
+                _wra_module.construct_rerun_eb_detail(wfl_run, {"dataset": "PANCAN"})
+            self.assertIn("Rerun is not allowed for this workflow", str(ctx.exception))
+            self.assertIn("unsupported_rerun_workflow", str(ctx.exception))
+        finally:
+            wfl.name = saved_name
+            wfl.save()
 
     def test_rerun_duplication_skips_runs_without_ready_state(self):
         """
