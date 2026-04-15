@@ -97,7 +97,7 @@ class WorkflowRunActionViewSet(ViewSet):
             detail = construct_rerun_eb_detail(wfl_run, serializer.data)
             new_portal_run_id = detail.get("portalRunId")
         except RerunDuplicationError as e:
-            return Response({"rerun_duplication_error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         emit_wru_api_event(detail)
 
@@ -109,7 +109,6 @@ class WorkflowRunActionViewSet(ViewSet):
             )
         except Exception as e:
             logger.exception("Failed to create rerun audit comment for workflow run %s, user email: %s, new portal run id: %s, error: %s", wfl_run.orcabus_id, user_email, new_portal_run_id, e)
-            return Response({"detail": "Rerun event emitted successfully, but failed to create rerun audit comment."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(detail, status=status.HTTP_200_OK)
 
