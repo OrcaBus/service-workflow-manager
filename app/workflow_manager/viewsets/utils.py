@@ -11,8 +11,8 @@ from datetime import datetime, timezone as dt_timezone
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import jwt
-from django.db.models import F, OuterRef, Q, QuerySet, Subquery, Value
-from django.db.models.functions import Coalesce
+from django.db.models import Case, F, Func, IntegerField, OuterRef, Q, QuerySet, Subquery, Value, When, Window
+from django.db.models.functions import Cast, Coalesce, Lower, RowNumber
 from django.utils.dateparse import parse_datetime
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.settings import api_settings
@@ -60,49 +60,6 @@ def compare_versions(a: str, b: str) -> int:
     return 0
 
 
-def to_camel_case(snake_str):
-    components = re.split(r"[_\-\s]", snake_str)
-    return components[0].lower() + "".join(x.title() for x in components[1:])
-
-
-# --- Bearer / JWT (used by comment and similar viewsets) ---
-
-
-def parse_bearer_raw_token_from_request(request, keyword: str = "Bearer") -> Optional[str]:
-    """
-    Backward-compatible wrapper around the shared Bearer token parser.
-    """
-    from .auth_utils import parse_bearer_raw_token_from_request as shared_parse_bearer_raw_token_from_request
-
-    return shared_parse_bearer_raw_token_from_request(request, keyword=keyword)
-
-
-def decode_rs256_jwt_payload_without_verification(raw_token: str) -> dict[str, Any]:
-    """
-    Backward-compatible wrapper around the shared JWT payload decoder.
-    """
-    from .auth_utils import (
-        decode_rs256_jwt_payload_without_verification as shared_decode_rs256_jwt_payload_without_verification,
-    )
-
-    return shared_decode_rs256_jwt_payload_without_verification(raw_token)
-def get_email_from_bearer_authorization(request, keyword: str = "Bearer") -> str:
-    """
-    Normalized ``email`` claim from ``Authorization: Bearer <jwt>``.
-
-    Raises:
-        AuthenticationFailed: Missing/malformed Bearer header, invalid token, or no email claim.
-    """
-    raw_token = parse_bearer_raw_token_from_request(request, keyword=keyword)
-    if not raw_token:
-        raise AuthenticationFailed("Authentication credentials were not provided.")
-    payload = decode_rs256_jwt_payload_without_verification(raw_token)
-    email = payload.get("email")
-    if email and isinstance(email, str) and email.strip():
-        return email.strip().lower()
-    raise AuthenticationFailed("Token payload did not contain a valid email claim.")
-
-
 # ---------------------------------------------------------------------------
 # Shared query-param helpers
 # ---------------------------------------------------------------------------
@@ -136,7 +93,10 @@ WORKFLOW_RUN_TERMINATION_STATUSES: Tuple[str, ...] = (
 def parse_datetime_safe(value: Optional[str]) -> Optional[datetime]:
     if not value or not isinstance(value, str):
         return None
-    return parse_datetime(value.strip())
+    dt = parse_datetime(value.strip())
+    if dt is not None and dt.tzinfo is None:
+        dt = dt.replace(tzinfo=dt_timezone.utc)
+    return dt
 
 
 def validate_ordering(ordering: str | None, allowed_fields: frozenset[str]) -> str | None:
@@ -265,6 +225,7 @@ def filtered_workflow_runs_queryset(
         annotate_latest_state_time
         or bool(start_dt or end_dt)
         or (apply_status_filter and bool(status))
+        or is_ongoing == "true"
     )
     if needs_annotation:
         latest_time_sq = (
@@ -285,7 +246,13 @@ def filtered_workflow_runs_queryset(
         qs = qs.filter(latest_state_time__lte=end_dt)
 
     if is_ongoing == "true":
-        qs = qs.filter(~Q(states__status__in=termination_statuses))
+        # Filter to runs whose *latest* state is non-terminal.  We match the
+        # state row at ``latest_state_time`` and exclude terminal statuses,
+        # so completed runs with earlier non-terminal states are not included.
+        qs = qs.exclude(
+            states__timestamp=F("latest_state_time"),
+            states__status__in=termination_statuses,
+        )
 
     if apply_status_filter and status:
         qs = qs.filter(
@@ -419,6 +386,65 @@ def filtered_workflows_queryset(
 # ---------------------------------------------------------------------------
 # Workflow grouping by name (shared by workflow list and stats)
 # ---------------------------------------------------------------------------
+
+
+def _semver_component(position: int) -> Case:
+    """Return an integer expression for the *position*-th (1-based) semver component.
+
+    Only extracts the component when the full version string matches ``X.Y.Z``
+    (all-digit parts separated by dots).  Non-semver versions fall back to 0
+    for every component, exactly matching the Python ``version_sort_key``
+    fallback of ``(0, 0, 0)``.
+    """
+    return Case(
+        When(
+            version__regex=r'^[0-9]+\.[0-9]+\.[0-9]+$',
+            then=Cast(
+                Func(
+                    F("version"), Value("."), Value(str(position)),
+                    function="SPLIT_PART",
+                ),
+                output_field=IntegerField(),
+            ),
+        ),
+        default=Value(0),
+        output_field=IntegerField(),
+    )
+
+
+def get_latest_workflow_ids_queryset() -> QuerySet:
+    """Return a queryset of ``orcabus_id`` values for the latest workflow per name group.
+
+    "Latest" is determined by semantic version (major.minor.patch descending),
+    with ``orcabus_id`` as tie-breaker (descending). Grouping by name is
+    case-insensitive, matching the Python ``get_latest_workflows_by_name_group``
+    behaviour.
+
+    The entire computation runs in the database (PostgreSQL), avoiding the need
+    to materialise all ``Workflow`` rows in Python or build large ``IN (...)``
+    clauses.
+    """
+    major = _semver_component(1)
+    minor = _semver_component(2)
+    patch = _semver_component(3)
+
+    row_num = Window(
+        expression=RowNumber(),
+        partition_by=[Lower("name")],
+        order_by=[
+            major.desc(),
+            minor.desc(),
+            patch.desc(),
+            F("orcabus_id").desc(),
+        ],
+    )
+
+    return (
+        Workflow.objects.annotate(row_num=row_num)
+        .filter(row_num=1)
+        .values_list("orcabus_id", flat=True)
+    )
+
 
 def get_latest_workflows_by_name_group(
     workflows: Iterable[Workflow],

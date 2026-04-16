@@ -22,7 +22,7 @@ from workflow_manager.serializers.workflow import WorkflowListQueryParamSerializ
 from workflow_manager.serializers.workflow_run import WorkflowRunListQueryParamSerializer
 from workflow_manager.viewsets.utils import (
     WORKFLOW_RUN_TERMINATION_STATUSES,
-    get_latest_workflows_by_name_group,
+    get_latest_workflow_ids_queryset,
     filtered_workflow_runs_queryset,
     filtered_analysis_runs_queryset,
     filtered_analyses_queryset,
@@ -217,15 +217,14 @@ class StatsViewSet(GenericViewSet):
     )
     @action(detail=False, methods=["GET"], url_path="grouped_workflow/status_counts")
     def grouped_workflow_status_counts(self, request):
-        # Important: decide the "latest version per name group" before applying filters.
-        # Otherwise, filtering (e.g. by status/search) can remove versions and incorrectly
-        # change which version is considered "latest".
-        all_latest_list, _ = get_latest_workflows_by_name_group(Workflow.objects.all())
-        latest_ids = [w.orcabus_id for w in all_latest_list]
+        # Decide "latest version per name group" in the DB before applying user
+        # filters.  This avoids materialising all Workflow rows in Python and
+        # generating a large IN (...) clause.
+        latest_ids_qs = get_latest_workflow_ids_queryset()
 
         filtered_latest_qs = (
             filtered_workflows_queryset(request.query_params)
-            .filter(orcabus_id__in=latest_ids)
+            .filter(orcabus_id__in=latest_ids_qs)
         )
 
         counts = (

@@ -12,7 +12,7 @@ from workflow_manager.serializers.base import (
     OrcabusIdListUtils,
     SerializersBase,
 )
-from workflow_manager.viewsets.utils import to_camel_case
+from workflow_manager.serializers.base import to_camel_case
 from workflow_manager.tests.factories import LibraryFactory
 
 

@@ -1,6 +1,9 @@
+import re
 from rest_framework import serializers
-from workflow_manager.viewsets.utils import to_camel_case
 
+def to_camel_case(snake_str):
+    components = re.split(r"[_\-\s]", snake_str)
+    return components[0].lower() + "".join(x.title() for x in components[1:])
 
 class SerializersBase(serializers.ModelSerializer):
 

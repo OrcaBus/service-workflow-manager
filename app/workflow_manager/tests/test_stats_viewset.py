@@ -166,3 +166,105 @@ class StatsViewSetTestCase(TestCase):
         self.assertEqual(after["all"], before["all"] + 1)
         self.assertEqual(after["validated"], before["validated"] + 1)
         self.assertEqual(after["unvalidated"], before["unvalidated"])
+
+    def test_grouped_workflow_status_counts_semver_order_not_creation_order(self):
+        """Latest-per-name must be determined by semver, not by creation (ULID) order.
+
+        Creating v0.6.1 *after* v0.7.0 should still pick v0.7.0 as the latest.
+        """
+        from workflow_manager.models.workflow import ExecutionEngine, ValidationState
+
+        name = f"wfm_stats_semver_{uuid.uuid4().hex[:16]}"
+        before = self.client.get(f"{self.base_endpoint}/grouped_workflow/status_counts/").json()
+
+        # Created first → lower ULID
+        Workflow.objects.create(
+            name=name,
+            version="0.7.0",
+            code_version="a",
+            execution_engine=ExecutionEngine.ICA,
+            validation_state=ValidationState.VALIDATED,
+        )
+        # Created second → higher ULID, but *lower* semver
+        Workflow.objects.create(
+            name=name,
+            version="0.6.1",
+            code_version="b",
+            execution_engine=ExecutionEngine.ICA,
+            validation_state=ValidationState.UNVALIDATED,
+        )
+
+        after = self.client.get(f"{self.base_endpoint}/grouped_workflow/status_counts/").json()
+
+        # v0.7.0 (VALIDATED) should be picked, not v0.6.1 (UNVALIDATED)
+        self.assertEqual(after["all"], before["all"] + 1)
+        self.assertEqual(after["validated"], before["validated"] + 1)
+        self.assertEqual(after["unvalidated"], before["unvalidated"])
+
+    def test_grouped_workflow_status_counts_case_insensitive_grouping(self):
+        """Workflows with the same name in different cases should merge into one group."""
+        from workflow_manager.models.workflow import ExecutionEngine, ValidationState
+
+        base_name = f"wfm_case_{uuid.uuid4().hex[:16]}"
+        before = self.client.get(f"{self.base_endpoint}/grouped_workflow/status_counts/").json()
+
+        Workflow.objects.create(
+            name=base_name.upper(),
+            version="0.5.0",
+            code_version="a",
+            execution_engine=ExecutionEngine.ICA,
+            validation_state=ValidationState.UNVALIDATED,
+        )
+        Workflow.objects.create(
+            name=base_name.lower(),
+            version="1.0.0",
+            code_version="b",
+            execution_engine=ExecutionEngine.ICA,
+            validation_state=ValidationState.VALIDATED,
+        )
+        Workflow.objects.create(
+            name=base_name.capitalize(),
+            version="0.8.0",
+            code_version="c",
+            execution_engine=ExecutionEngine.ICA,
+            validation_state=ValidationState.DEPRECATED,
+        )
+
+        after = self.client.get(f"{self.base_endpoint}/grouped_workflow/status_counts/").json()
+
+        # All three case variants should merge into one group; latest is v1.0.0 (VALIDATED)
+        self.assertEqual(after["all"], before["all"] + 1)
+        self.assertEqual(after["validated"], before["validated"] + 1)
+        self.assertEqual(after["unvalidated"], before["unvalidated"])
+        self.assertEqual(after["deprecated"], before["deprecated"])
+
+    def test_grouped_workflow_status_counts_non_semver_version(self):
+        """Non-semver versions (e.g. containing hyphens) must not crash the CAST."""
+        from workflow_manager.models.workflow import ExecutionEngine, ValidationState
+
+        name = f"wfm_nonsemver_{uuid.uuid4().hex[:16]}"
+        before = self.client.get(f"{self.base_endpoint}/grouped_workflow/status_counts/").json()
+
+        # Non-semver version that would cause CAST errors if not guarded
+        Workflow.objects.create(
+            name=name,
+            version="1--1.2.3",
+            code_version="a",
+            execution_engine=ExecutionEngine.ICA,
+            validation_state=ValidationState.UNVALIDATED,
+        )
+        # Valid semver - should be selected as latest (non-semver falls back to (0,0,0))
+        Workflow.objects.create(
+            name=name,
+            version="0.1.0",
+            code_version="b",
+            execution_engine=ExecutionEngine.ICA,
+            validation_state=ValidationState.VALIDATED,
+        )
+
+        after = self.client.get(f"{self.base_endpoint}/grouped_workflow/status_counts/").json()
+
+        # v0.1.0 (VALIDATED) beats "1--1.2.3" (treated as (0,0,0))
+        self.assertEqual(after["all"], before["all"] + 1)
+        self.assertEqual(after["validated"], before["validated"] + 1)
+        self.assertEqual(after["unvalidated"], before["unvalidated"])
