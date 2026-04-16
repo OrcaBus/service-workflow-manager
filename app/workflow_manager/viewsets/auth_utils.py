@@ -1,6 +1,6 @@
 """
 Utility functions for authentication in the workflow manager API.
-Independed from the workflow manager API to avoid the risk of circular imports.
+Independent from the workflow manager API to avoid the risk of circular imports.
 """
 
 from __future__ import annotations
