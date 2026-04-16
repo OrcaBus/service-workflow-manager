@@ -227,8 +227,8 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         self.assertIn(self.mock_user_email, second_comment.text)
 
     @patch("workflow_manager.viewsets.workflow_run_action.Comment.objects.create")
-    def test_rerun_comment_create_failure_returns_500_after_emit(self, mock_comment_create):
-        """Event is emitted first; if audit comment creation fails, client gets 500 with a clear detail."""
+    def test_rerun_comment_create_failure_logs_and_returns_200_after_emit(self, mock_comment_create):
+        """Event is emitted first; audit comment failure is logged but rerun still succeeds for the client."""
         mock_comment_create.side_effect = RuntimeError("simulated DB failure")
 
         wfl_run = WorkflowRun.objects.all().first()
@@ -244,13 +244,15 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         wfl.save()
 
         libeb.emit_event.reset_mock()
-        response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "PANCAN"})
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(
-            response.json()["detail"],
-            "Rerun event emitted successfully, but failed to create rerun audit comment.",
-        )
+        with self.assertLogs("workflow_manager.viewsets.workflow_run_action", level="ERROR") as log_cm:
+            response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "PANCAN"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("portalRunId", response.json())
         libeb.emit_event.assert_called()
+        self.assertTrue(
+            any("Failed to create rerun audit comment" in r.getMessage() for r in log_cm.records),
+            msg="Expected ERROR log when audit comment creation fails",
+        )
 
     def test_construct_rerun_eb_detail_value_error_unsupported_workflow(self):
         """construct_rerun_eb_detail raises ValueError when workflow name has no rerun implementation."""
