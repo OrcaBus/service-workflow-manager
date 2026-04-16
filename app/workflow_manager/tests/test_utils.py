@@ -8,7 +8,7 @@ from django.utils.timezone import make_aware
 from workflow_manager.models import WorkflowRun, State, Payload
 from workflow_manager.models.utils import WorkflowRunUtil, StateUtil, create_portal_run_id
 
-from workflow_manager.serializers.base import parse_version, version_sort_key, compare_versions
+from workflow_manager.viewsets.utils import parse_version, version_sort_key, compare_versions
 from workflow_manager.tests.factories import WorkflowRunFactory, PayloadFactory
 
 

@@ -10,25 +10,36 @@ from workflow_manager.models.state import State
 from workflow_manager.models.analysis import Analysis, AnalysisStatus
 from workflow_manager.models.analysis_run import AnalysisRun
 from workflow_manager.models.workflow import Workflow, ValidationState
+from workflow_manager.serializers.analysis import AnalysisListQueryParamSerializer
+from workflow_manager.serializers.analysis_run import AnalysisRunListQueryParamSerializer
 from workflow_manager.serializers.stats import (
     WorkflowRunStatusCountSerializer,
     AnalysisRunStatusCountSerializer,
     WorkflowStatusCountSerializer,
     AnalysisStatusCountSerializer,
 )
-from workflow_manager.viewsets.workflow_utils import get_latest_workflows_by_name_group
-
-# Latest-state "terminal" buckets for workflow runs and analysis runs (ongoing = not in this set).
-RUN_LATEST_STATE_TERMINATION_STATUSES = (
-    "FAILED",
-    "ABORTED",
-    "SUCCEEDED",
-    "RESOLVED",
-    "DEPRECATED",
+from workflow_manager.serializers.workflow import WorkflowListQueryParamSerializer
+from workflow_manager.serializers.workflow_run import WorkflowRunListQueryParamSerializer
+from workflow_manager.viewsets.utils import (
+    WORKFLOW_RUN_TERMINATION_STATUSES,
+    get_latest_workflows_by_name_group,
+    filtered_workflow_runs_queryset,
+    filtered_analysis_runs_queryset,
+    filtered_analyses_queryset,
+    filtered_workflows_queryset,
 )
 
+RUN_LATEST_STATE_TERMINATION_STATUSES = WORKFLOW_RUN_TERMINATION_STATUSES
 
-def _run_latest_state_bucket_counts(parent_model, state_model, *, state_fk_field: str, termination_statuses):
+
+def _run_latest_state_bucket_counts(
+    parent_model,
+    state_model,
+    *,
+    state_fk_field: str,
+    termination_statuses,
+    base_queryset=None,
+):
     """Count parent rows (e.g. WorkflowRun) by latest linked state row status (one row per parent).
 
     Tie-break on equal ``timestamp`` uses ``-orcabus_id`` so each parent contributes to exactly one bucket.
@@ -38,10 +49,11 @@ def _run_latest_state_bucket_counts(parent_model, state_model, *, state_fk_field
         .order_by("-timestamp", "-orcabus_id")
         .values("status")[:1]
     )
-    qs = parent_model.objects.annotate(latest_status=Subquery(latest_status_sq))
+    parent_qs = base_queryset if base_queryset is not None else parent_model.objects.all()
+    qs = parent_qs.annotate(latest_status=Subquery(latest_status_sq))
     grouped_counts = {
         row["latest_status"]: row["count"]
-        for row in qs.values("latest_status").annotate(count=Count("pk"))
+        for row in qs.values("latest_status").annotate(count=Count("pk", distinct=True))
     }
     all_count = sum(grouped_counts.values())
     succeeded = grouped_counts.get("SUCCEEDED", 0)
@@ -72,53 +84,86 @@ class StatsViewSet(GenericViewSet):
     pagination_class = None
     http_method_names = ["get"]
 
-    def _workflow_run_status_counts(self):
-        """Count WorkflowRun records grouped by their latest State status."""
+    # --- workflow run ---
+
+    def _workflow_run_status_counts(self, query_params):
+        base = filtered_workflow_runs_queryset(
+            query_params,
+            termination_statuses=RUN_LATEST_STATE_TERMINATION_STATUSES,
+            apply_status_filter=False,
+        )
         return _run_latest_state_bucket_counts(
             WorkflowRun,
             State,
             state_fk_field="workflow_run",
             termination_statuses=RUN_LATEST_STATE_TERMINATION_STATUSES,
+            base_queryset=base,
         )
 
-    def _analysis_run_status_counts(self):
-        """Count AnalysisRun records grouped by their latest AnalysisRunState status."""
+    @extend_schema(
+        parameters=[WorkflowRunListQueryParamSerializer],
+        responses=WorkflowRunStatusCountSerializer,
+        description=(
+            "Counts of workflow runs grouped by latest state status. "
+            "Accepts the same query parameters as the workflow run list (keyword filters, search, "
+            "start_time/end_time on latest state time, is_ongoing) except status and ordering."
+        ),
+    )
+    @action(detail=False, methods=["GET"], url_path="workflow_run/status_counts")
+    def workflow_run_status_counts(self, request):
+        return Response(self._workflow_run_status_counts(request.query_params), status=200)
+
+    # --- analysis run ---
+
+    def _analysis_run_status_counts(self, query_params):
+        base = filtered_analysis_runs_queryset(
+            query_params,
+            termination_statuses=RUN_LATEST_STATE_TERMINATION_STATUSES,
+            apply_status_filter=False,
+        )
         return _run_latest_state_bucket_counts(
             AnalysisRun,
             AnalysisRunState,
             state_fk_field="analysis_run",
             termination_statuses=RUN_LATEST_STATE_TERMINATION_STATUSES,
+            base_queryset=base,
         )
 
     @extend_schema(
-        responses=WorkflowRunStatusCountSerializer,
-        description="Counts of workflow runs grouped by latest state status.",
-    )
-    @action(detail=False, methods=["GET"], url_path="workflow_run/status_counts")
-    def workflow_run_status_counts(self, request):
-        return Response(self._workflow_run_status_counts(), status=200)
-
-    @extend_schema(
+        parameters=[AnalysisRunListQueryParamSerializer],
         responses=AnalysisRunStatusCountSerializer,
-        description="Counts of analysis runs grouped by latest state status.",
+        description=(
+            "Counts of analysis runs grouped by latest state status. "
+            "Accepts keyword filters, search, start_time/end_time except status and ordering."
+        ),
     )
     @action(detail=False, methods=["GET"], url_path="analysis_run/status_counts")
     def analysis_run_status_counts(self, request):
-        return Response(self._analysis_run_status_counts(), status=200)
+        return Response(self._analysis_run_status_counts(request.query_params), status=200)
+
+    # --- workflow ---
 
     @extend_schema(
+        parameters=[WorkflowListQueryParamSerializer],
         responses=WorkflowStatusCountSerializer,
-        description="Counts of workflow definitions grouped by validation state.",
+        description=(
+            "Counts of workflow definitions grouped by validation state. "
+            "Accepts keyword filters and search except status and ordering."
+        ),
     )
     @action(detail=False, methods=["GET"], url_path="workflow/status_counts")
     def workflow_status_counts(self, request):
+        base = filtered_workflows_queryset(
+            request.query_params,
+            apply_status_filter=False,
+        )
         counts = (
-            Workflow.objects.values("validation_state")
-            .annotate(count=Count("orcabus_id"))
+            base.values("validation_state")
+            .annotate(count=Count("orcabus_id", distinct=True))
             .order_by("validation_state")
         )
         result = {
-            "all": Workflow.objects.count(),
+            "all": base.count(),
             **{vs.value.lower(): 0 for vs in ValidationState},
         }
         for row in counts:
@@ -127,19 +172,29 @@ class StatsViewSet(GenericViewSet):
 
         return Response(result, status=200)
 
+    # --- analysis ---
+
     @extend_schema(
+        parameters=[AnalysisListQueryParamSerializer],
         responses=AnalysisStatusCountSerializer,
-        description="Counts of analysis definitions grouped by status.",
+        description=(
+            "Counts of analysis definitions grouped by status. "
+            "Accepts keyword filters and search except status and ordering."
+        ),
     )
     @action(detail=False, methods=["GET"], url_path="analysis/status_counts")
     def analysis_status_counts(self, request):
+        base = filtered_analyses_queryset(
+            request.query_params,
+            apply_status_filter=False,
+        )
         counts = (
-            Analysis.objects.values("status")
-            .annotate(count=Count("orcabus_id"))
+            base.values("status")
+            .annotate(count=Count("orcabus_id", distinct=True))
             .order_by("status")
         )
         result = {
-            "all": Analysis.objects.count(),
+            "all": base.count(),
             **{s.value.lower(): 0 for s in AnalysisStatus},
         }
         for row in counts:
@@ -148,24 +203,44 @@ class StatsViewSet(GenericViewSet):
 
         return Response(result, status=200)
 
+    # --- grouped workflow ---
+
     @extend_schema(
+        parameters=[WorkflowListQueryParamSerializer],
         responses=WorkflowStatusCountSerializer,
         description=(
             "Counts of grouped workflows by validation state. "
-            "Workflows are grouped by name and only the latest version per group is counted."
+            "Workflows are grouped by name and only the latest version per group is counted. "
+            "Accepts keyword filters, search, and status (applied to the latest workflows only). "
+            "Ordering is ignored."
         ),
     )
     @action(detail=False, methods=["GET"], url_path="grouped_workflow/status_counts")
     def grouped_workflow_status_counts(self, request):
-        latest_workflows, _ = get_latest_workflows_by_name_group(Workflow.objects.all())
+        # Important: decide the "latest version per name group" before applying filters.
+        # Otherwise, filtering (e.g. by status/search) can remove versions and incorrectly
+        # change which version is considered "latest".
+        all_latest_list, _ = get_latest_workflows_by_name_group(Workflow.objects.all())
+        latest_ids = [w.orcabus_id for w in all_latest_list]
+
+        filtered_latest_qs = (
+            filtered_workflows_queryset(request.query_params)
+            .filter(orcabus_id__in=latest_ids)
+        )
+
+        counts = (
+            filtered_latest_qs.values("validation_state")
+            .annotate(count=Count("orcabus_id", distinct=True))
+            .order_by("validation_state")
+        )
 
         result = {
-            "all": len(latest_workflows),
+            "all": filtered_latest_qs.count(),
             **{vs.value.lower(): 0 for vs in ValidationState},
         }
-        for w in latest_workflows:
-            key = w.validation_state.lower()
+        for row in counts:
+            key = row["validation_state"].lower()
             if key in result:
-                result[key] += 1
+                result[key] = row["count"]
 
         return Response(result, status=200)

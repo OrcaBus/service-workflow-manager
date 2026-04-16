@@ -1,6 +1,7 @@
 from rest_framework import serializers
+from rest_framework.settings import api_settings
 
-from workflow_manager.models import Analysis, AnalysisContext, Workflow
+from workflow_manager.models import Analysis, AnalysisContext, Workflow, AnalysisStatus
 from workflow_manager.serializers.analysis_context import AnalysisContextSerializer
 from workflow_manager.serializers.base import (
     SerializersBase,
@@ -19,6 +20,34 @@ class AnalysisListParamSerializer(OptionalFieldsMixin, AnalysisBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
         model = Analysis
         fields = "__all__"
+
+
+class AnalysisListQueryParamSerializer(AnalysisListParamSerializer):
+    """Full query parameter schema for analysis list and stats endpoints (OpenAPI)."""
+
+    status = serializers.ChoiceField(
+        required=False,
+        allow_blank=True,
+        choices=AnalysisStatus.choices,
+        help_text="Filter by status (e.g. ACTIVE, INACTIVE).",
+    )
+    search = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="Substring search on analysis name, version, description.",
+    )
+    ordering = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="Sort order: e.g. analysis_name, -analysis_name, status, -status.",
+    )
+
+    class Meta(AnalysisListParamSerializer.Meta):
+        fields = [
+            "orcabus_id", "analysis_name", "analysis_version", "description",
+            "status",
+            api_settings.SEARCH_PARAM, api_settings.ORDERING_PARAM,
+        ]
 
 
 class AnalysisMinSerializer(AnalysisBaseSerializer):
