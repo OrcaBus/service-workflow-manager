@@ -70,40 +70,22 @@ def to_camel_case(snake_str):
 
 def parse_bearer_raw_token_from_request(request, keyword: str = "Bearer") -> Optional[str]:
     """
-    Extract the JWT string from ``Authorization: Bearer <token>``.
-
-    Returns ``None`` if the header is missing or not a single Bearer token.
+    Backward-compatible wrapper around the shared Bearer token parser.
     """
-    header = request.META.get("HTTP_AUTHORIZATION", "")
-    if not header:
-        return None
+    from .auth_utils import parse_bearer_raw_token_from_request as shared_parse_bearer_raw_token_from_request
 
-    parts = header.split()
-    if len(parts) != 2 or parts[0].lower() != keyword.lower():
-        return None
-
-    raw_token = parts[1].strip()
-    return raw_token or None
+    return shared_parse_bearer_raw_token_from_request(request, keyword=keyword)
 
 
 def decode_rs256_jwt_payload_without_verification(raw_token: str) -> dict[str, Any]:
     """
-    Decode a JWT's payload with alg RS256. Signature is **not** verified.
-
-    Use when an upstream layer (e.g. API Gateway) has already authenticated the caller;
-    this only reads claims such as ``email``.
+    Backward-compatible wrapper around the shared JWT payload decoder.
     """
-    try:
-        return jwt.decode(
-            raw_token,
-            options={"verify_signature": False},
-            algorithms=["RS256"],
-        )
-    except jwt.PyJWTError as exc:
-        logger.info("JWT decode failed: %s", exc)
-        raise AuthenticationFailed("Invalid token.") from exc
+    from .auth_utils import (
+        decode_rs256_jwt_payload_without_verification as shared_decode_rs256_jwt_payload_without_verification,
+    )
 
-
+    return shared_decode_rs256_jwt_payload_without_verification(raw_token)
 def get_email_from_bearer_authorization(request, keyword: str = "Bearer") -> str:
     """
     Normalized ``email`` claim from ``Authorization: Bearer <jwt>``.
