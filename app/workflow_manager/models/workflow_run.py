@@ -39,7 +39,7 @@ class WorkflowRun(OrcaBusBaseModel):
 
     def get_latest_state(self):
         # retrieve all related states and get the latest one
-        return self.states.order_by('-timestamp').first()
+        return self.states.order_by('-timestamp', '-orcabus_id').first()
 
 
 class LibraryAssociationManager(OrcaBusBaseManager):

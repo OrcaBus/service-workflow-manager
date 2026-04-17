@@ -49,7 +49,13 @@ def _run_latest_state_bucket_counts(
         .order_by("-timestamp", "-orcabus_id")
         .values("status")[:1]
     )
-    parent_qs = base_queryset if base_queryset is not None else parent_model.objects.all()
+    if base_queryset is not None:
+        # Use a clean queryset to avoid ORM side-effects from
+        # .distinct() / .select_related() / .prefetch_related() that
+        # can interfere with subquery annotations + GROUP BY aggregation.
+        parent_qs = parent_model.objects.filter(pk__in=base_queryset.values("pk"))
+    else:
+        parent_qs = parent_model.objects.all()
     qs = parent_qs.annotate(latest_status=Subquery(latest_status_sq))
     grouped_counts = {
         row["latest_status"]: row["count"]

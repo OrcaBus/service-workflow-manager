@@ -221,13 +221,16 @@ def filtered_workflow_runs_queryset(
     status = (query_params.get("status") or "").strip()
     is_ongoing = (query_params.get("is_ongoing") or "").strip().lower()
 
-    needs_annotation = (
+    needs_time_annotation = (
         annotate_latest_state_time
         or bool(start_dt or end_dt)
-        or (apply_status_filter and bool(status))
+    )
+    needs_latest_status = (
+        (apply_status_filter and bool(status))
         or is_ongoing == "true"
     )
-    if needs_annotation:
+
+    if needs_time_annotation:
         latest_time_sq = (
             State.objects.filter(workflow_run=OuterRef("pk"))
             .order_by("-timestamp")
@@ -240,25 +243,27 @@ def filtered_workflow_runs_queryset(
             )
         )
 
+    if needs_latest_status:
+        latest_status_sq = (
+            State.objects.filter(workflow_run=OuterRef("pk"))
+            .order_by("-timestamp", "-orcabus_id")
+            .values("status")[:1]
+        )
+        qs = qs.annotate(latest_status=Subquery(latest_status_sq))
+
     if start_dt:
         qs = qs.filter(latest_state_time__gte=start_dt)
     if end_dt:
         qs = qs.filter(latest_state_time__lte=end_dt)
 
     if is_ongoing == "true":
-        # Filter to runs whose *latest* state is non-terminal.  We match the
-        # state row at ``latest_state_time`` and exclude terminal statuses,
-        # so completed runs with earlier non-terminal states are not included.
-        qs = qs.exclude(
-            states__timestamp=F("latest_state_time"),
-            states__status__in=termination_statuses,
-        )
+        # Filter to runs whose *latest* state is non-terminal.
+        # Uses the same deterministic subquery as the stats endpoint
+        # (ORDER BY -timestamp, -orcabus_id) so both APIs always agree.
+        qs = qs.exclude(latest_status__in=termination_statuses)
 
     if apply_status_filter and status:
-        qs = qs.filter(
-            states__timestamp=F("latest_state_time"),
-            states__status=status.upper(),
-        )
+        qs = qs.filter(latest_status=status.upper())
 
     search_term = (query_params.get(api_settings.SEARCH_PARAM) or "").strip()
     if search_term:
@@ -293,12 +298,13 @@ def filtered_analysis_runs_queryset(
     end_dt = parse_datetime_safe(query_params.get("end_time", ""))
     status = (query_params.get("status") or "").strip()
 
-    needs_annotation = (
+    needs_time_annotation = (
         annotate_latest_state_time
         or bool(start_dt or end_dt)
-        or (apply_status_filter and bool(status))
     )
-    if needs_annotation:
+    needs_latest_status = apply_status_filter and bool(status)
+
+    if needs_time_annotation:
         latest_time_sq = (
             AnalysisRunState.objects.filter(analysis_run=OuterRef("pk"))
             .order_by("-timestamp")
@@ -311,16 +317,21 @@ def filtered_analysis_runs_queryset(
             )
         )
 
+    if needs_latest_status:
+        latest_status_sq = (
+            AnalysisRunState.objects.filter(analysis_run=OuterRef("pk"))
+            .order_by("-timestamp", "-orcabus_id")
+            .values("status")[:1]
+        )
+        qs = qs.annotate(latest_status=Subquery(latest_status_sq))
+
     if start_dt:
         qs = qs.filter(latest_state_time__gte=start_dt)
     if end_dt:
         qs = qs.filter(latest_state_time__lte=end_dt)
 
     if apply_status_filter and status:
-        qs = qs.filter(
-            states__timestamp=F("latest_state_time"),
-            states__status=status.upper(),
-        )
+        qs = qs.filter(latest_status=status.upper())
 
     search_term = (query_params.get(api_settings.SEARCH_PARAM) or "").strip()
     if search_term:

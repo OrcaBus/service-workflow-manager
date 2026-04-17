@@ -238,6 +238,36 @@ class StatsViewSetTestCase(TestCase):
         self.assertEqual(after["unvalidated"], before["unvalidated"])
         self.assertEqual(after["deprecated"], before["deprecated"])
 
+    def test_stats_resolved_count_matches_list_api(self):
+        """Stats resolved count must agree with the list API ?status=resolved filter.
+
+        Regression test: the stats subquery and the list filter used to use
+        different mechanisms (subquery vs JOIN) to determine the latest state,
+        causing resolved=0 in stats while the list API returned 1 result.
+        """
+        wfr = WorkflowRunFactory(
+            workflow=self.wf,
+            portal_run_id=f"resolve-{uuid.uuid4().hex[:20]}",
+            workflow_run_name="ResolvedConsistencyCheck",
+        )
+        ts = make_aware(datetime(2025, 1, 15, 12, 0, 0))
+        State.objects.create(
+            status="FAILED",
+            timestamp=ts,
+            workflow_run=wfr,
+        )
+        State.objects.create(
+            status="RESOLVED",
+            timestamp=make_aware(datetime(2025, 1, 16, 12, 0, 0)),
+            workflow_run=wfr,
+        )
+
+        stats = self.client.get(f"{self.base_endpoint}/workflow_run/status_counts/").json()
+        list_resp = self.client.get(f"/{api_base}workflowrun/", {"status": "resolved"})
+
+        list_count = list_resp.json()["pagination"]["count"]
+        self.assertEqual(stats["resolved"], list_count)
+
     def test_grouped_workflow_status_counts_non_semver_version(self):
         """Non-semver versions (e.g. containing hyphens) must not crash the CAST."""
         from workflow_manager.models.workflow import ExecutionEngine, ValidationState
