@@ -37,10 +37,17 @@ def _run_latest_state_bucket_counts(
     state_model,
     *,
     state_fk_field: str,
-    termination_statuses,
+    count_statuses: list[str],
+    termination_statuses=None,
     base_queryset=None,
 ):
     """Count parent rows (e.g. WorkflowRun) by latest linked state row status (one row per parent).
+
+    Args:
+        count_statuses: Explicit list of status values to include as individual keys in the result
+                        (e.g. ["SUCCEEDED", "FAILED", "DRAFT"]).  Each is lowercased as the key.
+        termination_statuses: If provided, an ``ongoing`` bucket is added counting runs whose
+                              latest status is NOT in this set.  Pass ``None`` to omit ``ongoing``.
 
     Tie-break on equal ``timestamp`` uses ``-orcabus_id`` so each parent contributes to exactly one bucket.
     """
@@ -62,26 +69,19 @@ def _run_latest_state_bucket_counts(
         for row in qs.values("latest_status").annotate(count=Count("pk", distinct=True))
     }
     all_count = sum(grouped_counts.values())
-    succeeded = grouped_counts.get("SUCCEEDED", 0)
-    aborted = grouped_counts.get("ABORTED", 0)
-    failed = grouped_counts.get("FAILED", 0)
-    resolved = grouped_counts.get("RESOLVED", 0)
-    deprecated = grouped_counts.get("DEPRECATED", 0)
-    ongoing = sum(
-        count
-        for status, count in grouped_counts.items()
-        if status is not None and status not in termination_statuses
-    )
 
-    return {
-        "all": all_count,
-        "succeeded": succeeded,
-        "aborted": aborted,
-        "failed": failed,
-        "resolved": resolved,
-        "deprecated": deprecated,
-        "ongoing": ongoing,
-    }
+    result = {"all": all_count}
+    for status in count_statuses:
+        result[status.lower()] = grouped_counts.get(status.upper(), 0)
+
+    if termination_statuses is not None:
+        result["ongoing"] = sum(
+            count
+            for status, count in grouped_counts.items()
+            if status is not None and status not in termination_statuses
+        )
+
+    return result
 
 
 class StatsViewSet(GenericViewSet):
@@ -102,6 +102,7 @@ class StatsViewSet(GenericViewSet):
             WorkflowRun,
             State,
             state_fk_field="workflow_run",
+            count_statuses=["SUCCEEDED", "ABORTED", "FAILED", "RESOLVED", "DEPRECATED", "DRAFT"],
             termination_statuses=RUN_LATEST_STATE_TERMINATION_STATUSES,
             base_queryset=base,
         )
@@ -131,6 +132,7 @@ class StatsViewSet(GenericViewSet):
             AnalysisRun,
             AnalysisRunState,
             state_fk_field="analysis_run",
+            count_statuses=["SUCCEEDED", "ABORTED", "FAILED", "RESOLVED", "DEPRECATED"],
             termination_statuses=RUN_LATEST_STATE_TERMINATION_STATUSES,
             base_queryset=base,
         )
@@ -140,7 +142,7 @@ class StatsViewSet(GenericViewSet):
         responses=AnalysisRunStatusCountSerializer,
         description=(
             "Counts of analysis runs grouped by latest state status. "
-            "Accepts keyword filters, search, start_time/end_time except status and ordering."
+            "Accepts keyword filters, search, start_time/end_time, is_ongoing except status and ordering."
         ),
     )
     @action(detail=False, methods=["GET"], url_path="analysis_run/status_counts")

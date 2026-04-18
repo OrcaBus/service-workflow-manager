@@ -39,6 +39,11 @@ class AnalysisRunListQueryParamSerializer(AnalysisRunListParamSerializer):
         allow_blank=True,
         help_text="ISO 8601 datetime; end of range on latest state timestamp.",
     )
+    is_ongoing = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+        help_text="If 'true', only runs whose latest state is not terminal.",
+    )
     status = serializers.CharField(
         required=False,
         allow_blank=True,
@@ -61,7 +66,7 @@ class AnalysisRunListQueryParamSerializer(AnalysisRunListParamSerializer):
     class Meta(AnalysisRunListParamSerializer.Meta):
         fields = [
             "orcabus_id", "analysis_run_name", "comment", "analysis",
-            "start_time", "end_time", "status",
+            "start_time", "end_time", "is_ongoing", "status",
             api_settings.SEARCH_PARAM, api_settings.ORDERING_PARAM,
         ]
 

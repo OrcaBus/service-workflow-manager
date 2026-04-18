@@ -297,12 +297,16 @@ def filtered_analysis_runs_queryset(
     start_dt = parse_datetime_safe(query_params.get("start_time", ""))
     end_dt = parse_datetime_safe(query_params.get("end_time", ""))
     status = (query_params.get("status") or "").strip()
+    is_ongoing = (query_params.get("is_ongoing") or "").strip().lower()
 
     needs_time_annotation = (
         annotate_latest_state_time
         or bool(start_dt or end_dt)
     )
-    needs_latest_status = apply_status_filter and bool(status)
+    needs_latest_status = (
+        (apply_status_filter and bool(status))
+        or is_ongoing == "true"
+    )
 
     if needs_time_annotation:
         latest_time_sq = (
@@ -329,6 +333,9 @@ def filtered_analysis_runs_queryset(
         qs = qs.filter(latest_state_time__gte=start_dt)
     if end_dt:
         qs = qs.filter(latest_state_time__lte=end_dt)
+
+    if is_ongoing == "true":
+        qs = qs.exclude(latest_status__in=termination_statuses)
 
     if apply_status_filter and status:
         qs = qs.filter(latest_status=status.upper())

@@ -44,9 +44,9 @@ class WorkflowRunListQueryParamSerializer(WorkflowRunListParamSerializer):
         allow_blank=True,
         help_text="ISO 8601 datetime; end of range on latest state timestamp.",
     )
-    is_ongoing = serializers.CharField(
+    is_ongoing = serializers.BooleanField(
         required=False,
-        allow_blank=True,
+        allow_null=True,
         help_text="If 'true', only runs whose latest state is not terminal.",
     )
     status = serializers.CharField(

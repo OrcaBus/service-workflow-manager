@@ -29,9 +29,27 @@ class StatsViewSetTestCase(TestCase):
         data = response.json()
         self.assertEqual(
             set(data.keys()),
-            {"all", "succeeded", "aborted", "failed", "resolved", "deprecated", "ongoing"},
+            {"all", "succeeded", "aborted", "failed", "resolved", "deprecated", "draft", "ongoing"},
         )
         self.assertGreaterEqual(data["all"], 1)
+
+    def test_workflow_run_status_counts_includes_draft_bucket(self):
+        before = self.client.get(f"{self.base_endpoint}/workflow_run/status_counts/").json()
+
+        wfr = WorkflowRunFactory(
+            workflow=self.wf,
+            portal_run_id=f"draft-{uuid.uuid4().hex[:24]}",
+            workflow_run_name="DraftBucketRun",
+        )
+        State.objects.create(
+            status="DRAFT",
+            timestamp=make_aware(datetime(2025, 2, 1, 10, 0, 0)),
+            workflow_run=wfr,
+        )
+
+        after = self.client.get(f"{self.base_endpoint}/workflow_run/status_counts/").json()
+        self.assertEqual(after["all"], before["all"] + 1)
+        self.assertEqual(after["draft"], before.get("draft", 0) + 1)
 
     def test_workflow_run_status_counts_not_inflated_by_same_timestamp_states(self):
         """Two State rows at the same timestamp must count as one run (tie-break by PK)."""
@@ -110,6 +128,40 @@ class StatsViewSetTestCase(TestCase):
             set(data.keys()),
             {"all", "succeeded", "aborted", "failed", "resolved", "deprecated", "ongoing"},
         )
+
+    def test_analysis_run_status_counts_supports_is_ongoing_filter(self):
+        before = self.client.get(
+            f"{self.base_endpoint}/analysis_run/status_counts/",
+            {"is_ongoing": "true"},
+        ).json()
+
+        anr_ongoing = AnalysisRun.objects.create(
+            orcabus_id=f"anr.{ulid.new().str}",
+            analysis_run_name="AnalysisRunOngoingStats",
+        )
+        AnalysisRunState.objects.create(
+            status="DRAFT",
+            timestamp=make_aware(datetime(2025, 2, 2, 10, 0, 0)),
+            analysis_run=anr_ongoing,
+        )
+
+        anr_terminal = AnalysisRun.objects.create(
+            orcabus_id=f"anr.{ulid.new().str}",
+            analysis_run_name="AnalysisRunTerminalStats",
+        )
+        AnalysisRunState.objects.create(
+            status="SUCCEEDED",
+            timestamp=make_aware(datetime(2025, 2, 2, 10, 0, 0)),
+            analysis_run=anr_terminal,
+        )
+
+        after = self.client.get(
+            f"{self.base_endpoint}/analysis_run/status_counts/",
+            {"is_ongoing": "true"},
+        ).json()
+
+        self.assertEqual(after["all"], before["all"] + 1)
+        self.assertEqual(after["ongoing"], before["ongoing"] + 1)
 
     def test_workflow_status_counts_returns_200(self):
         response = self.client.get(f"{self.base_endpoint}/workflow/status_counts/")

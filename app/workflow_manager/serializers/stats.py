@@ -8,6 +8,7 @@ class WorkflowRunStatusCountSerializer(serializers.Serializer):
     failed = serializers.IntegerField()
     resolved = serializers.IntegerField()
     deprecated = serializers.IntegerField()
+    draft = serializers.IntegerField()
     ongoing = serializers.IntegerField()
 
 
