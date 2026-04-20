@@ -112,7 +112,6 @@ export class WorkflowManagerStack extends Stack {
 
     this.createMigrationHandler();
     this.createApiHandlerAndIntegration(props);
-    this.createLegacyWrscEventHandler();
     this.createWruEventHandler();
     this.createAruEventHandler();
   }
@@ -198,33 +197,6 @@ export class WorkflowManagerStack extends Stack {
         `/api/${API_VERSION}/workflowrun/{orcabusId}/rerun/{proxy+}`,
         HttpMethod.POST
       ),
-    });
-  }
-
-  private createLegacyWrscEventHandler() {
-    const procFn: PythonFunction = this.createPythonFunction('HandleWrscEventLegacy', {
-      index: 'workflow_manager_proc/lambdas/handle_wrsc_event_legacy.py',
-      handler: 'handler',
-      timeout: Duration.seconds(28),
-    });
-
-    this.mainBus.grantPutEventsTo(procFn);
-
-    const eventRule = new Rule(this, 'EventRule', {
-      description: 'Rule to send WorkflowRunStateChange events to the HandleWrscEventLegacy Lambda',
-      eventBus: this.mainBus,
-    });
-
-    eventRule.addTarget(new aws_events_targets.LambdaFunction(procFn));
-    eventRule.addEventPattern({
-      // See https://github.com/aws/aws-cdk/issues/30220
-      // @ts-expect-error AWS CDK types don't support 'anything-but' pattern
-      source: [{ 'anything-but': 'orcabus.workflowmanager' }],
-      detailType: ['WorkflowRunStateChange'],
-      detail: {
-        workflowName: [{ exists: true }],
-        workflowVersion: [{ exists: true }],
-      },
     });
   }
 
