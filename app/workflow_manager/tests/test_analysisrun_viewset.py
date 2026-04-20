@@ -34,6 +34,27 @@ class AnalysisRunViewSetTestCase(TestCase):
             response = self.client.get(f"{self.endpoint}/{ar.orcabus_id}/")
             self.assertEqual(response.status_code, 200)
 
+    def test_list_with_timestamp_ordering_asc(self):
+        response = self.client.get(f"{self.endpoint}/", {"ordering": "timestamp"})
+        self.assertEqual(response.status_code, 200)
+
+    def test_list_with_timestamp_ordering_desc(self):
+        response = self.client.get(f"{self.endpoint}/", {"ordering": "-timestamp"})
+        self.assertEqual(response.status_code, 200)
+
+    def test_list_with_invalid_ordering_uses_default(self):
+        response = self.client.get(f"{self.endpoint}/", {"ordering": "invalid_field"})
+        self.assertEqual(response.status_code, 200)
+
+    def test_list_with_search(self):
+        ar = AnalysisRun.objects.first()
+        if ar:
+            response = self.client.get(
+                f"{self.endpoint}/",
+                {"search": ar.analysis_run_name[:4]},
+            )
+            self.assertEqual(response.status_code, 200)
+
 
 class AnalysisRunCommentViewSetTestCase(TestCase):
     endpoint = f"/{api_base}analysisrun"
