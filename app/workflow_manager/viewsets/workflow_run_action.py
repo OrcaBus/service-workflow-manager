@@ -27,7 +27,7 @@ from workflow_manager.models import (
     WorkflowRun,
     State,
 )
-from workflow_manager.viewsets.base import get_email_from_bearer_authorization
+from workflow_manager.viewsets.auth_utils import get_email_from_bearer_authorization
 
 
 logger = logging.getLogger(__name__)

@@ -11,8 +11,8 @@ from workflow_manager.serializers.comment import (
     CommentCreateRequestSerializer,
     CommentUpdateRequestSerializer,
 )
-from .base import PatchOnlyViewSet
-from .auth_utils import get_email_from_bearer_authorization
+from workflow_manager.viewsets.base import PatchOnlyViewSet
+from workflow_manager.viewsets.auth_utils import get_email_from_bearer_authorization
 
 
 @extend_schema_view(
