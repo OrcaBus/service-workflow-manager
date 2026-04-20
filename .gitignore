@@ -20,3 +20,6 @@ venv/
 env/
 .env
 .local/
+
+# Ignore github skills
+.github/skills

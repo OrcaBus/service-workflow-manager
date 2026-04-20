@@ -1,50 +1,9 @@
 import re
-from typing import Optional, Tuple
-
 from rest_framework import serializers
 
-
-def parse_version(version_str: str) -> Optional[Tuple[int, int, int]]:
-    """
-    Parse version string in format X.Y.Z.
-    Returns tuple (major, minor, patch) or None if invalid.
-    """
-    if not version_str:
-        return None
-    match = re.match(r"^(\d+)\.(\d+)\.(\d+)$", str(version_str).strip())
-    if match:
-        return tuple(int(x) for x in match.groups())
-    return None
-
-
-def version_sort_key(version_str: str) -> Tuple[int, int, int]:
-    """
-    Return a sort key for version comparison.
-    Valid XX.XX.XX versions sort by (major, minor, patch).
-    Non-conforming versions return (0, 0, 0) so they sort lowest.
-    """
-    parsed = parse_version(version_str)
-    return parsed if parsed is not None else (0, 0, 0)
-
-
-def compare_versions(a: str, b: str) -> int:
-    """
-    Compare two version strings.
-    Returns: positive if a > b, negative if a < b, 0 if equal.
-    """
-    key_a = version_sort_key(a)
-    key_b = version_sort_key(b)
-    if key_a > key_b:
-        return 1
-    if key_a < key_b:
-        return -1
-    return 0
-
-
 def to_camel_case(snake_str):
-    components = re.split(r'[_\-\s]', snake_str)
-    return components[0].lower() + ''.join(x.title() for x in components[1:])
-
+    components = re.split(r"[_\-\s]", snake_str)
+    return components[0].lower() + "".join(x.title() for x in components[1:])
 
 class SerializersBase(serializers.ModelSerializer):
 

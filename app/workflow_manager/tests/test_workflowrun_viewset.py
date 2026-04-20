@@ -40,12 +40,12 @@ class WorkflowRunViewSetTestCase(TestCase):
         response = self.client.get(f"{self.endpoint}/", {"status": "FAILED"})
         self.assertEqual(response.status_code, 200)
 
-    def test_list_with_order_by_timestamp(self):
-        response = self.client.get(f"{self.endpoint}/", {"order_by": "timestamp"})
+    def test_list_with_ordering_timestamp(self):
+        response = self.client.get(f"{self.endpoint}/", {"ordering": "timestamp"})
         self.assertEqual(response.status_code, 200)
 
-    def test_list_with_order_by_minus_timestamp(self):
-        response = self.client.get(f"{self.endpoint}/", {"order_by": "-timestamp"})
+    def test_list_with_ordering_minus_timestamp(self):
+        response = self.client.get(f"{self.endpoint}/", {"ordering": "-timestamp"})
         self.assertEqual(response.status_code, 200)
 
     def test_list_with_search(self):

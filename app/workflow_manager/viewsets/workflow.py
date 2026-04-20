@@ -1,66 +1,104 @@
 from collections import defaultdict
 
+from django.db.models.functions import Lower
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import action
+from rest_framework.settings import api_settings
 
 from workflow_manager.models.workflow import Workflow
 from workflow_manager.serializers.workflow import (
     WorkflowSerializer,
-    WorkflowListParamSerializer,
+    WorkflowListQueryParamSerializer,
     WorkflowListSerializer,
 )
-from workflow_manager.serializers.base import version_sort_key
 from workflow_manager.viewsets.base import PostOnlyViewSet
+from workflow_manager.viewsets.utils import (
+    get_latest_workflow_ids_queryset,
+    filtered_workflows_queryset,
+    validate_ordering,
+    version_sort_key,
+)
+
+ALLOWED_ORDER_FIELDS = frozenset([
+    'orcabus_id', '-orcabus_id',
+    'name', '-name',
+    'version', '-version',
+    'code_version', '-code_version',
+    'execution_engine', '-execution_engine',
+    'validation_state', '-validation_state',
+])
 
 
 class WorkflowViewSet(PostOnlyViewSet):
     serializer_class = WorkflowSerializer
     search_fields = Workflow.get_base_fields()
+    filter_backends = []
 
     def get_queryset(self):
-        query_params = self.request.query_params.copy()
-        return Workflow.objects.get_by_keyword(self.queryset, **query_params)
+        result_set = filtered_workflows_queryset(self.request.query_params)
 
-    def _get_latest_workflows_with_history(self, queryset):
-        """
-        Group workflows by name (case-insensitive), pick highest version per group
-        (XX.XX.00 format), tie-break: first one. Return (latest_list, history_map).
-        """
-        all_workflows = list(queryset)
-        grouped = defaultdict(list)
-        for w in all_workflows:
-            grouped[w.name.lower()].append(w)
-
-        latest_list = []
-        history_map = {}
-        for name_key in sorted(grouped.keys()):
-            group = grouped[name_key]
-            # Sort by version desc; equal versions keep original order (stable sort)
-            group.sort(key=lambda w: version_sort_key(w.version), reverse=True)
-            latest = group[0]
-            latest_list.append(latest)
-            history_map[latest.orcabus_id] = group
-
-        return latest_list, history_map
+        raw_order = (self.request.query_params.get(api_settings.ORDERING_PARAM) or "").strip()
+        validated = validate_ordering(raw_order, ALLOWED_ORDER_FIELDS)
+        ordering = validated if validated else self.ordering[0]
+        return result_set.order_by(ordering)
 
     @extend_schema(
-        parameters=[WorkflowListParamSerializer],
+        parameters=[WorkflowListQueryParamSerializer],
         responses=WorkflowSerializer(many=True),
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
     @extend_schema(
-        parameters=[WorkflowListParamSerializer],
+        parameters=[WorkflowListQueryParamSerializer],
         responses=WorkflowListSerializer(many=True),
     )
     @action(detail=False, methods=["get"], url_path="grouped")
     def grouped(self, request, *args, **kwargs):
         """List workflows grouped by name, returning the latest version with full version history."""
-        queryset = self.filter_queryset(self.get_queryset())
-        latest_list, history_map = self._get_latest_workflows_with_history(queryset)
-        page = self.paginate_queryset(latest_list)
+        # Decide "latest version per name group" in the DB using a window
+        # function over semver components.  This avoids materialising all
+        # Workflow rows in Python and building a large IN (...) clause.
+        latest_ids_qs = get_latest_workflow_ids_queryset()
+
+        filtered_latest_qs = (
+            filtered_workflows_queryset(request.query_params)
+            .filter(orcabus_id__in=latest_ids_qs)
+        )
+
+        raw_order = (request.query_params.get(api_settings.ORDERING_PARAM) or "").strip()
+        validated = validate_ordering(raw_order, ALLOWED_ORDER_FIELDS)
+        ordering = validated if validated else self.ordering[0]
+        filtered_latest_qs = filtered_latest_qs.order_by(ordering)
+
+        page = self.paginate_queryset(filtered_latest_qs)
+
+        # Fetch version history only for the paginated page's name groups,
+        # rather than loading all workflows upfront.
+        page_names = {w.name.lower() for w in page}
+        if page_names:
+            history_rows = Workflow.objects.annotate(
+                name_lower=Lower("name"),
+            ).filter(name_lower__in=page_names)
+
+            # Group by lowercase name, then map latest orcabus_id → group.
+            name_groups: dict[str, list] = defaultdict(list)
+            for w in history_rows:
+                name_groups[w.name.lower()].append(w)
+            for group in name_groups.values():
+                group.sort(
+                    key=lambda w: (version_sort_key(w.version), w.orcabus_id),
+                    reverse=True,
+                )
+
+            page_history_map = {}
+            for w in page:
+                group = name_groups.get(w.name.lower(), [])
+                page_history_map[w.orcabus_id] = group
+        else:
+            page_history_map = {}
+
         serializer = WorkflowListSerializer(
-            page, many=True, context={"history_map": history_map}
+            page, many=True, context={"history_map": page_history_map}
         )
         return self.get_paginated_response(serializer.data)

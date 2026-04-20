@@ -11,8 +11,8 @@ from workflow_manager.serializers.base import (
     OrcabusIdListField,
     OrcabusIdListUtils,
     SerializersBase,
-    to_camel_case,
 )
+from workflow_manager.serializers.base import to_camel_case
 from workflow_manager.tests.factories import LibraryFactory
 
 
