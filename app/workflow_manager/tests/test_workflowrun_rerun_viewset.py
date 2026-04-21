@@ -1,20 +1,25 @@
+import json
 import os
 import uuid
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 from django.utils.timezone import make_aware
 from libumccr.aws import libeb
 
 from workflow_manager.models import LibraryAssociation, Payload, Workflow, WorkflowRun
+from workflow_manager.models.comment import Comment
 from workflow_manager.tests.factories import StateFactory, WorkflowRunFactory, PayloadFactory
 from workflow_manager.tests.fixtures.sim_workflow import TestData
 from workflow_manager.urls.base import api_base
+from workflow_manager.viewsets import workflow_run_action as _wra_module
 
 
 class WorkflowRunRerunViewSetTestCase(TestCase):
     endpoint = f"/{api_base}workflowrun"
+
+    mock_user_email = "testuser@example.com"
 
     def setUp(self):
         os.environ["EVENT_BUS_NAME"] = "mock-bus"
@@ -23,8 +28,40 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         self._real_emit_event = libeb.emit_event
         libeb.emit_event = MagicMock()
 
+        self._real_get_email = _wra_module.get_email_from_bearer_authorization
+        _wra_module.get_email_from_bearer_authorization = MagicMock(return_value=self.mock_user_email)
+
     def tearDown(self) -> None:
         libeb.emit_event = self._real_emit_event
+        _wra_module.get_email_from_bearer_authorization = self._real_get_email
+
+    def _assert_wru_response_structure(self, response_data: dict, expected_dataset: str):
+        """Assert the response conforms to the WorkflowRunUpdate (WRU) schema."""
+        self.assertEqual(response_data["status"], "READY")
+        self.assertIn("portalRunId", response_data)
+        self.assertIn("workflowRunName", response_data)
+        self.assertIn("timestamp", response_data)
+
+        # workflow must be a nested object (not flat workflowName/workflowVersion)
+        workflow = response_data["workflow"]
+        self.assertIsInstance(workflow, dict)
+        self.assertIn("orcabusId", workflow)
+        self.assertIn("name", workflow)
+        self.assertIn("version", workflow)
+
+        # libraries (not linkedLibraries)
+        self.assertIn("libraries", response_data)
+        self.assertNotIn("linkedLibraries", response_data)
+        self.assertIsInstance(response_data["libraries"], list)
+        for lib in response_data["libraries"]:
+            self.assertIn("libraryId", lib)
+            self.assertIn("orcabusId", lib)
+
+        # payload with overridden dataset
+        payload = response_data["payload"]
+        self.assertIn("version", payload)
+        self.assertIn("data", payload)
+        self.assertEqual(payload["data"]["inputs"]["dataset"], expected_dataset)
 
     def test_rerun_api(self):
         wfl_run = WorkflowRun.objects.all().first()
@@ -41,7 +78,7 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         payload.save()
 
         response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun")
-        self.assertIn(response.status_code, [400], "Workflow name associated with the workflow run is not allowed")
+        self.assertEqual(response.status_code, 400, "Workflow name associated with the workflow run is not allowed")
 
         wfl = Workflow.objects.all().first()
         wfl.name = "rnasum"
@@ -51,22 +88,56 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
             f"{self.endpoint}/{wfl_run.orcabus_id}/rerun",
             data={"dataset": "INVALID_CHOICE"},
         )
-        self.assertIn(response.status_code, [400], "Invalid payload expected")
+        self.assertEqual(response.status_code, 400, "Invalid payload expected")
 
         response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "PANCAN"})
-        self.assertIn(response.status_code, [200], "Expected a successful response")
-        self.assertTrue(wfl_run.portal_run_id not in str(response.content), "expect old portal_run_id replaced")
+        self.assertEqual(response.status_code, 200, "Expected a successful response")
+        response_data = response.json()
+
+        # Verify the response conforms to the WRU schema
+        self._assert_wru_response_structure(response_data, expected_dataset="PANCAN")
+
+        # The portalRunId must be a newly generated value, not the original one
+        new_portal_run_id = response_data["portalRunId"]
+        self.assertNotEqual(new_portal_run_id, wfl_run.portal_run_id)
+        original_workflow_run_name = wfl_run.workflow_run_name
+        if wfl_run.portal_run_id in original_workflow_run_name:
+            self.assertIn(new_portal_run_id, response_data["workflowRunName"])
+            self.assertNotIn(wfl_run.portal_run_id, response_data["workflowRunName"])
+        else:
+            self.assertEqual(response_data["workflowRunName"], original_workflow_run_name)
+        self.assertEqual(response_data["workflow"]["orcabusId"], wfl_run.workflow.orcabus_id)
+
+        # Verify old portal_run_id in payload data is replaced with new one
+        source_uri = response_data["payload"]["data"]["engineParameters"]["sourceUri"]
+        self.assertNotIn(wfl_run.portal_run_id, source_uri, "Old portal_run_id should be replaced in payload data")
+        self.assertIn(new_portal_run_id, source_uri, "New portal_run_id should appear in payload data")
+
+        # Verify libeb.emit_event was called with correct WRU DetailType
+        libeb.emit_event.assert_called()
+        call_args = libeb.emit_event.call_args[0][0]
+        self.assertEqual(call_args["DetailType"], "WorkflowRunUpdate")
+        self.assertEqual(call_args["Source"], "orcabus.workflowmanagerapi")
+
+        # EventBridge detail must omit optional fields instead of null (JSON schema: optional string, not nullable)
+        detail_obj = json.loads(call_args["Detail"])
+        for omitted_top_level in ("id", "version", "orcabusId", "analysisRun", "computeEnv", "storageEnv"):
+            self.assertNotIn(
+                omitted_top_level,
+                detail_obj,
+                f"Optional WRU field {omitted_top_level!r} should be omitted, not emitted as null",
+            )
 
         response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "BRCA"})
-        self.assertIn(response.status_code, [400], "Rerun duplication with same input error expected")
+        self.assertEqual(response.status_code, 400, "Rerun duplication with same input error expected")
 
         response = self.client.post(
             f"{self.endpoint}/{wfl_run.orcabus_id}/rerun",
             data={"dataset": "BRCA", "allow_duplication": True},
         )
-        self.assertIn(
+        self.assertEqual(
             response.status_code,
-            [200],
+            200,
             "Rerun with same input allowed when `allow_duplication` is set to True",
         )
 
@@ -105,11 +176,99 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
 
         # This will trigger the rerun with different library set
         response = self.client.post(f"{self.endpoint}/{wfr_new.orcabus_id}/rerun", data={"dataset": "BRCA"})
-        self.assertIn(
+        self.assertEqual(
             response.status_code,
-            [200],
+            200,
             "Rerun with the same input is allowed when using a different library set",
         )
+
+    def test_rerun_creates_system_comment(self):
+        """Verify that each rerun creates a Comment object linked to the workflow run."""
+        wfl_run = WorkflowRun.objects.all().first()
+        payload = wfl_run.states.get(status="READY").payload
+        payload.data = {
+            "inputs": {"someUri": "s3://random/prefix/", "dataset": "BRCA"},
+            "engineParameters": {"sourceUri": "s3://bucket/test/"},
+        }
+        payload.save()
+
+        wfl = Workflow.objects.all().first()
+        wfl.name = "rnasum"
+        wfl.save()
+
+        self.assertEqual(Comment.objects.filter(workflow_run=wfl_run).count(), 0)
+
+        # First rerun
+        response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "PANCAN"})
+        self.assertEqual(response.status_code, 200)
+        first_portal_run_id = response.json()["portalRunId"]
+
+        comments = Comment.objects.filter(workflow_run=wfl_run).order_by("created_at")
+        self.assertEqual(comments.count(), 1)
+        first_comment = comments.first()
+        self.assertEqual(first_comment.created_by, "workflow manager")
+        self.assertIn(wfl_run.portal_run_id, first_comment.text)
+        self.assertIn(first_portal_run_id, first_comment.text)
+        self.assertIn(self.mock_user_email, first_comment.text)
+
+        # Second rerun (allow duplication) — should create a second comment
+        response = self.client.post(
+            f"{self.endpoint}/{wfl_run.orcabus_id}/rerun",
+            data={"dataset": "PANCAN", "allow_duplication": True},
+        )
+        self.assertEqual(response.status_code, 200)
+        second_portal_run_id = response.json()["portalRunId"]
+
+        comments = Comment.objects.filter(workflow_run=wfl_run).order_by("created_at")
+        self.assertEqual(comments.count(), 2)
+        second_comment = comments.last()
+        self.assertEqual(second_comment.created_by, "workflow manager")
+        self.assertIn(second_portal_run_id, second_comment.text)
+        self.assertIn(self.mock_user_email, second_comment.text)
+
+    @patch("workflow_manager.viewsets.workflow_run_action.Comment.objects.create")
+    def test_rerun_comment_create_failure_logs_and_returns_200_after_emit(self, mock_comment_create):
+        """Event is emitted first; audit comment failure is logged but rerun still succeeds for the client."""
+        mock_comment_create.side_effect = RuntimeError("simulated DB failure")
+
+        wfl_run = WorkflowRun.objects.all().first()
+        payload = wfl_run.states.get(status="READY").payload
+        payload.data = {
+            "inputs": {"someUri": "s3://random/prefix/", "dataset": "BRCA"},
+            "engineParameters": {"sourceUri": f"s3://bucket/{wfl_run.portal_run_id}/"},
+        }
+        payload.save()
+
+        wfl = Workflow.objects.all().first()
+        wfl.name = "rnasum"
+        wfl.save()
+
+        libeb.emit_event.reset_mock()
+        with self.assertLogs("workflow_manager.viewsets.workflow_run_action", level="ERROR") as log_cm:
+            response = self.client.post(f"{self.endpoint}/{wfl_run.orcabus_id}/rerun", data={"dataset": "PANCAN"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("portalRunId", response.json())
+        libeb.emit_event.assert_called()
+        self.assertTrue(
+            any("Failed to create rerun audit comment" in r.getMessage() for r in log_cm.records),
+            msg="Expected ERROR log when audit comment creation fails",
+        )
+
+    def test_construct_rerun_eb_detail_value_error_unsupported_workflow(self):
+        """construct_rerun_eb_detail raises ValueError when workflow name has no rerun implementation."""
+        wfl_run = WorkflowRun.objects.all().first()
+        wfl = wfl_run.workflow
+        saved_name = wfl.name
+        try:
+            wfl.name = "unsupported_rerun_workflow"
+            wfl.save()
+            with self.assertRaises(ValueError) as ctx:
+                _wra_module.construct_rerun_eb_detail(wfl_run, {"dataset": "PANCAN"})
+            self.assertIn("Rerun is not allowed for this workflow", str(ctx.exception))
+            self.assertIn("unsupported_rerun_workflow", str(ctx.exception))
+        finally:
+            wfl.name = saved_name
+            wfl.save()
 
     def test_rerun_duplication_skips_runs_without_ready_state(self):
         """
@@ -141,7 +300,7 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         wfl_run2.states.get(status="READY").delete()
 
         response = self.client.post(f"{self.endpoint}/{wfl_run1.orcabus_id}/rerun", data={"dataset": "PANCAN"})
-        self.assertIn(response.status_code, [200], "Expected a successful response")
+        self.assertEqual(response.status_code, 200, "Expected a successful response")
 
     def test_rerun_wfr_same_deprecated_payload(self):
         """The exact same rnasum payload but the old one has deprecated and now expected to rerun the same thing"""
@@ -169,7 +328,7 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
         wfl_run2 = WorkflowRun.objects.get(workflow_run_name="TestWorkflowPrimaryRun2")
 
         response = self.client.post(f"{self.endpoint}/{wfl_run1.orcabus_id}/rerun", data={"dataset": "PANCAN"})
-        self.assertIn(response.status_code, [200], "Expected a successful response")
+        self.assertEqual(response.status_code, 200, "Expected a successful response")
 
         new_payload2 = Payload.objects.create(
             version="1.0.0",
@@ -195,7 +354,7 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
             timestamp=make_aware(datetime.now())
         )
         response = self.client.post(f"{self.endpoint}/{wfl_run1.orcabus_id}/rerun", data={"dataset": "PANCAN"})
-        self.assertIn(response.status_code, [200], "Expected a successful response")
+        self.assertEqual(response.status_code, 200, "Expected a successful response")
 
     def test_disable_rerun_deprecated_wfr(self):
         """Test that a workflow run marked as DEPRECATED cannot be rerun."""
@@ -225,4 +384,4 @@ class WorkflowRunRerunViewSetTestCase(TestCase):
             timestamp=make_aware(datetime.now())
         )
         response = self.client.post(f"{self.endpoint}/{wfl_run1.orcabus_id}/rerun", data={"dataset": "BRCA"})
-        self.assertIn(response.status_code, [400], "Expected a fail response")
+        self.assertEqual(response.status_code, 400, "Expected a fail response")

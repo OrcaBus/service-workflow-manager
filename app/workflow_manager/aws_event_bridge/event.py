@@ -1,16 +1,15 @@
 import os
 import logging
-import json
 from libumccr.aws import libeb
-import workflow_manager.aws_event_bridge.workflowmanager.workflowrunstatechange as wfm
+from workflow_manager_proc.domain.event import wru
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def emit_wrsc_api_event(event):
+def emit_wru_api_event(event: dict):
     """
-    Emit events to the event bridge sourced from the workflow manager API
+    Validate the event dict against the WorkflowRunUpdate schema and emit it to EventBridge.
     """
     source = "orcabus.workflowmanagerapi"
     event_bus_name = os.environ.get("EVENT_BUS_NAME", None)
@@ -18,15 +17,19 @@ def emit_wrsc_api_event(event):
     if event_bus_name is None:
         raise ValueError("EVENT_BUS_NAME environment variable is not set.")
 
-    logger.info(f"Emitting event: {event}")
+    validated = wru.WorkflowRunUpdate.model_validate(event)
+
+    # Omit keys with value null: JSON schema marks optional fields as non-required string types,
+    # not as nullable; emitting null violates the schema.
+    detail_json = validated.model_dump_json(exclude_none=True)
+
+    logger.info(f"Emitting WRU event to event bus {event_bus_name}: {event}")
     response = libeb.emit_event({
         'Source': source,
-        'DetailType': wfm.WorkflowRunStateChange.__name__,
-        'Detail': json.dumps(wfm.Marshaller.marshall(event)),
+        'DetailType': wru.WorkflowRunUpdate.__name__,
+        'Detail': detail_json,
         'EventBusName': event_bus_name,
     })
 
-    logger.info(f"Sent a WRSC event to event bus {event_bus_name}:")
-    logger.info(event)
     logger.info(f"{__name__} done.")
     return response

@@ -1,4 +1,5 @@
 import json
+import logging
 
 from datetime import datetime, timezone
 
@@ -14,9 +15,10 @@ from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, PolymorphicProxySerializer
 
-from workflow_manager.aws_event_bridge.event import emit_wrsc_api_event
+from workflow_manager.aws_event_bridge.event import emit_wru_api_event
 from workflow_manager.errors import RerunDuplicationError
 from workflow_manager.models.utils import create_portal_run_id
+from workflow_manager.models.comment import Comment
 from workflow_manager.serializers.library import LibrarySerializer
 from workflow_manager.serializers.payload import PayloadSerializer
 from workflow_manager.serializers.workflow_run_action import AllowedRerunWorkflow, RERUN_INPUT_SERIALIZERS, \
@@ -25,7 +27,10 @@ from workflow_manager.models import (
     WorkflowRun,
     State,
 )
+from workflow_manager.viewsets.auth_utils import get_email_from_bearer_authorization
 
+
+logger = logging.getLogger(__name__)
 
 class WorkflowRunActionViewSet(ViewSet):
     lookup_value_regex = "[^/]+"  # to allow orcabus id prefix
@@ -85,19 +90,33 @@ class WorkflowRunActionViewSet(ViewSet):
             return Response({"detail": "Workflow run has been deprecated and rerun is not allowed."},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        # User will be used to create rerun audit comment
+        user_email = get_email_from_bearer_authorization(request)
+
         try:
             detail = construct_rerun_eb_detail(wfl_run, serializer.data)
+            new_portal_run_id = detail.get("portalRunId")
         except RerunDuplicationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        emit_wrsc_api_event(detail)
+        emit_wru_api_event(detail)
+
+        try:
+            Comment.objects.create(
+                workflow_run=wfl_run,
+                created_by="workflow manager",
+                text=f"Rerun of {wfl_run.portal_run_id} with new portal run id: {new_portal_run_id} by {user_email}",
+            )
+        except Exception as e:
+            logger.exception("Failed to create rerun audit comment for workflow run %s, user email: %s, new portal run id: %s, error: %s", wfl_run.orcabus_id, user_email, new_portal_run_id, e)
 
         return Response(detail, status=status.HTTP_200_OK)
 
 
 def construct_rerun_eb_detail(wfl_run: WorkflowRun, input_body: dict) -> dict:
     """
-    Construct event bridge detail for rerun based on the existing workflow run and request body
+    Construct WorkflowRunUpdate event bridge detail for rerun based on the existing workflow run and request body.
+    The returned dict conforms to the WorkflowRunUpdate (WRU) schema.
     """
     new_portal_run_id = create_portal_run_id()
     wfl_name = wfl_run.workflow.name
@@ -110,22 +129,35 @@ def construct_rerun_eb_detail(wfl_run: WorkflowRun, input_body: dict) -> dict:
     else:
         raise ValueError(f"Rerun is not allowed for this workflow: {wfl_name}")
 
-    # FIXME RNAsum rerun UI trigger to update legacy WRSC to WRU schema
-    #  https://github.com/OrcaBus/service-workflow-manager/issues/99
-    # Replace old portal_run_id with new_portal_run_id in any part of the string
-    new_eb_detail = json.loads(
-        json.dumps({
-            "status": 'READY',
-            "payload": new_payload,
-            "portalRunId": new_portal_run_id,
-            "linkedLibraries": LibrarySerializer(wfl_run.libraries.all(), many=True, camel_case_data=True).data,
-            "workflowName": wfl_run.workflow.name,
-            "workflowRunName": wfl_run.workflow_run_name,
-            "workflowVersion": wfl_run.workflow.version,
-            "timestamp": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
-        }).replace(f"{wfl_run.portal_run_id}", f"{new_portal_run_id}"))
+    # Replace references to the old portal_run_id within the payload data, since dynamic payload
+    # fields (e.g. S3 paths) may still reference it.  Scoped to payload only to avoid corrupting
+    # structured fields like orcabusId.
+    old_portal_run_id = wfl_run.portal_run_id
+    new_payload = json.loads(
+        json.dumps(new_payload).replace(old_portal_run_id, new_portal_run_id)
+    )
 
-    return new_eb_detail
+    workflow = wfl_run.workflow
+    new_workflow_run_name = wfl_run.workflow_run_name.replace(
+        old_portal_run_id,
+        new_portal_run_id,
+    )
+    return {
+        "status": "READY",
+        "portalRunId": new_portal_run_id,
+        "workflowRunName": new_workflow_run_name,
+        "workflow": {
+            "orcabusId": workflow.orcabus_id,
+            "name": workflow.name,
+            "version": workflow.version,
+            "codeVersion": workflow.code_version,
+            "executionEngine": workflow.execution_engine,
+            "executionEnginePipelineId": workflow.execution_engine_pipeline_id,
+        },
+        "libraries": LibrarySerializer(wfl_run.libraries.all(), many=True, camel_case_data=True).data,
+        "payload": new_payload,
+        "timestamp": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+    }
 
 
 def construct_rnasum_rerun_payload(wfl_run: WorkflowRun, input_body: dict) -> dict:
@@ -136,7 +168,8 @@ def construct_rnasum_rerun_payload(wfl_run: WorkflowRun, input_body: dict) -> di
 
     if not allow_rerun_duplication:
         # The duplication check is based on the dataset input at the READY state of the workflow run that has the same
-        # linked libraries and Workflow entity. If the dataset has been run in the past, it will raise an error.
+        # linked libraries and Workflow entity.
+        # If the dataset has been run in the past, it will raise an error unless `allow_duplication` is set to True.
         library_ids = wfl_run.libraries.values_list('library_id', flat=True)
         sorted_library_ids = sorted(library_ids)
         library_ids_string = ','.join(sorted_library_ids)
@@ -161,7 +194,7 @@ def construct_rnasum_rerun_payload(wfl_run: WorkflowRun, input_body: dict) -> di
                 ready_data_payload = PayloadSerializer(ready_state.payload).data
                 past_dataset.add(ready_data_payload.get('data', {}).get("inputs", {}).get("dataset", ''))
             except State.DoesNotExist:
-                # Skip runs without a READY state
+                logger.warning("Workflow run %s has no READY state", run.orcabus_id)
                 continue
         if input_body["dataset"] in past_dataset:
             raise RerunDuplicationError(f"Dataset '{input_body['dataset']}' has been run in the past. "
