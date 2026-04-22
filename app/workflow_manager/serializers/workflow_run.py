@@ -97,11 +97,15 @@ class WorkflowRunDetailSerializer(WorkflowRunBaseSerializer):
     from .library import LibrarySerializer
     from .workflow import WorkflowSerializer
     from .analysis_run import AnalysisRunSerializer
+    from .run_context import RunContextSerializer
+    from .readset import ReadsetSerializer
 
     libraries = LibrarySerializer(many=True, read_only=True)
     workflow = WorkflowSerializer(read_only=True)
     analysis_run = AnalysisRunSerializer(read_only=True)
     current_state = serializers.SerializerMethodField()
+    contexts = RunContextSerializer(many=True, read_only=True)
+    readsets = ReadsetSerializer(many=True, read_only=True)
 
     class Meta(OrcabusIdSerializerMetaMixin):
         model = WorkflowRun
