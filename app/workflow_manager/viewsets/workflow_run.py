@@ -27,7 +27,7 @@ class WorkflowRunViewSet(BaseViewSet):
     """
     serializer_class = WorkflowRunDetailSerializer
     search_fields = WorkflowRun.get_base_fields()
-    queryset = WorkflowRun.objects.prefetch_related("libraries").all()
+    queryset = WorkflowRun.objects.all()
     termination_statuses = ["FAILED", "ABORTED", "SUCCEEDED", "RESOLVED", "DEPRECATED"]
     http_method_names = ['get', 'head', 'options', 'trace']
     # Ordering and search are handled in get_queryset / filtered_workflow_runs_queryset;
@@ -60,6 +60,9 @@ class WorkflowRunViewSet(BaseViewSet):
             apply_status_filter=True,
             annotate_latest_state_time=needs_timestamp_order,
         )
+
+        if self.action == "retrieve":
+            result_set = result_set.prefetch_related("contexts", "readsets")
 
         if needs_timestamp_order:
             if validated == "timestamp":

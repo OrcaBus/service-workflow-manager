@@ -9,7 +9,7 @@ class AnalysisRunStateBaseSerializer(SerializersBase):
 class AnalysisRunStateMinSerializer(AnalysisRunStateBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
         model = AnalysisRunState
-        fields = ["orcabus_id", "status", "timestamp", "comment"]
+        fields = ["orcabus_id", "status", "timestamp"]
 
 
 class AnalysisRunStateSerializer(AnalysisRunStateBaseSerializer):
