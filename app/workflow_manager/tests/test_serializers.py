@@ -213,3 +213,51 @@ class AnalysisRunSerializerTests(TestCase):
         serializer = AnalysisRunDetailSerializer(ar)
         data = serializer.data
         self.assertEqual(data["states"], [])
+
+
+class WorkflowRunSerializerTests(TestCase):
+    def test_detail_serializer_includes_nested_contexts_and_readsets(self):
+        from workflow_manager.models import Readset, RunContext
+        from workflow_manager.models.run_context import RunContextUseCase
+        from workflow_manager.serializers.workflow_run import WorkflowRunDetailSerializer
+        from workflow_manager.tests.factories import WorkflowRunFactory
+
+        workflow_run = WorkflowRunFactory()
+        context = RunContext.objects.create(
+            name="compute-context",
+            usecase=RunContextUseCase.COMPUTE,
+            description="primary compute context",
+        )
+        readset = Readset.objects.create(
+            rgid="rg1",
+            library_id="L000001",
+            library_orcabus_id="lib-orca-1",
+        )
+        workflow_run.contexts.add(context)
+        workflow_run.readsets.add(readset)
+
+        serializer = WorkflowRunDetailSerializer(workflow_run)
+        data = serializer.data
+
+        self.assertEqual(len(data["contexts"]), 1)
+        self.assertEqual(data["contexts"][0]["orcabus_id"], context.orcabus_id)
+        self.assertEqual(data["contexts"][0]["name"], context.name)
+        self.assertEqual(data["contexts"][0]["usecase"], context.usecase)
+        self.assertEqual(len(data["readsets"]), 1)
+        self.assertEqual(data["readsets"][0]["orcabus_id"], readset.orcabus_id)
+        self.assertEqual(data["readsets"][0]["rgid"], readset.rgid)
+        self.assertEqual(data["readsets"][0]["library_id"], readset.library_id)
+        self.assertEqual(
+            data["readsets"][0]["library_orcabus_id"],
+            readset.library_orcabus_id,
+        )
+
+    def test_detail_serializer_returns_null_current_state_when_no_states(self):
+        from workflow_manager.serializers.workflow_run import WorkflowRunDetailSerializer
+        from workflow_manager.tests.factories import WorkflowRunFactory
+
+        workflow_run = WorkflowRunFactory()
+
+        serializer = WorkflowRunDetailSerializer(workflow_run)
+
+        self.assertIsNone(serializer.data["current_state"])

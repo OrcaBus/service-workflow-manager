@@ -13,7 +13,7 @@ class WorkflowRunBaseSerializer(SerializersBase):
     current_state = serializers.SerializerMethodField()
 
     @extend_schema_field(StateMinSerializer(allow_null=True))
-    def get_current_state(self, obj) -> dict:
+    def get_current_state(self, obj) -> dict | None:
         latest_state = obj.get_latest_state()
         return StateMinSerializer(latest_state).data if latest_state else None
 
@@ -105,7 +105,6 @@ class WorkflowRunDetailSerializer(WorkflowRunBaseSerializer):
     libraries = LibrarySerializer(many=True, read_only=True)
     workflow = WorkflowSerializer(read_only=True)
     analysis_run = AnalysisRunSerializer(read_only=True)
-    # current_state = serializers.SerializerMethodField()
     contexts = RunContextSerializer(many=True, read_only=True)
     readsets = ReadsetSerializer(many=True, read_only=True)
 
