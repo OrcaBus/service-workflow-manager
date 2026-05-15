@@ -17,12 +17,10 @@ import {
   OrcaBusApiGateway,
   OrcaBusApiGatewayProps,
 } from '@orcabus/platform-cdk-constructs/api-gateway';
-import { DatabaseCluster } from 'aws-cdk-lib/aws-rds';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import {
   DB_CLUSTER_ENDPOINT_HOST_PARAMETER_NAME,
-  DB_CLUSTER_IDENTIFIER,
-  DB_CLUSTER_RESOURCE_ID_PARAMETER_NAME,
+  formatRdsPolicyName,
 } from '@orcabus/platform-cdk-constructs/shared-config/database';
 import { WorkflowManagerSchemaRegistry } from './schema';
 import { AutoTriggerBackupMigration } from './lambda-migration';
@@ -81,20 +79,17 @@ export class WorkflowManagerStack extends Stack {
       ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMReadOnlyAccess')
     );
 
-    // Grab the database cluster
-    const clusterResourceIdentifier = StringParameter.valueForStringParameter(
-      this,
-      DB_CLUSTER_RESOURCE_ID_PARAMETER_NAME
-    );
     const clusterHostEndpoint = StringParameter.valueForStringParameter(
       this,
       DB_CLUSTER_ENDPOINT_HOST_PARAMETER_NAME
     );
-    const dbCluster = DatabaseCluster.fromDatabaseClusterAttributes(this, 'OrcabusDbCluster', {
-      clusterIdentifier: DB_CLUSTER_IDENTIFIER,
-      clusterResourceIdentifier: clusterResourceIdentifier,
-    });
-    dbCluster.grantConnect(this.lambdaRole, this.WORKFLOW_MANAGER_DB_USER);
+    this.lambdaRole.addManagedPolicy(
+      ManagedPolicy.fromManagedPolicyName(
+        this,
+        'RdsConnectPolicy',
+        formatRdsPolicyName(this.WORKFLOW_MANAGER_DB_USER)
+      )
+    );
 
     this.lambdaEnv = {
       DJANGO_SETTINGS_MODULE: 'workflow_manager.settings.aws',
