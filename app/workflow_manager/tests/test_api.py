@@ -1,12 +1,12 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import SimpleTestCase
 
 import api
 
 
-class ApiHandlerTests(TestCase):
+class ApiHandlerTests(SimpleTestCase):
     def setUp(self):
         self.context = SimpleNamespace(
             aws_request_id="request-123",
@@ -48,6 +48,70 @@ class ApiHandlerTests(TestCase):
                 1234,
                 "GET",
                 "/api/v1/workflows/",
+                "RuntimeError",
+            ],
+        )
+
+    def test_handler_logs_http_api_v2_request_details_when_wsgi_handler_raises(self):
+        error = RuntimeError("gateway timeout")
+        event = {
+            "rawPath": "/api/v1/workflows/",
+            "requestContext": {
+                "http": {
+                    "method": "POST",
+                    "path": "/stage/api/v1/workflows/",
+                },
+            },
+        }
+
+        with (
+            patch("api.serverless_wsgi.handle_request", side_effect=error),
+            patch("api.logger.exception") as mock_logger_exception,
+        ):
+            with self.assertRaises(RuntimeError):
+                api.handler(event, self.context)
+
+        mock_logger_exception.assert_called_once()
+        message, *args = mock_logger_exception.call_args.args
+        self.assertIn("API Lambda request failed", message)
+        self.assertEqual(
+            args,
+            [
+                "request-123",
+                1234,
+                "POST",
+                "/api/v1/workflows/",
+                "RuntimeError",
+            ],
+        )
+
+    def test_handler_falls_back_to_http_api_context_path_when_raw_path_is_missing(self):
+        error = RuntimeError("gateway timeout")
+        event = {
+            "requestContext": {
+                "http": {
+                    "method": "PATCH",
+                    "path": "/api/v1/workflows/1/",
+                },
+            },
+        }
+
+        with (
+            patch("api.serverless_wsgi.handle_request", side_effect=error),
+            patch("api.logger.exception") as mock_logger_exception,
+        ):
+            with self.assertRaises(RuntimeError):
+                api.handler(event, self.context)
+
+        mock_logger_exception.assert_called_once()
+        _message, *args = mock_logger_exception.call_args.args
+        self.assertEqual(
+            args,
+            [
+                "request-123",
+                1234,
+                "PATCH",
+                "/api/v1/workflows/1/",
                 "RuntimeError",
             ],
         )
