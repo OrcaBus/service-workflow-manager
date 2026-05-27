@@ -142,7 +142,7 @@ export class WorkflowManagerStack extends Stack {
     const apiFn: PythonFunction = this.createPythonFunction('Api', {
       index: 'api.py',
       handler: 'handler',
-      timeout: Duration.seconds(28),
+      timeout: Duration.seconds(29),
     });
 
     const wfmApi = new OrcaBusApiGateway(this, 'ApiGateway', props.apiGatewayCognitoProps);
