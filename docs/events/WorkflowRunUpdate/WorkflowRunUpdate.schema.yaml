@@ -67,6 +67,9 @@ definitions:
       portalRunId:
         # the portal run id of the WorkflowRun
         type: string
+      executionId:
+        # the execution id of the WorkflowRun on the execution platform
+        type: string
       workflowRunName:
         # a unique name of the WorkflowRun
         type: string

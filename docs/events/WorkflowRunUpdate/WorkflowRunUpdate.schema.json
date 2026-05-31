@@ -30,6 +30,9 @@
         "portalRunId": {
           "type": "string"
         },
+        "executionId": {
+          "type": "string"
+        },
         "workflowRunName": {
           "type": "string"
         },
