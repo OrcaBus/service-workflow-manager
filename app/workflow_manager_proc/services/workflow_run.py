@@ -109,7 +109,7 @@ def create_or_get_workflow_run(event: wru.WorkflowRunUpdate, workflow: Workflow)
         wfr = WorkflowRun(
             portal_run_id=event.portalRunId,
             workflow_run_name=event.workflowRunName,
-            # execution_id=event.executionId,   # FIXME: No executionId in the event schema. How do we do it? For ICA, apparently analysis ID is in the Payload data tag for some workflow pipeline execution
+            execution_id=event.executionId,
             workflow=workflow,
         )
         logger.info(wfr)
@@ -121,6 +121,10 @@ def create_or_get_workflow_run(event: wru.WorkflowRunUpdate, workflow: Workflow)
 
         # if the workflow run is linked to library record(s), create the association(s)
         establish_workflow_run_libraries(event, wfr)
+
+    if event.executionId and not wfr.execution_id:
+        wfr.execution_id = event.executionId
+        wfr.save()
 
     return wfr
 
@@ -243,6 +247,7 @@ def map_workflow_run_new_state_to_wrsc(wfr: WorkflowRun, new_state: State) -> wr
         timestamp=new_state.timestamp,
         orcabusId=wfr.orcabus_id,
         portalRunId=wfr.portal_run_id,
+        executionId=wfr.execution_id,
         workflowRunName=wfr.workflow_run_name,
         workflow=wrsc.Workflow(
             orcabusId=wfr.workflow.orcabus_id,
@@ -345,6 +350,8 @@ def get_wrsc_hash(out_wrsc: wrsc.WorkflowRunStateChange) -> str:
     keywords.append(out_wrsc.orcabusId)
     keywords.append(out_wrsc.portalRunId)
     keywords.append(out_wrsc.workflowRunName)
+    if out_wrsc.executionId:
+        keywords.append(out_wrsc.executionId)
     keywords.append(out_wrsc.status)
     keywords.append(out_wrsc.workflow.orcabusId)
 

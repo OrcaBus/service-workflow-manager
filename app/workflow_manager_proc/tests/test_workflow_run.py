@@ -103,6 +103,98 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(Readset.objects.count(), 4)
         self.assertEqual(RunContext.objects.count(), 2)
 
+    def test_create_workflow_run_with_execution_id(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_create_workflow_run_with_execution_id
+        """
+        _ = WorkflowFactory()
+        self.load_mock_wru_max()
+        # mock_wru_max.executionId = "e4a91a1c-3c2a-4e7e-9b3e-1234567890ab" (from fixture)
+        workflow_run.create_workflow_run(self.mock_wru_max)
+        self.assertEqual(WorkflowRun.objects.count(), 1)
+        wfr = WorkflowRun.objects.first()
+        self.assertEqual(wfr.execution_id, self.mock_wru_max.executionId)
+
+    def test_create_workflow_run_without_execution_id(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_create_workflow_run_without_execution_id
+        """
+        _ = WorkflowFactory()
+        self.load_mock_wru_min()
+        # mock_wru_min.executionId is None (not in fixture)
+        workflow_run.create_workflow_run(self.mock_wru_min)
+        self.assertEqual(WorkflowRun.objects.count(), 1)
+        wfr = WorkflowRun.objects.first()
+        self.assertIsNone(wfr.execution_id)
+
+    def test_update_execution_id_from_null(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_update_execution_id_from_null
+
+        A run created without executionId gets its execution_id set when a subsequent event
+        carries one, provided the existing execution_id is null.
+        """
+        _ = WorkflowFactory()
+
+        # First event: no executionId, creates run with null execution_id
+        self.load_mock_wru_min()
+        workflow_run.create_workflow_run(self.mock_wru_min)
+        self.assertEqual(WorkflowRun.objects.count(), 1)
+        self.assertIsNone(WorkflowRun.objects.first().execution_id)
+
+        # Second event: same portalRunId (both fixtures share "202405012397gatc"), with executionId
+        self.load_mock_wru_max()
+        self.mock_wru_max.status = 'DRAFT'  # same status — stays in except branch, hits null-to-value guard
+        self.mock_wru_max.timestamp = timezone.now()  # ensure timestamp is after first event so state transition succeeds
+        result = workflow_run.create_workflow_run(self.mock_wru_max)
+        self.assertIsNotNone(result)
+        self.assertEqual(WorkflowRun.objects.count(), 1)
+        wfr = WorkflowRun.objects.first()
+        self.assertEqual(wfr.execution_id, self.mock_wru_max.executionId)
+
+    def test_wrsc_includes_execution_id(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_wrsc_includes_execution_id
+        """
+        _ = WorkflowFactory()
+        self.load_mock_wru_max()
+        out_wrsc = workflow_run.create_workflow_run(self.mock_wru_max)
+        self.assertIsNotNone(out_wrsc)
+        self.assertEqual(out_wrsc.executionId, self.mock_wru_max.executionId)
+
+    def test_get_wrsc_hash_differs_by_execution_id(self):
+        """
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_get_wrsc_hash_differs_by_execution_id
+        """
+        self.load_mock_wru_max()
+
+        base_kwargs = dict(
+            id="",
+            version=self.mock_wru_max.version,
+            timestamp=self.mock_wru_max.timestamp,
+            orcabusId=self.mock_wru_max.orcabusId,
+            portalRunId=self.mock_wru_max.portalRunId,
+            workflowRunName=self.mock_wru_max.workflowRunName,
+            workflow=wrsc.Workflow(
+                orcabusId=self.mock_wru_max.workflow.orcabusId,
+                name=self.mock_wru_max.workflow.name,
+                version=self.mock_wru_max.workflow.version,
+                codeVersion=self.mock_wru_max.workflow.codeVersion,
+                executionEngine=self.mock_wru_max.workflow.executionEngine,
+                executionEnginePipelineId=self.mock_wru_max.workflow.executionEnginePipelineId,
+                validationState=self.mock_wru_max.workflow.validationState,
+            ),
+            status=self.mock_wru_max.status,
+        )
+
+        wrsc_a = wrsc.WorkflowRunStateChange(**base_kwargs, executionId="exec-id-alpha")
+        wrsc_b = wrsc.WorkflowRunStateChange(**base_kwargs, executionId="exec-id-beta")
+
+        hash_a = workflow_run.get_wrsc_hash(wrsc_a)
+        hash_b = workflow_run.get_wrsc_hash(wrsc_b)
+
+        self.assertNotEqual(hash_a, hash_b)
+
     def test_create_workflow_run_state_has_not_been_updated(self):
         """
         python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_create_workflow_run_state_has_not_been_updated
