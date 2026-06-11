@@ -31,7 +31,11 @@ class StateTransitionValidationMixin:
     """
     states_transition_validation_map = {
         'RESOLVED': ['FAILED'],  # Only FAILED can transition to RESOLVED
-        'DEPRECATED': {'excluded_states': ['FAILED', 'ABORTED', 'RESOLVED', 'DEPRECATED']}  # All states except these can transition to DEPRECATED
+        # 'DEPRECATED': {'excluded_states': ['FAILED', 'ABORTED', 'RESOLVED', 'DEPRECATED']}  # All states except these can transition to DEPRECATED
+        # temperarily only allow SUCCEEDED to transition to DEPRECATED, refer https://github.com/OrcaBus/service-workflow-manager/issues/163.
+        # since we want to prevent abuse of DEPRECATED state, as it may prevent downstream state updates from being applied correctly.
+        # We can relax this in the future if needed.
+        'DEPRECATED': ['SUCCEEDED']  # Only these states can transition to DEPRECATED
     }
 
     @staticmethod
