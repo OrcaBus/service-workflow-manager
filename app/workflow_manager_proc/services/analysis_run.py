@@ -21,7 +21,9 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 EVENT_BUS_NAME = os.environ.get("EVENT_BUS_NAME")
-ARSC_SCHEMA_VERSION = "1.0.0"  # TODO: set somewhere more global (and check against schema?)
+ARSC_SCHEMA_VERSION = (
+    "1.0.0"  # TODO: set somewhere more global (and check against schema?)
+)
 
 
 @transaction.atomic
@@ -29,7 +31,11 @@ def create_analysis_run(event: aru.AnalysisRunUpdate) -> None:
     db_record = _create_analysis_run(event)
     mapped_arsc = _map_analysis_run_to_arsc(db_record)
     logger.info("Emitting ARSC.")
-    emit_event(event_type=EventType.ARSC, event_bus=EVENT_BUS_NAME, event_json=mapped_arsc.model_dump_json())
+    emit_event(
+        event_type=EventType.ARSC,
+        event_bus=EVENT_BUS_NAME,
+        event_json=mapped_arsc.model_dump_json(),
+    )
     logger.info("ARSC emitted.")
 
 
@@ -48,16 +54,19 @@ def _create_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
     """
     logger.info(f"Start processing ARU: {event}")
     # assert DRAFT status
-    assert event.status.upper() == Status.DRAFT.convention, "AnalysisRunUpdate: Unexpected state!"
+    assert (
+        event.status.upper() == Status.DRAFT.convention
+    ), "AnalysisRunUpdate: Unexpected state!"
 
     analysis_event: aru.Analysis = event.analysis
 
     # We expect the corresponding Analysis to exist
     try:
         logger.info(
-            f"Looking for Analysis ({analysis_event.name}:{analysis_event.version}) with id {analysis_event.orcabusId}.")
+            f"Looking for Analysis ({analysis_event.name}:{analysis_event.version}) with id {analysis_event.orcabusId}."
+        )
         analysis_db: Analysis = Analysis.objects.get(
-            orcabus_id = analysis_event.orcabusId
+            orcabus_id=analysis_event.orcabusId
         )
     except Exception as e:
         logger.error("No Analysis record found!")
@@ -65,7 +74,9 @@ def _create_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
 
     # Create the AnalysisRun for this event
     # NOTE: since we process an Initiated event, we expect that the AnalysisRun does NOT exist yet
-    analysis_run_db: QuerySet = AnalysisRun.objects.filter(analysis_run_name=event.analysisRunName)
+    analysis_run_db: QuerySet = AnalysisRun.objects.filter(
+        analysis_run_name=event.analysisRunName
+    )
     if analysis_run_db.exists():
         raise Exception("AnalysisRun record already exists!")
     else:
@@ -91,7 +102,9 @@ def _create_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
                 # The library record should exist - synced with metadata service on LibraryStateChange events
                 # However, until that sync is in place we may need to create a record on demand
                 # FIXME: remove this once library records are automatically synced
-                db_lib = Library.objects.create(orcabus_id=aru_lib.orcabusId, library_id=aru_lib.libraryId)
+                db_lib = Library.objects.create(
+                    orcabus_id=aru_lib.orcabusId, library_id=aru_lib.libraryId
+                )
 
             # At this point we have a Library record, so we add that
             analysis_run.libraries.add(db_lib)
@@ -109,15 +122,13 @@ def _create_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
 
         if event.computeEnv:
             rc = RunContext.objects.get_by_keyword(
-                usecase=RunContextUseCase.COMPUTE.value,
-                name=event.computeEnv
+                usecase=RunContextUseCase.COMPUTE.value, name=event.computeEnv
             ).first()
             analysis_run.contexts.add(rc)
 
         if event.storageEnv:
             rc = RunContext.objects.get_by_keyword(
-                usecase=RunContextUseCase.STORAGE.value,
-                name=event.storageEnv
+                usecase=RunContextUseCase.STORAGE.value, name=event.storageEnv
             ).first()
             analysis_run.contexts.add(rc)
 
@@ -132,7 +143,11 @@ def finalise_analysis_run(event: aru.AnalysisRunUpdate):
     db_record = _finalise_analysis_run(event)
     mapped_arsc = _map_analysis_run_to_arsc(db_record)
     logger.info("Emitting ARSC.")
-    emit_event(event_type=EventType.ARSC, event_bus=EVENT_BUS_NAME, event_json=mapped_arsc.model_dump_json())
+    emit_event(
+        event_type=EventType.ARSC,
+        event_bus=EVENT_BUS_NAME,
+        event_json=mapped_arsc.model_dump_json(),
+    )
     # TODO: add WorkflowRun DRAFT generation for workflows in analysis
     _create_workflow_runs_for_analysis_run(mapped_arsc)
     logger.info("ARSC emitted.")
@@ -153,25 +168,37 @@ def _finalise_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
     # Since we are finalising, we expect a corresponding record to exist already
     # Note: this will raise an exception if the record does NOT exist (or there are multiple)
     analysis_run_db: AnalysisRun = AnalysisRun.objects.get(orcabus_id=event.orcabusId)
-    assert analysis_run_db is not None, f"AnalysisRunUpdate: AnalysisRun record does not exist!"
+    assert (
+        analysis_run_db is not None
+    ), f"AnalysisRunUpdate: AnalysisRun record does not exist!"
 
     # ensure the current state is DRAFT before we transition to READY
-    assert analysis_run_db.get_latest_state().status == Status.DRAFT.convention, "Cannot finalise record that is not in DRAFT state!"
+    assert (
+        analysis_run_db.get_latest_state().status == Status.DRAFT.convention
+    ), "Cannot finalise record that is not in DRAFT state!"
 
     # AnalysisRunId: can't be updated, has to match
     assert event.orcabusId == analysis_run_db.orcabus_id, "AnalysisRun IDs don't match!"
     # AnalysisRunName: can't be updated, has to match
-    assert event.analysisRunName == analysis_run_db.analysis_run_name, "AnalysisRun names do not match!"
+    assert (
+        event.analysisRunName == analysis_run_db.analysis_run_name
+    ), "AnalysisRun names do not match!"
 
     # Analysis: can't be updated, has to match if present
     analysis_aru: aru.Analysis = event.analysis
     if analysis_aru:
         if analysis_aru.orcabusId:
-            assert analysis_aru.orcabusId == analysis_run_db.analysis.orcabus_id, "Analysis IDs don't match!"
+            assert (
+                analysis_aru.orcabusId == analysis_run_db.analysis.orcabus_id
+            ), "Analysis IDs don't match!"
         if analysis_aru.name:
-            assert analysis_aru.name == analysis_run_db.analysis.analysis_name, "AnalysisNames don't match!"
+            assert (
+                analysis_aru.name == analysis_run_db.analysis.analysis_name
+            ), "AnalysisNames don't match!"
         if analysis_aru.version:
-            assert analysis_aru.version == analysis_run_db.analysis.analysis_version, "AnalysisVersions don't match!"
+            assert (
+                analysis_aru.version == analysis_run_db.analysis.analysis_version
+            ), "AnalysisVersions don't match!"
 
     # ComputeEnv / StorageEnv: mandatory, can be provided
     # if the same env is already set on the DB record, then nothing to do
@@ -179,25 +206,27 @@ def _finalise_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
     # It does not matter if the entry exists or not the value from the event takes precedence
     if event.computeEnv:
         compute_context: RunContext = RunContext.objects.get(
-            name=event.computeEnv,
-            usecase=RunContextUseCase.COMPUTE.value
+            name=event.computeEnv, usecase=RunContextUseCase.COMPUTE.value
         )  # name + usecase => unique
         analysis_run_db.contexts.add(compute_context)
 
     if event.storageEnv:
         storage_context: RunContext = RunContext.objects.get(
-            name=event.storageEnv,
-            usecase=RunContextUseCase.STORAGE.value
+            name=event.storageEnv, usecase=RunContextUseCase.STORAGE.value
         )  # name + usecase => unique
         analysis_run_db.contexts.add(storage_context)
 
     # Libraries: are mandatory, but cannot be changed
     # Readsets: are mandatory, but Readsets can be added (if not present yet)
-    assert len(event.libraries) == len(analysis_run_db.libraries.all()), "Libraries don't match!"
+    assert len(event.libraries) == len(
+        analysis_run_db.libraries.all()
+    ), "Libraries don't match!"
 
     # NOTE: Readsets on the event are attributes of a library.
     #       However, on the DB side they are directly linked to the AnalysisRun and not to the Library.
-    rss_db = set(analysis_run_db.readsets.all())  # keep track of all Readsets that are already attached
+    rss_db = set(
+        analysis_run_db.readsets.all()
+    )  # keep track of all Readsets that are already attached
     # Now check each library of the event and check the associated readsets whether they match the DB records
     logger.info("Finalising associated libraries")
     for l in event.libraries:
@@ -205,18 +234,26 @@ def _finalise_analysis_run(event: aru.AnalysisRunUpdate) -> AnalysisRun:
         lod = l.orcabusId
         # assert that the DB record has the according Library record linked
         # ensure orcabus_id and library_id of the library are mapped to the same record
-        assert analysis_run_db.libraries.get(library_id=lid) == analysis_run_db.libraries.get(orcabus_id=lod)
+        assert analysis_run_db.libraries.get(
+            library_id=lid
+        ) == analysis_run_db.libraries.get(orcabus_id=lod)
         rss = l.readsets
         for rs in rss:
             logger.info("Finalising associated readsets")
             if len(rss_db) > 0:
                 logger.info("Readsets exist.")
                 # check event readset against the DB readsets
-                rs_db: Readset = analysis_run_db.readsets.filter(orcabus_id=rs.orcabusId).first()
+                rs_db: Readset = analysis_run_db.readsets.filter(
+                    orcabus_id=rs.orcabusId
+                ).first()
                 if rs_db:
                     # if the readset exists already, make sure it's for the same library
-                    assert rs_db.library_orcabus_id == lod, "AnalysisRun Readset Library ID does not match!"
-                    assert rs_db.library_id == lid, "AnalysisRun Readset Library ID does not match!"
+                    assert (
+                        rs_db.library_orcabus_id == lod
+                    ), "AnalysisRun Readset Library ID does not match!"
+                    assert (
+                        rs_db.library_id == lid
+                    ), "AnalysisRun Readset Library ID does not match!"
                     rss_db.remove(rs_db)  # remove the readset from the tracker
             else:
                 # No readsets associated with the AnalysisRun DB record, create new Readset and link it to AnalysisRun
@@ -248,34 +285,35 @@ def _map_analysis_run_to_arsc(analysis_run: AnalysisRun) -> arsc.AnalysisRunStat
     for l in analysis_run.libraries.all():
         # create arsc library record
         library = arsc.Library(
-            orcabusId=l.orcabus_id,
-            libraryId=l.library_id,
-            readsets=None
+            orcabusId=l.orcabus_id, libraryId=l.library_id, readsets=None
         )
         # find all readsets of the run with the same library ids
-        rs_set = analysis_run.readsets.filter(library_id=l.library_id, library_orcabus_id=l.orcabus_id)
+        rs_set = analysis_run.readsets.filter(
+            library_id=l.library_id, library_orcabus_id=l.orcabus_id
+        )
         if rs_set.count() > 0:
             library.readsets = list()
         # create arsc readset records and add to the arsc library record
         for rs in rs_set:
-            library.readsets.append(arsc.Readset(
-                orcabusId=rs.orcabus_id,
-                rgid=rs.rgid
-            ))
+            library.readsets.append(arsc.Readset(orcabusId=rs.orcabus_id, rgid=rs.rgid))
         lib_list.append(library)
 
     current_state: AnalysisRunState = analysis_run.get_latest_state()
 
     # fetch the compute env if there is one
     compute_envs = analysis_run.contexts.filter(usecase=RunContextUseCase.COMPUTE.value)
-    assert compute_envs.count() <= 1, "Multiple Compute Envs are currently not supported!"
+    assert (
+        compute_envs.count() <= 1
+    ), "Multiple Compute Envs are currently not supported!"
     compute_env = None
     if compute_envs.count() == 1:
         compute_env = compute_envs.first().name
 
     # fetch the storage env if there is one
     storage_envs = analysis_run.contexts.filter(usecase=RunContextUseCase.STORAGE.value)
-    assert storage_envs.count() <= 1, "Multiple Storage Envs are currently not supported!"
+    assert (
+        storage_envs.count() <= 1
+    ), "Multiple Storage Envs are currently not supported!"
     storage_env = None
     if storage_envs.count() == 1:
         storage_env = storage_envs.first().name
@@ -290,7 +328,7 @@ def _map_analysis_run_to_arsc(analysis_run: AnalysisRun) -> arsc.AnalysisRunStat
         analysis=arsc.Analysis(
             orcabusId=analysis_run.analysis.orcabus_id,
             name=analysis_run.analysis.analysis_name,
-            version=analysis_run.analysis.analysis_version
+            version=analysis_run.analysis.analysis_version,
         ),
         libraries=lib_list,
         computeEnv=compute_env,
@@ -345,7 +383,9 @@ def get_arsc_hash(ar_state: arsc.AnalysisRunStateChange) -> str:
     return md5_object.hexdigest()
 
 
-def _create_workflow_runs_for_analysis_run(analysis_run: arsc.AnalysisRunStateChange) -> None:
+def _create_workflow_runs_for_analysis_run(
+    analysis_run: arsc.AnalysisRunStateChange,
+) -> None:
     """
     Create WorkflowRun records for the AnalysisRun based on its state transition to READY.
     Args:
@@ -353,7 +393,9 @@ def _create_workflow_runs_for_analysis_run(analysis_run: arsc.AnalysisRunStateCh
     Returns: None. Returns are handled internally via event emissions if/when required.
     """
     # assert we operate on the correct state
-    assert analysis_run.status.upper() == Status.READY.convention, "Expected READY state!"
+    assert (
+        analysis_run.status.upper() == Status.READY.convention
+    ), "Expected READY state!"
 
     # TODO: handle the case where we receive the same READY event multiple times
     #       (don't want to create WorkflowRun records twice).

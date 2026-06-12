@@ -18,12 +18,16 @@ class AnalysisRunState(OrcaBusBaseModel):
         unique_together = ["analysis_run", "status", "timestamp"]
 
     # --- mandatory fields
-    orcabus_id = OrcaBusIdField(primary_key=True, prefix='ars')
-    status = models.CharField(max_length=255)  # TODO: How and where to enforce conventions?
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix="ars")
+    status = models.CharField(
+        max_length=255
+    )  # TODO: How and where to enforce conventions?
     timestamp = models.DateTimeField()
     comment = models.CharField(max_length=255, null=True, blank=True)
 
-    analysis_run = models.ForeignKey(AnalysisRun, related_name='states', on_delete=models.CASCADE)
+    analysis_run = models.ForeignKey(
+        AnalysisRun, related_name="states", on_delete=models.CASCADE
+    )
 
     objects = AnalysisRunStateManager()
 

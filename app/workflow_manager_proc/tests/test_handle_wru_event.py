@@ -3,7 +3,14 @@ from unittest import mock
 
 from pydantic import ValidationError
 
-from workflow_manager.models import WorkflowRun, Workflow, Library, LibraryAssociation, State, Payload
+from workflow_manager.models import (
+    WorkflowRun,
+    Workflow,
+    Library,
+    LibraryAssociation,
+    State,
+    Payload,
+)
 from workflow_manager.tests.factories import WorkflowFactory
 from workflow_manager_proc.lambdas import handle_wru_event
 from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
@@ -31,7 +38,9 @@ class WruEventHandlerUnitTests(WorkflowManagerProcUnitTestCase):
             handle_wru_event.handler(self.mock_wrsc_legacy, None)
 
         except ValidationError as e:
-            logger.exception(f"THIS ERROR EXCEPTION IS INTENTIONAL FOR TEST. NOT ACTUAL ERROR. \n{e}")
+            logger.exception(
+                f"THIS ERROR EXCEPTION IS INTENTIONAL FOR TEST. NOT ACTUAL ERROR. \n{e}"
+            )
 
         self.assertRaises(ValidationError)
         self.assertEqual(Workflow.objects.count(), 0)

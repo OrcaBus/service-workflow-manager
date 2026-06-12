@@ -67,7 +67,9 @@ class WorkflowModelTests(TestCase):
             mock_wfl2.save()
 
         except ValidationError as e:
-            logger.exception(f"THIS ERROR EXCEPTION IS INTENTIONAL FOR TEST. NOT ACTUAL ERROR. \n{e}")
+            logger.exception(
+                f"THIS ERROR EXCEPTION IS INTENTIONAL FOR TEST. NOT ACTUAL ERROR. \n{e}"
+            )
 
         self.assertRaises(ValidationError)
 
@@ -76,9 +78,7 @@ class WorkflowModelTests(TestCase):
         python manage.py test workflow_manager.tests.test_models.WorkflowModelTests.test_save_library
         """
 
-        lib = Library(
-            library_id="L2400001"
-        )
+        lib = Library(library_id="L2400001")
         lib.save()
         logger.info(lib)
         self.assertEqual(1, Library.objects.count())
@@ -90,8 +90,7 @@ class WorkflowModelTests(TestCase):
         """
 
         lib = Library(
-            library_id="L2400001",
-            orcabus_id="lib.01J8ES4ZDRQAP2BN3SDYYV5PKW"
+            library_id="L2400001", orcabus_id="lib.01J8ES4ZDRQAP2BN3SDYYV5PKW"
         )
         lib.save()
         logger.info(lib)
@@ -105,9 +104,7 @@ class WorkflowModelTests(TestCase):
 
         lib1 = Library.objects.create(library_id="L2400001")
         lib2 = Library.objects.create(library_id="L2400002")
-        wfr = WorkflowRun.objects.create(
-            portal_run_id="99990101abcdefgh"
-        )
+        wfr = WorkflowRun.objects.create(portal_run_id="99990101abcdefgh")
         LibraryAssociation.objects.create(
             library=lib1,
             workflow_run=wfr,
@@ -196,7 +193,7 @@ class WorkflowModelTests(TestCase):
         rs = Readset.objects.create(
             rgid="CAGCAGTC+ACGCCAAC.4.999999_A00130_0999_BH7TVMDSX7",
             library_id="L2400001",
-            library_orcabus_id="lib.01J8ES4ZDRQAP2BN3SDYYV5PKW"
+            library_orcabus_id="lib.01J8ES4ZDRQAP2BN3SDYYV5PKW",
         )
         self.assertEqual(1, Readset.objects.count())
         self.assertTrue(rs.orcabus_id.startswith("fqr."))
@@ -215,7 +212,9 @@ class CommentModelTests(TestCase):
     def test_comment_requires_exactly_one_parent(self):
         """Comment must be linked to exactly one of workflow_run or analysis_run."""
         with self.assertRaises(ValidationError):
-            Comment(workflow_run=None, analysis_run=None, text="x", created_by="u").save()
+            Comment(
+                workflow_run=None, analysis_run=None, text="x", created_by="u"
+            ).save()
 
         with self.assertRaises(ValidationError):
             Comment(
@@ -242,8 +241,6 @@ class CommentModelTests(TestCase):
         self.assertIsNone(c.workflow_run)
 
     def test_comment_str(self):
-        c = Comment.objects.create(
-            workflow_run=self.wfr, text="hello", created_by="u"
-        )
+        c = Comment.objects.create(workflow_run=self.wfr, text="hello", created_by="u")
         self.assertIn("ID:", str(c))
         self.assertIn("hello", str(c))

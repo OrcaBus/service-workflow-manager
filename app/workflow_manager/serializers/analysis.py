@@ -44,9 +44,13 @@ class AnalysisListQueryParamSerializer(AnalysisListParamSerializer):
 
     class Meta(AnalysisListParamSerializer.Meta):
         fields = [
-            "orcabus_id", "analysis_name", "analysis_version", "description",
+            "orcabus_id",
+            "analysis_name",
+            "analysis_version",
+            "description",
             "status",
-            api_settings.SEARCH_PARAM, api_settings.ORDERING_PARAM,
+            api_settings.SEARCH_PARAM,
+            api_settings.ORDERING_PARAM,
         ]
 
 

@@ -22,12 +22,14 @@ class RunContext(OrcaBusBaseModel):
     class Meta:
         unique_together = ["name", "usecase"]
 
-    orcabus_id = OrcaBusIdField(primary_key=True, prefix='rnx')
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix="rnx")
     name = models.CharField(max_length=255)
     usecase = models.CharField(max_length=255, choices=RunContextUseCase)
 
     description = models.CharField(max_length=255, blank=True, null=True)
-    status = models.CharField(max_length=255, choices=RunContextStatus, default=RunContextStatus.ACTIVE)
+    status = models.CharField(
+        max_length=255, choices=RunContextStatus, default=RunContextStatus.ACTIVE
+    )
 
     objects = RunContextManager()
 

@@ -8,7 +8,10 @@ from workflow_manager.serializers.base import (
     OptionalFieldsMixin,
     OrcabusIdSerializerMetaMixin,
 )
-from .analysis_run_state import AnalysisRunStateMinSerializer, AnalysisRunStateSerializer
+from .analysis_run_state import (
+    AnalysisRunStateMinSerializer,
+    AnalysisRunStateSerializer,
+)
 
 
 class AnalysisRunBaseSerializer(SerializersBase):
@@ -17,10 +20,15 @@ class AnalysisRunBaseSerializer(SerializersBase):
     @extend_schema_field(AnalysisRunStateMinSerializer(allow_null=True))
     def get_current_state(self, obj):
         latest_state = obj.get_latest_state()
-        return AnalysisRunStateMinSerializer(latest_state).data if latest_state else None
+        return (
+            AnalysisRunStateMinSerializer(latest_state).data if latest_state else None
+        )
 
 
-class AnalysisRunListParamSerializer(OptionalFieldsMixin, AnalysisRunBaseSerializer, ):
+class AnalysisRunListParamSerializer(
+    OptionalFieldsMixin,
+    AnalysisRunBaseSerializer,
+):
     class Meta(OrcabusIdSerializerMetaMixin):
         model = AnalysisRun
         fields = "__all__"
@@ -65,9 +73,16 @@ class AnalysisRunListQueryParamSerializer(AnalysisRunListParamSerializer):
 
     class Meta(AnalysisRunListParamSerializer.Meta):
         fields = [
-            "orcabus_id", "analysis_run_name", "comment", "analysis",
-            "start_time", "end_time", "is_ongoing", "status",
-            api_settings.SEARCH_PARAM, api_settings.ORDERING_PARAM,
+            "orcabus_id",
+            "analysis_run_name",
+            "comment",
+            "analysis",
+            "start_time",
+            "end_time",
+            "is_ongoing",
+            "status",
+            api_settings.SEARCH_PARAM,
+            api_settings.ORDERING_PARAM,
         ]
 
 
@@ -85,6 +100,7 @@ class AnalysisRunSerializer(AnalysisRunBaseSerializer):
         model = AnalysisRun
         fields = "__all__"
 
+
 class AnalysisRunDetailSerializer(AnalysisRunBaseSerializer):
     from .library import LibrarySerializer
     from .analysis import AnalysisSerializer
@@ -101,7 +117,9 @@ class AnalysisRunDetailSerializer(AnalysisRunBaseSerializer):
     @extend_schema_field(AnalysisRunStateSerializer(many=True))
     def get_states(self, obj):
         all_states = obj.states.order_by("timestamp")
-        return AnalysisRunStateSerializer(all_states, many=True).data if all_states else []
+        return (
+            AnalysisRunStateSerializer(all_states, many=True).data if all_states else []
+        )
 
     class Meta(OrcabusIdSerializerMetaMixin):
         model = AnalysisRun

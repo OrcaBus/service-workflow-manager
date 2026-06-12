@@ -4,8 +4,17 @@ from unittest import mock
 from django.utils import timezone
 from mockito import when, unstub
 
-from workflow_manager.models import Workflow, WorkflowRun, Library, LibraryAssociation, State, Payload, AnalysisRun, \
-    Readset, RunContext
+from workflow_manager.models import (
+    Workflow,
+    WorkflowRun,
+    Library,
+    LibraryAssociation,
+    State,
+    Payload,
+    AnalysisRun,
+    Readset,
+    RunContext,
+)
 from workflow_manager.models.run_context import RunContextUseCase
 from workflow_manager.tests.factories import WorkflowRunFactory, WorkflowFactory
 from workflow_manager_proc.domain.event import wrsc
@@ -67,7 +76,7 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.load_mock_wru_max()
 
         # Temporary override the event status to simulate the second DRAFT
-        self.mock_wru_max.status = 'DRAFT'
+        self.mock_wru_max.status = "DRAFT"
         self.mock_wru_max.timestamp = timezone.now()
         self.mock_wru_max.payload.refId = None
 
@@ -87,7 +96,7 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.load_mock_wru_max()
 
         # Temporary override the event to simulate the third (simply repeating / duplicate) DRAFT
-        self.mock_wru_max.status = 'DRAFT'
+        self.mock_wru_max.status = "DRAFT"
         self.mock_wru_max.timestamp = timezone.now()
         self.mock_wru_max.payload.refId = None
 
@@ -144,8 +153,12 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         # Second event: same portalRunId (both fixtures share "202405012397gatc"), with executionId
         self.load_mock_wru_max()
-        self.mock_wru_max.status = 'DRAFT'  # same status — stays in except branch, hits null-to-value guard
-        self.mock_wru_max.timestamp = timezone.now()  # ensure timestamp is after first event so state transition succeeds
+        self.mock_wru_max.status = (
+            "DRAFT"  # same status — stays in except branch, hits null-to-value guard
+        )
+        self.mock_wru_max.timestamp = (
+            timezone.now()
+        )  # ensure timestamp is after first event so state transition succeeds
         result = workflow_run.create_workflow_run(self.mock_wru_max)
         self.assertIsNotNone(result)
         self.assertEqual(WorkflowRun.objects.count(), 1)
@@ -201,7 +214,9 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         """
         _ = WorkflowFactory()
         self.load_mock_wru_min()
-        when(workflow_run).update_workflow_run_to_new_state(...).thenReturn((False, "DOES_NOT_MATTER"))
+        when(workflow_run).update_workflow_run_to_new_state(...).thenReturn(
+            (False, "DOES_NOT_MATTER")
+        )
         out_wrsc = workflow_run.create_workflow_run(self.mock_wru_min)
         self.assertIsNone(out_wrsc)
         self.assertEqual(Workflow.objects.count(), 1)
@@ -235,14 +250,20 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         wfl_persisted_in_db = workflow_run.get_workflow(self.mock_wru_max)
 
-        wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(self.mock_wru_max, wfl_persisted_in_db)
+        wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(
+            self.mock_wru_max, wfl_persisted_in_db
+        )
         logger.info(wfr_persisted_in_db)
         self.assertEqual(WorkflowRun.objects.count(), 1)
 
         # Try the second time. The workflow run db lookup should be found the existing record.
-        wfr_persisted_in_db2 = workflow_run.create_or_get_workflow_run(self.mock_wru_max, wfl_persisted_in_db)
+        wfr_persisted_in_db2 = workflow_run.create_or_get_workflow_run(
+            self.mock_wru_max, wfl_persisted_in_db
+        )
         logger.info(wfr_persisted_in_db2)
-        self.assertEqual(wfr_persisted_in_db.orcabus_id, wfr_persisted_in_db2.orcabus_id)
+        self.assertEqual(
+            wfr_persisted_in_db.orcabus_id, wfr_persisted_in_db2.orcabus_id
+        )
         self.assertEqual(WorkflowRun.objects.count(), 1)
 
         # Verify related entities are created
@@ -279,12 +300,10 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         # add pre-existing libraries
         l1 = Library.objects.create(
-            library_id="L000001",
-            orcabus_id="01J5M2J44HFJ9424G7074NKTGN"
+            library_id="L000001", orcabus_id="01J5M2J44HFJ9424G7074NKTGN"
         )
         l2 = Library.objects.create(
-            library_id="L000002",
-            orcabus_id="01J5M2JFE1JPYV62RYQEG99CP5"
+            library_id="L000002", orcabus_id="01J5M2JFE1JPYV62RYQEG99CP5"
         )
         self.assertEqual(Library.objects.count(), 2)
         logger.info(l1)
@@ -341,24 +360,22 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         # Create libraries and link to workflow run
         l1 = Library.objects.create(
-            library_id="L000001",
-            orcabus_id="01J5M2J44HFJ9424G7074NKTGN"
+            library_id="L000001", orcabus_id="01J5M2J44HFJ9424G7074NKTGN"
         )
         l2 = Library.objects.create(
-            library_id="L000002",
-            orcabus_id="01J5M2JFE1JPYV62RYQEG99CP5"
+            library_id="L000002", orcabus_id="01J5M2JFE1JPYV62RYQEG99CP5"
         )
         LibraryAssociation.objects.create(
             workflow_run=mock_wfr,
             library=l1,
             association_date=timezone.now(),
-            status="ACTIVE"
+            status="ACTIVE",
         )
         LibraryAssociation.objects.create(
             workflow_run=mock_wfr,
             library=l2,
             association_date=timezone.now(),
-            status="ACTIVE"
+            status="ACTIVE",
         )
 
         # Assert pre condition
@@ -420,24 +437,22 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         # Create _differing_ libraries and link to workflow run
         l1 = Library.objects.create(
-            library_id="L900001",
-            orcabus_id="09J5M2J44HFJ9424G7074NKTGN"
+            library_id="L900001", orcabus_id="09J5M2J44HFJ9424G7074NKTGN"
         )
         l2 = Library.objects.create(
-            library_id="L900002",
-            orcabus_id="09J5M2JFE1JPYV62RYQEG99CP5"
+            library_id="L900002", orcabus_id="09J5M2JFE1JPYV62RYQEG99CP5"
         )
         LibraryAssociation.objects.create(
             workflow_run=mock_wfr,
             library=l1,
             association_date=timezone.now(),
-            status="ACTIVE"
+            status="ACTIVE",
         )
         LibraryAssociation.objects.create(
             workflow_run=mock_wfr,
             library=l2,
             association_date=timezone.now(),
-            status="ACTIVE"
+            status="ACTIVE",
         )
 
         # Assert pre condition
@@ -504,20 +519,28 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         # First create wfr with min fixture DRAFT state
         wfl_persisted_in_db = workflow_run.get_workflow(self.mock_wru_min)
-        wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(self.mock_wru_min, wfl_persisted_in_db)
+        wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(
+            self.mock_wru_min, wfl_persisted_in_db
+        )
 
-        success, state = workflow_run.update_workflow_run_to_new_state(self.mock_wru_min, wfr_persisted_in_db)
+        success, state = workflow_run.update_workflow_run_to_new_state(
+            self.mock_wru_min, wfr_persisted_in_db
+        )
         logger.info(state)
         self.assertTrue(success)
-        self.assertEqual(state.status, 'DRAFT')
+        self.assertEqual(state.status, "DRAFT")
 
         # Now try to update the state with max fixture
         self.load_mock_wru_max()
-        self.mock_wru_max.timestamp = None  # reset WRU fixture timestamp so that it can advance to next state
-        success, state = workflow_run.update_workflow_run_to_new_state(self.mock_wru_max, wfr_persisted_in_db)
+        self.mock_wru_max.timestamp = (
+            None  # reset WRU fixture timestamp so that it can advance to next state
+        )
+        success, state = workflow_run.update_workflow_run_to_new_state(
+            self.mock_wru_max, wfr_persisted_in_db
+        )
         logger.info(state)
         self.assertTrue(success)
-        self.assertEqual(state.status, 'READY')
+        self.assertEqual(state.status, "READY")
 
         # Verify related entities are created
         self.assertEqual(State.objects.count(), 2)
@@ -532,19 +555,26 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         # First create wfr with min fixture DRAFT state
         wfl_persisted_in_db = workflow_run.get_workflow(self.mock_wru_max)
-        wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(self.mock_wru_max, wfl_persisted_in_db)
+        wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(
+            self.mock_wru_max, wfl_persisted_in_db
+        )
 
-        success, state = workflow_run.update_workflow_run_to_new_state(self.mock_wru_max, wfr_persisted_in_db)
+        success, state = workflow_run.update_workflow_run_to_new_state(
+            self.mock_wru_max, wfr_persisted_in_db
+        )
         logger.info(state)
 
         self.assertTrue(success)
-        self.assertEqual(state.status, 'READY')
+        self.assertEqual(state.status, "READY")
 
         # Verify related entities are created
         self.assertEqual(State.objects.count(), 1)
         self.assertEqual(Payload.objects.count(), 1)
 
-        self.assertNotEqual(Payload.objects.first().payload_ref_id, '99995678-238c-4200-b632-d5dd8c8db94a')
+        self.assertNotEqual(
+            Payload.objects.first().payload_ref_id,
+            "99995678-238c-4200-b632-d5dd8c8db94a",
+        )
 
     def test_update_workflow_run_to_new_state_without_ref_id(self):
         """
@@ -558,13 +588,17 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         # First create wfr with min fixture DRAFT state
         wfl_persisted_in_db = workflow_run.get_workflow(self.mock_wru_max)
-        wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(self.mock_wru_max, wfl_persisted_in_db)
+        wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(
+            self.mock_wru_max, wfl_persisted_in_db
+        )
 
-        success, state = workflow_run.update_workflow_run_to_new_state(self.mock_wru_max, wfr_persisted_in_db)
+        success, state = workflow_run.update_workflow_run_to_new_state(
+            self.mock_wru_max, wfr_persisted_in_db
+        )
         logger.info(state)
 
         self.assertTrue(success)
-        self.assertEqual(state.status, 'READY')
+        self.assertEqual(state.status, "READY")
 
         # Verify related entities are created
         self.assertEqual(State.objects.count(), 1)
@@ -572,7 +606,10 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         logger.info(Payload.objects.first().payload_ref_id)
 
-        self.assertNotEqual(Payload.objects.first().payload_ref_id, '99995678-238c-4200-b632-d5dd8c8db94a')
+        self.assertNotEqual(
+            Payload.objects.first().payload_ref_id,
+            "99995678-238c-4200-b632-d5dd8c8db94a",
+        )
 
     def test_map_workflow_run_new_state_to_wrsc(self):
         """
@@ -581,17 +618,21 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         _ = WorkflowFactory()
         self.load_mock_wru_max()
         wfl_persisted_in_db = workflow_run.get_workflow(self.mock_wru_max)
-        wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(self.mock_wru_max, wfl_persisted_in_db)
-
-        anr = AnalysisRun.objects.create(
-            analysis_run_name="wgts-dna"
+        wfr_persisted_in_db = workflow_run.create_or_get_workflow_run(
+            self.mock_wru_max, wfl_persisted_in_db
         )
+
+        anr = AnalysisRun.objects.create(analysis_run_name="wgts-dna")
         wfr_persisted_in_db.analysis_run = anr
         wfr_persisted_in_db.save()
 
-        success, new_state = workflow_run.update_workflow_run_to_new_state(self.mock_wru_max, wfr_persisted_in_db)
+        success, new_state = workflow_run.update_workflow_run_to_new_state(
+            self.mock_wru_max, wfr_persisted_in_db
+        )
 
-        out_wrsc = workflow_run.map_workflow_run_new_state_to_wrsc(wfr_persisted_in_db, new_state)
+        out_wrsc = workflow_run.map_workflow_run_new_state_to_wrsc(
+            wfr_persisted_in_db, new_state
+        )
         logger.info(out_wrsc.model_dump_json())
 
         validated_out_wrsc = wrsc.WorkflowRunStateChange.model_validate(out_wrsc)
@@ -718,7 +759,6 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(State.objects.count(), 2)
         self.assertEqual(Payload.objects.count(), 1)
 
-
         # Third WorkflowRun in DRAFT state, with the same Payload content, but a different version.
         logger.info("3. WRU")
         self.load_mock_wru_draft_2()
@@ -726,7 +766,6 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.mock_wru_draft_2.workflowRunName = "TestWorkflowRunNo3"
         self.mock_wru_draft_2.portalRunId = "302405012397xxxx"
         self.mock_wru_draft_2.payload.version = "0.1.1"
-
 
         print("-" * 128)
 

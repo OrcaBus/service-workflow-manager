@@ -29,7 +29,7 @@ class Workflow(OrcaBusBaseModel):
         # a combo of this gives us human-readable pipeline id
         unique_together = ["name", "version", "code_version", "execution_engine"]
 
-    orcabus_id = OrcaBusIdField(primary_key=True, prefix='wfl')
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix="wfl")
     name = models.CharField(max_length=255)
     version = models.CharField(max_length=255)
     # See https://github.com/OrcaBus/service-workflow-manager/issues/95
@@ -45,7 +45,9 @@ class Workflow(OrcaBusBaseModel):
     # - deprecated
     # - failed (validation) - although those should probably never be used and deleted directly
     # e.g. support testing in production, so unvalidated workflows are not used
-    validation_state = models.CharField(max_length=255, choices=ValidationState, default=ValidationState.UNVALIDATED)
+    validation_state = models.CharField(
+        max_length=255, choices=ValidationState, default=ValidationState.UNVALIDATED
+    )
 
     objects = WorkflowManager()
 

@@ -17,8 +17,13 @@ class WorkflowManagerProcUnitTestCase(TestCase):
 
     def setUp(self) -> None:
         # Mock boto3 client
-        self.events_client = botocore.session.get_session().create_client('events', region_name='ap-southeast-2')
-        self.boto3_patcher = patch('workflow_manager_proc.services.event_utils.client', return_value=self.events_client)
+        self.events_client = botocore.session.get_session().create_client(
+            "events", region_name="ap-southeast-2"
+        )
+        self.boto3_patcher = patch(
+            "workflow_manager_proc.services.event_utils.client",
+            return_value=self.events_client,
+        )
         self.mock_boto3 = self.boto3_patcher.start()
         self.mock_events = self.mock_boto3.return_value
         self.events_client_stubber = Stubber(self.events_client)
@@ -81,6 +86,7 @@ class WorkflowManagerProcUnitTestCase(TestCase):
         self.load_mock_file(rel_path="fixtures/WRU_draft_2.json")
         mock_obj_with_envelope: wru.AWSEvent = wru.AWSEvent.model_validate(self.event)
         self.mock_wru_draft_2: wru.WorkflowRunUpdate = mock_obj_with_envelope.detail
+
 
 class WorkflowManagerProcIntegrationTestCase(TestCase):
     pass

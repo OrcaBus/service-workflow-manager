@@ -19,12 +19,14 @@ class Analysis(OrcaBusBaseModel):
     class Meta:
         unique_together = ["analysis_name", "analysis_version"]
 
-    orcabus_id = OrcaBusIdField(primary_key=True, prefix='ana')
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix="ana")
     analysis_name = models.CharField(max_length=255)
     analysis_version = models.CharField(max_length=255)
 
     description = models.CharField(max_length=255, blank=True, null=True)
-    status = models.CharField(max_length=255, choices=AnalysisStatus, default=AnalysisStatus.ACTIVE)
+    status = models.CharField(
+        max_length=255, choices=AnalysisStatus, default=AnalysisStatus.ACTIVE
+    )
 
     # relationships
     contexts = models.ManyToManyField(AnalysisContext)

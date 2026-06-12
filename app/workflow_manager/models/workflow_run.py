@@ -14,7 +14,7 @@ class WorkflowRunManager(OrcaBusBaseManager):
 
 
 class WorkflowRun(OrcaBusBaseModel):
-    orcabus_id = OrcaBusIdField(primary_key=True, prefix='wfr')
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix="wfr")
     portal_run_id = models.CharField(max_length=255, unique=True)
 
     execution_id = models.CharField(max_length=255, null=True, blank=True)
@@ -22,8 +22,12 @@ class WorkflowRun(OrcaBusBaseModel):
     comment = models.CharField(max_length=255, null=True, blank=True)
 
     # Relationships
-    workflow = models.ForeignKey(Workflow, null=True, blank=True, on_delete=models.SET_NULL)
-    analysis_run = models.ForeignKey(AnalysisRun, null=True, blank=True, on_delete=models.SET_NULL)
+    workflow = models.ForeignKey(
+        Workflow, null=True, blank=True, on_delete=models.SET_NULL
+    )
+    analysis_run = models.ForeignKey(
+        AnalysisRun, null=True, blank=True, on_delete=models.SET_NULL
+    )
     libraries = models.ManyToManyField(Library, through="LibraryAssociation")
     contexts = models.ManyToManyField(RunContext)
     readsets = models.ManyToManyField(Readset)
@@ -39,7 +43,7 @@ class WorkflowRun(OrcaBusBaseModel):
 
     def get_latest_state(self):
         # retrieve all related states and get the latest one
-        return self.states.order_by('-timestamp', '-orcabus_id').first()
+        return self.states.order_by("-timestamp", "-orcabus_id").first()
 
 
 class LibraryAssociationManager(OrcaBusBaseManager):

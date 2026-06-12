@@ -2,7 +2,10 @@ from django.test import TestCase
 
 from workflow_manager.models import Analysis
 from workflow_manager.models.analysis import AnalysisStatus
-from workflow_manager.models.analysis_context import AnalysisContext, AnalysisContextUseCase
+from workflow_manager.models.analysis_context import (
+    AnalysisContext,
+    AnalysisContextUseCase,
+)
 from workflow_manager.models.workflow import Workflow
 from workflow_manager.tests.fixtures.sim_analysis import TestData
 from workflow_manager.urls.base import api_base

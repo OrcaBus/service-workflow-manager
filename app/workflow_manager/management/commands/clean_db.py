@@ -9,7 +9,7 @@ from workflow_manager.models import (
     LibraryAssociation,
     Analysis,
     AnalysisRun,
-    AnalysisContext
+    AnalysisContext,
 )
 
 

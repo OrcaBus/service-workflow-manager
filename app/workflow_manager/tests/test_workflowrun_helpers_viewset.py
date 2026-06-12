@@ -1,6 +1,10 @@
 from django.test import TestCase
 
-from workflow_manager.viewsets.utils import build_keyword_params, parse_datetime_safe, validate_ordering
+from workflow_manager.viewsets.utils import (
+    build_keyword_params,
+    parse_datetime_safe,
+    validate_ordering,
+)
 from workflow_manager.viewsets.workflow_run import ALLOWED_ORDER_FIELDS
 
 
@@ -36,9 +40,15 @@ class WorkflowRunViewSetHelpersTestCase(TestCase):
         self.assertIsNone(parse_datetime_safe(123))
 
     def test_validate_ordering_valid(self):
-        self.assertEqual(validate_ordering("orcabus_id", ALLOWED_ORDER_FIELDS), "orcabus_id")
-        self.assertEqual(validate_ordering("-orcabus_id", ALLOWED_ORDER_FIELDS), "-orcabus_id")
-        self.assertEqual(validate_ordering("  orcabus_id  ", ALLOWED_ORDER_FIELDS), "orcabus_id")
+        self.assertEqual(
+            validate_ordering("orcabus_id", ALLOWED_ORDER_FIELDS), "orcabus_id"
+        )
+        self.assertEqual(
+            validate_ordering("-orcabus_id", ALLOWED_ORDER_FIELDS), "-orcabus_id"
+        )
+        self.assertEqual(
+            validate_ordering("  orcabus_id  ", ALLOWED_ORDER_FIELDS), "orcabus_id"
+        )
 
     def test_validate_ordering_invalid_returns_none(self):
         self.assertIsNone(validate_ordering("", ALLOWED_ORDER_FIELDS))

@@ -66,5 +66,5 @@ class AWSEvent(BaseModel):
     time: AwareDatetime | None = None
     version: str | None = None
     account: str | None = None
-    detail_type: str = Field(..., alias='detail-type')
+    detail_type: str = Field(..., alias="detail-type")
     detail: WorkflowRunUpdate

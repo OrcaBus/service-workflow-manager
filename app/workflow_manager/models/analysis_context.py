@@ -22,12 +22,16 @@ class AnalysisContext(OrcaBusBaseModel):
     class Meta:
         unique_together = ["name", "usecase"]
 
-    orcabus_id = OrcaBusIdField(primary_key=True, prefix='anx')
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix="anx")
     name = models.CharField(max_length=255)
     usecase = models.CharField(max_length=255, choices=AnalysisContextUseCase)
 
     description = models.CharField(max_length=255, blank=True, null=True)
-    status = models.CharField(max_length=255, choices=AnalysisContextStatus, default=AnalysisContextStatus.ACTIVE)
+    status = models.CharField(
+        max_length=255,
+        choices=AnalysisContextStatus,
+        default=AnalysisContextStatus.ACTIVE,
+    )
 
     objects = AnalysisContextManager()
 

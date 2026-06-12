@@ -4,6 +4,7 @@
 Usage:
 - export DJANGO_SETTINGS_MODULE=workflow_manager.settings.aws
 """
+
 import copy
 import logging
 
@@ -21,12 +22,12 @@ DATABASES = {
         "HOST": PG_HOST,
         "USER": PG_USER,
         "NAME": PG_DB_NAME,
-        "ENGINE": 'django_iam_dbauth.aws.postgresql',
+        "ENGINE": "django_iam_dbauth.aws.postgresql",
         "OPTIONS": {
             "use_iam_auth": True,
             "sslmode": "require",
             "resolve_cname_enabled": False,
-        }
+        },
     }
 }
 

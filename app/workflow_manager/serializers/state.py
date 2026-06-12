@@ -33,7 +33,6 @@ class StateCreateRequestSerializer(serializers.Serializer):
     comment = serializers.CharField(required=True, allow_blank=False)
 
 
-
 class StateUpdateRequestSerializer(serializers.Serializer):
     """
     Schema contract for PATCH /state/{id}.

@@ -113,7 +113,9 @@ class PayloadHashUnitTestCase(TestCase):
         json_2_hash = hash_payload_data(json.loads(json_2))
         json_3_hash = hash_payload_data(json.loads(json_3))
 
-        self.assertTrue(json_1_hash == json_2_hash == json_3_hash, "Hashes to not match!")
+        self.assertTrue(
+            json_1_hash == json_2_hash == json_3_hash, "Hashes to not match!"
+        )
 
     def test_arrays(self) -> None:
         """

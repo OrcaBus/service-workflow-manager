@@ -1,7 +1,11 @@
-from workflow_manager.serializers.base import SerializersBase, OrcabusIdSerializerMetaMixin
+from workflow_manager.serializers.base import (
+    SerializersBase,
+    OrcabusIdSerializerMetaMixin,
+)
 from workflow_manager.models import Comment
 from workflow_manager.models.comment import CommentSeverity
 from rest_framework import serializers
+
 
 class CommentCreateRequestSerializer(serializers.Serializer):
     """Request body for POST .../comment/ (OpenAPI + validation)."""
@@ -13,6 +17,7 @@ class CommentCreateRequestSerializer(serializers.Serializer):
         required=False,
         help_text="Optional; defaults to INFO.",
     )
+
 
 class CommentUpdateRequestSerializer(serializers.Serializer):
     """Request body for PATCH .../comment/{id}/ (OpenAPI + validation)."""
@@ -53,6 +58,7 @@ class CommentMinSerializer(CommentBaseSerializer):
 
 class CommentSerializer(CommentBaseSerializer):
     is_deleted = serializers.BooleanField(required=False, default=False)
+
     class Meta(OrcabusIdSerializerMetaMixin):
         model = Comment
         fields = "__all__"

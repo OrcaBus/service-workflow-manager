@@ -13,7 +13,7 @@ class Payload(OrcaBusBaseModel):
     class Meta:
         unique_together = ["payload_ref_id", "version"]
 
-    orcabus_id = OrcaBusIdField(primary_key=True, prefix='pld')
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix="pld")
     payload_ref_id = models.CharField(max_length=255)
     version = models.CharField(max_length=255)
     data = models.JSONField(encoder=DjangoJSONEncoder)

@@ -29,12 +29,23 @@ class StatsViewSetTestCase(TestCase):
         data = response.json()
         self.assertEqual(
             set(data.keys()),
-            {"all", "succeeded", "aborted", "failed", "resolved", "deprecated", "draft", "ongoing"},
+            {
+                "all",
+                "succeeded",
+                "aborted",
+                "failed",
+                "resolved",
+                "deprecated",
+                "draft",
+                "ongoing",
+            },
         )
         self.assertGreaterEqual(data["all"], 1)
 
     def test_workflow_run_status_counts_includes_draft_bucket(self):
-        before = self.client.get(f"{self.base_endpoint}/workflow_run/status_counts/").json()
+        before = self.client.get(
+            f"{self.base_endpoint}/workflow_run/status_counts/"
+        ).json()
 
         wfr = WorkflowRunFactory(
             workflow=self.wf,
@@ -47,13 +58,17 @@ class StatsViewSetTestCase(TestCase):
             workflow_run=wfr,
         )
 
-        after = self.client.get(f"{self.base_endpoint}/workflow_run/status_counts/").json()
+        after = self.client.get(
+            f"{self.base_endpoint}/workflow_run/status_counts/"
+        ).json()
         self.assertEqual(after["all"], before["all"] + 1)
         self.assertEqual(after["draft"], before.get("draft", 0) + 1)
 
     def test_workflow_run_status_counts_not_inflated_by_same_timestamp_states(self):
         """Two State rows at the same timestamp must count as one run (tie-break by PK)."""
-        before = self.client.get(f"{self.base_endpoint}/workflow_run/status_counts/").json()
+        before = self.client.get(
+            f"{self.base_endpoint}/workflow_run/status_counts/"
+        ).json()
 
         ts = make_aware(datetime(2024, 6, 15, 10, 0, 0))
         id_lo, id_hi = ulid.new().str, ulid.new().str
@@ -80,7 +95,9 @@ class StatsViewSetTestCase(TestCase):
             workflow_run=wfr,
         )
 
-        after = self.client.get(f"{self.base_endpoint}/workflow_run/status_counts/").json()
+        after = self.client.get(
+            f"{self.base_endpoint}/workflow_run/status_counts/"
+        ).json()
 
         self.assertEqual(after["all"], before["all"] + 1)
         self.assertEqual(after["succeeded"], before["succeeded"] + 1)
@@ -88,7 +105,9 @@ class StatsViewSetTestCase(TestCase):
 
     def test_analysis_run_status_counts_not_inflated_by_same_timestamp_states(self):
         """Two AnalysisRunState rows at the same timestamp must count as one run."""
-        before = self.client.get(f"{self.base_endpoint}/analysis_run/status_counts/").json()
+        before = self.client.get(
+            f"{self.base_endpoint}/analysis_run/status_counts/"
+        ).json()
 
         ts = make_aware(datetime(2024, 6, 15, 11, 0, 0))
         id_lo, id_hi = ulid.new().str, ulid.new().str
@@ -114,7 +133,9 @@ class StatsViewSetTestCase(TestCase):
             analysis_run=anr,
         )
 
-        after = self.client.get(f"{self.base_endpoint}/analysis_run/status_counts/").json()
+        after = self.client.get(
+            f"{self.base_endpoint}/analysis_run/status_counts/"
+        ).json()
 
         self.assertEqual(after["all"], before["all"] + 1)
         self.assertEqual(after["succeeded"], before["succeeded"] + 1)
@@ -126,7 +147,15 @@ class StatsViewSetTestCase(TestCase):
         data = response.json()
         self.assertEqual(
             set(data.keys()),
-            {"all", "succeeded", "aborted", "failed", "resolved", "deprecated", "ongoing"},
+            {
+                "all",
+                "succeeded",
+                "aborted",
+                "failed",
+                "resolved",
+                "deprecated",
+                "ongoing",
+            },
         )
 
     def test_analysis_run_status_counts_supports_is_ongoing_filter(self):
@@ -183,7 +212,9 @@ class StatsViewSetTestCase(TestCase):
         self.assertIn("inactive", data)
 
     def test_grouped_workflow_status_counts_returns_200(self):
-        response = self.client.get(f"{self.base_endpoint}/grouped_workflow/status_counts/")
+        response = self.client.get(
+            f"{self.base_endpoint}/grouped_workflow/status_counts/"
+        )
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(
@@ -196,7 +227,9 @@ class StatsViewSetTestCase(TestCase):
         from workflow_manager.models.workflow import ExecutionEngine, ValidationState
 
         name = f"wfm_stats_group_{uuid.uuid4().hex[:16]}"
-        before = self.client.get(f"{self.base_endpoint}/grouped_workflow/status_counts/").json()
+        before = self.client.get(
+            f"{self.base_endpoint}/grouped_workflow/status_counts/"
+        ).json()
 
         Workflow.objects.create(
             name=name,
@@ -213,7 +246,9 @@ class StatsViewSetTestCase(TestCase):
             validation_state=ValidationState.VALIDATED,
         )
 
-        after = self.client.get(f"{self.base_endpoint}/grouped_workflow/status_counts/").json()
+        after = self.client.get(
+            f"{self.base_endpoint}/grouped_workflow/status_counts/"
+        ).json()
 
         self.assertEqual(after["all"], before["all"] + 1)
         self.assertEqual(after["validated"], before["validated"] + 1)
@@ -227,7 +262,9 @@ class StatsViewSetTestCase(TestCase):
         from workflow_manager.models.workflow import ExecutionEngine, ValidationState
 
         name = f"wfm_stats_semver_{uuid.uuid4().hex[:16]}"
-        before = self.client.get(f"{self.base_endpoint}/grouped_workflow/status_counts/").json()
+        before = self.client.get(
+            f"{self.base_endpoint}/grouped_workflow/status_counts/"
+        ).json()
 
         # Created first → lower ULID
         Workflow.objects.create(
@@ -246,7 +283,9 @@ class StatsViewSetTestCase(TestCase):
             validation_state=ValidationState.UNVALIDATED,
         )
 
-        after = self.client.get(f"{self.base_endpoint}/grouped_workflow/status_counts/").json()
+        after = self.client.get(
+            f"{self.base_endpoint}/grouped_workflow/status_counts/"
+        ).json()
 
         # v0.7.0 (VALIDATED) should be picked, not v0.6.1 (UNVALIDATED)
         self.assertEqual(after["all"], before["all"] + 1)
@@ -258,7 +297,9 @@ class StatsViewSetTestCase(TestCase):
         from workflow_manager.models.workflow import ExecutionEngine, ValidationState
 
         base_name = f"wfm_case_{uuid.uuid4().hex[:16]}"
-        before = self.client.get(f"{self.base_endpoint}/grouped_workflow/status_counts/").json()
+        before = self.client.get(
+            f"{self.base_endpoint}/grouped_workflow/status_counts/"
+        ).json()
 
         Workflow.objects.create(
             name=base_name.upper(),
@@ -282,7 +323,9 @@ class StatsViewSetTestCase(TestCase):
             validation_state=ValidationState.DEPRECATED,
         )
 
-        after = self.client.get(f"{self.base_endpoint}/grouped_workflow/status_counts/").json()
+        after = self.client.get(
+            f"{self.base_endpoint}/grouped_workflow/status_counts/"
+        ).json()
 
         # All three case variants should merge into one group; latest is v1.0.0 (VALIDATED)
         self.assertEqual(after["all"], before["all"] + 1)
@@ -314,7 +357,9 @@ class StatsViewSetTestCase(TestCase):
             workflow_run=wfr,
         )
 
-        stats = self.client.get(f"{self.base_endpoint}/workflow_run/status_counts/").json()
+        stats = self.client.get(
+            f"{self.base_endpoint}/workflow_run/status_counts/"
+        ).json()
         list_resp = self.client.get(f"/{api_base}workflowrun/", {"status": "resolved"})
 
         list_count = list_resp.json()["pagination"]["count"]
@@ -325,7 +370,9 @@ class StatsViewSetTestCase(TestCase):
         from workflow_manager.models.workflow import ExecutionEngine, ValidationState
 
         name = f"wfm_nonsemver_{uuid.uuid4().hex[:16]}"
-        before = self.client.get(f"{self.base_endpoint}/grouped_workflow/status_counts/").json()
+        before = self.client.get(
+            f"{self.base_endpoint}/grouped_workflow/status_counts/"
+        ).json()
 
         # Non-semver version that would cause CAST errors if not guarded
         Workflow.objects.create(
@@ -344,7 +391,9 @@ class StatsViewSetTestCase(TestCase):
             validation_state=ValidationState.VALIDATED,
         )
 
-        after = self.client.get(f"{self.base_endpoint}/grouped_workflow/status_counts/").json()
+        after = self.client.get(
+            f"{self.base_endpoint}/grouped_workflow/status_counts/"
+        ).json()
 
         # v0.1.0 (VALIDATED) beats "1--1.2.3" (treated as (0,0,0))
         self.assertEqual(after["all"], before["all"] + 1)

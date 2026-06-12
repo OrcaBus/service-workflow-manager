@@ -3,7 +3,11 @@ from rest_framework import serializers
 from rest_framework.settings import api_settings
 
 from workflow_manager.models import Workflow, ValidationState
-from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin, OrcabusIdSerializerMetaMixin
+from workflow_manager.serializers.base import (
+    SerializersBase,
+    OptionalFieldsMixin,
+    OrcabusIdSerializerMetaMixin,
+)
 
 
 class WorkflowBaseSerializer(SerializersBase):
@@ -78,10 +82,15 @@ class WorkflowListQueryParamSerializer(WorkflowListParamSerializer):
 
     class Meta(WorkflowListParamSerializer.Meta):
         fields = [
-            "orcabus_id", "name", "version", "code_version",
-            "execution_engine", "execution_engine_pipeline_id",
+            "orcabus_id",
+            "name",
+            "version",
+            "code_version",
+            "execution_engine",
+            "execution_engine_pipeline_id",
             "status",
-            api_settings.SEARCH_PARAM, api_settings.ORDERING_PARAM,
+            api_settings.SEARCH_PARAM,
+            api_settings.ORDERING_PARAM,
         ]
 
 

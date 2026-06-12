@@ -65,20 +65,31 @@ class WorkflowRunUtil:
         # TODO: consider race conditions?
         """
         # enforce status conventions on new state
-        new_state.status = Status.get_convention(new_state.status)  # TODO: encapsulate into State ?!
+        new_state.status = Status.get_convention(
+            new_state.status
+        )  # TODO: encapsulate into State ?!
 
-        logger.debug(f"Transitioning WorkflowRun {self.workflow_run.orcabus_id} from: {self.get_current_state() if self.get_current_state() else 'None'} to: {new_state.status}")
+        logger.debug(
+            f"Transitioning WorkflowRun {self.workflow_run.orcabus_id} from: {self.get_current_state() if self.get_current_state() else 'None'} to: {new_state.status}"
+        )
 
         # Check that new state is actually different from current state
         # The hash of new state should be different from current state to avoid duplicates (e.g. due to retries)
         new_state_hash = StateUtil.create_state_hash(new_state)
-        current_state_hash = StateUtil.create_state_hash(self.get_current_state()) if self.get_current_state() else None
-        logger.info(f"New state hash: {new_state_hash}, Current state hash: {current_state_hash}")
+        current_state_hash = (
+            StateUtil.create_state_hash(self.get_current_state())
+            if self.get_current_state()
+            else None
+        )
+        logger.info(
+            f"New state hash: {new_state_hash}, Current state hash: {current_state_hash}"
+        )
 
         if current_state_hash == new_state_hash:
-            logger.warning(f"New state has same hash as current state, ignoring: {new_state}")
+            logger.warning(
+                f"New state has same hash as current state, ignoring: {new_state}"
+            )
             return False
-
 
         # If it's a brand new WorkflowRun we expect the first state to be DRAFT
         # TODO: handle exceptions;
@@ -88,8 +99,12 @@ class WorkflowRunUtil:
                 self.persist_state(new_state)
                 return True
             else:
-                logger.warning(f"WorkflowRun does not have state yet, but new state is not DRAFT: {new_state}")
-                self.persist_state(new_state)  # FIXME: remove once convention is enforced
+                logger.warning(
+                    f"WorkflowRun does not have state yet, but new state is not DRAFT: {new_state}"
+                )
+                self.persist_state(
+                    new_state
+                )  # FIXME: remove once convention is enforced
                 return True
 
         # Ignore any state that's older than the current one
@@ -98,7 +113,9 @@ class WorkflowRunUtil:
 
         # Don't allow any changes once in terminal state
         if self.is_complete():
-            logger.info(f"WorkflowRun in terminal state, can't transition to: {new_state.status}")
+            logger.info(
+                f"WorkflowRun in terminal state, can't transition to: {new_state.status}"
+            )
             return False
 
         # Allowed transitions from DRAFT state
@@ -162,7 +179,7 @@ class WorkflowRunUtil:
 
 
 class StateUtil:
-    """ Utility methods for a State. """
+    """Utility methods for a State."""
 
     @staticmethod
     def create_state_hash(state: State) -> str:
@@ -185,7 +202,6 @@ class StateUtil:
             md5_object.update(key.encode("utf-8"))
 
         return md5_object.hexdigest()
-
 
 
 def create_portal_run_id() -> str:

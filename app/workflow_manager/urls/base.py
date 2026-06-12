@@ -10,10 +10,16 @@ from workflow_manager.viewsets.workflow import WorkflowViewSet
 from workflow_manager.viewsets.workflow_run import WorkflowRunViewSet
 from workflow_manager.viewsets.payload import PayloadViewSet
 from workflow_manager.viewsets.analysis_context import AnalysisContextViewSet
-from workflow_manager.viewsets.state import StateViewSet, WorkflowRunBatchStateTransitionViewSet
+from workflow_manager.viewsets.state import (
+    StateViewSet,
+    WorkflowRunBatchStateTransitionViewSet,
+)
 from workflow_manager.viewsets.workflow_run_action import WorkflowRunActionViewSet
 from workflow_manager.viewsets.library import LibraryViewSet
-from workflow_manager.viewsets.comment import WorkflowRunCommentViewSet, AnalysisRunCommentViewSet
+from workflow_manager.viewsets.comment import (
+    WorkflowRunCommentViewSet,
+    AnalysisRunCommentViewSet,
+)
 from workflow_manager.viewsets.stats import StatsViewSet
 from workflow_manager.settings.base import API_VERSION
 
@@ -66,9 +72,12 @@ router.register(
 
 urlpatterns = [
     path(f"{api_base}", include(router.urls)),
-    path('schema/openapi.json', SpectacularJSONAPIView.as_view(), name='schema'),
-    path('schema/swagger-ui/',
-         SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path("schema/openapi.json", SpectacularJSONAPIView.as_view(), name="schema"),
+    path(
+        "schema/swagger-ui/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
 ]
 
 handler500 = "rest_framework.exceptions.server_error"
