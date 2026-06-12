@@ -25,7 +25,9 @@ class StateViewSetTestCase(TestCase):
             portal_run_id="9999",
         )
 
-        self.state_ready = State.objects.get(workflow_run=self.wfr_failed, status="READY")
+        self.state_ready = State.objects.get(
+            workflow_run=self.wfr_failed, status="READY"
+        )
 
     def test_list_states_returns_200(self):
         url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/"
@@ -47,7 +49,9 @@ class StateViewSetTestCase(TestCase):
         url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/"
         response = self.client.post(url, data={}, content_type="application/json")
         self.assertEqual(response.status_code, 400)
-        self.assertIn("status and comment fields are required", response.json()["detail"])
+        self.assertIn(
+            "status and comment fields are required", response.json()["detail"]
+        )
 
     def test_create_state_valid_transition_failed_to_resolved(self):
         url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/"
@@ -109,7 +113,9 @@ class StateViewSetTestCase(TestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn("Invalid state status to update comment.", response.json()["detail"])
+        self.assertIn(
+            "Invalid state status to update comment.", response.json()["detail"]
+        )
 
     def test_update_state_comment_success(self):
         state_deprecated = StateFactory(
@@ -270,7 +276,9 @@ class StateViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("not found", response.json()["detail"].lower())
 
-    def test_batch_state_transition_accepts_ids_without_prefix_and_returns_prefixed_ids(self):
+    def test_batch_state_transition_accepts_ids_without_prefix_and_returns_prefixed_ids(
+        self,
+    ):
         response = self.client.post(
             self.batch_endpoint,
             data={
@@ -311,7 +319,9 @@ class StateViewSetTestCase(TestCase):
             [self.wfr_succeeded.orcabus_id, self.wfr_empty.orcabus_id],
         )
 
-    def test_batch_state_transition_accepts_form_urlencoded_camelcase_csv_orcabus_ids(self):
+    def test_batch_state_transition_accepts_form_urlencoded_camelcase_csv_orcabus_ids(
+        self,
+    ):
         response = self.client.post(
             self.batch_endpoint,
             data="workflowrunOrcabusIds={}&status=Deprecated&comment=Second%20batch%20state%20transition.".format(

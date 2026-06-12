@@ -6,11 +6,19 @@ from django.test import TestCase
 from django.utils.timezone import make_aware
 
 from workflow_manager.models import WorkflowRun, State, Payload
-from workflow_manager.models.utils import WorkflowRunUtil, StateUtil, create_portal_run_id
+from workflow_manager.models.utils import (
+    WorkflowRunUtil,
+    StateUtil,
+    create_portal_run_id,
+)
 
 from workflow_manager.viewsets.utils import (
-    parse_version, version_sort_key, compare_versions,
-    validate_ordering, build_keyword_params, parse_datetime_safe,
+    parse_version,
+    version_sort_key,
+    compare_versions,
+    validate_ordering,
+    build_keyword_params,
+    parse_datetime_safe,
     get_latest_workflow_ids_queryset,
 )
 from workflow_manager.tests.factories import WorkflowRunFactory, PayloadFactory
@@ -76,22 +84,22 @@ class WorkflowRunUtilUnitTests(TestCase):
         s1: State = State(
             timestamp=make_aware(datetime(2024, 1, 3, 23, 55, 59, 342380)),
             workflow_run=wfr,
-            status='DRAFT'
+            status="DRAFT",
         )
         s2: State = State(
             timestamp=make_aware(datetime(2024, 1, 1, 23, 55, 59, 342380)),
             workflow_run=wfr,
-            status='DRAFT'
+            status="DRAFT",
         )
         s3: State = State(
             timestamp=make_aware(datetime(2024, 1, 4, 23, 55, 59, 342380)),
             workflow_run=wfr,
-            status='DRAFT'
+            status="DRAFT",
         )
         s4: State = State(
             timestamp=make_aware(datetime(2024, 1, 2, 23, 55, 59, 342380)),
             workflow_run=wfr,
-            status='DRAFT'
+            status="DRAFT",
         )
 
         # Test different orders, they all have to come to the same conclusion
@@ -218,18 +226,21 @@ class ValidateOrderingTests(TestCase):
 class BuildKeywordParamsTests(TestCase):
     def test_basic_keyword(self):
         from django.http import QueryDict
+
         qd = QueryDict("analysis_name=test")
         result = build_keyword_params(qd)
         self.assertEqual(result["analysis_name"], ["test"])
 
     def test_skips_non_keyword_params(self):
         from django.http import QueryDict
+
         qd = QueryDict("search=foo&ordering=-name&rows_per_page=10&page=2")
         result = build_keyword_params(qd)
         self.assertEqual(len(result), 0)
 
     def test_blank_value_skipped(self):
         from django.http import QueryDict
+
         qd = QueryDict("analysis_name=")
         result = build_keyword_params(qd)
         self.assertNotIn("analysis_name", result)
@@ -262,17 +273,44 @@ class ParseDatetimeSafeTests(TestCase):
 class GetLatestWorkflowIdsQuerysetTests(TestCase):
     def test_returns_queryset(self):
         from workflow_manager.models.workflow import Workflow
-        Workflow.objects.create(name="wf_a", version="1.0.0", execution_engine="ICA", execution_engine_pipeline_id="p1")
-        Workflow.objects.create(name="wf_a", version="2.0.0", execution_engine="ICA", execution_engine_pipeline_id="p2")
-        Workflow.objects.create(name="wf_b", version="1.0.0", execution_engine="ICA", execution_engine_pipeline_id="p3")
+
+        Workflow.objects.create(
+            name="wf_a",
+            version="1.0.0",
+            execution_engine="ICA",
+            execution_engine_pipeline_id="p1",
+        )
+        Workflow.objects.create(
+            name="wf_a",
+            version="2.0.0",
+            execution_engine="ICA",
+            execution_engine_pipeline_id="p2",
+        )
+        Workflow.objects.create(
+            name="wf_b",
+            version="1.0.0",
+            execution_engine="ICA",
+            execution_engine_pipeline_id="p3",
+        )
         qs = get_latest_workflow_ids_queryset()
         # Should return one ID per workflow name group
         self.assertGreaterEqual(qs.count(), 2)
 
     def test_non_semver_excluded(self):
         from workflow_manager.models.workflow import Workflow
-        Workflow.objects.create(name="wf_c", version="not-semver", execution_engine="ICA", execution_engine_pipeline_id="p4")
-        Workflow.objects.create(name="wf_c", version="1.0.0", execution_engine="ICA", execution_engine_pipeline_id="p5")
+
+        Workflow.objects.create(
+            name="wf_c",
+            version="not-semver",
+            execution_engine="ICA",
+            execution_engine_pipeline_id="p4",
+        )
+        Workflow.objects.create(
+            name="wf_c",
+            version="1.0.0",
+            execution_engine="ICA",
+            execution_engine_pipeline_id="p5",
+        )
         qs = get_latest_workflow_ids_queryset()
         ids = list(qs.values_list("pk", flat=True))
         wf_semver = Workflow.objects.get(name="wf_c", version="1.0.0")

@@ -18,7 +18,9 @@ class OrcaBusBaseManagerTestCase(TestCase):
         """
         python manage.py test workflow_manager.tests.test_base.OrcaBusBaseManagerTestCase.test_reduce_multi_values_qor
         """
-        q = OrcaBusBaseManager.reduce_multi_values_qor('subject_id', ["SBJ000001", "SBJ000002"])
+        q = OrcaBusBaseManager.reduce_multi_values_qor(
+            "subject_id", ["SBJ000001", "SBJ000002"]
+        )
         logger.info(q)
         self.assertIsNotNone(q)
         self.assertIsInstance(q, Q)
@@ -28,7 +30,7 @@ class OrcaBusBaseManagerTestCase(TestCase):
         """
         python manage.py test workflow_manager.tests.test_base.OrcaBusBaseManagerTestCase.test_reduce_multi_values_qor_auto_pack
         """
-        q = OrcaBusBaseManager.reduce_multi_values_qor('subject_id', "SBJ000001")
+        q = OrcaBusBaseManager.reduce_multi_values_qor("subject_id", "SBJ000001")
         logger.info(q)
         self.assertIsNotNone(q)
         self.assertIsInstance(q, Q)
@@ -37,7 +39,7 @@ class OrcaBusBaseManagerTestCase(TestCase):
     def test_reduce_multi_values_qor_comma_separated(self):
         """Comma-separated string is expanded into OR of individual values."""
         q = OrcaBusBaseManager.reduce_multi_values_qor(
-            'workflow__orcabus_id', "id1,id2,wfl.id3"
+            "workflow__orcabus_id", "id1,id2,wfl.id3"
         )
         self.assertIsNotNone(q)
         self.assertIsInstance(q, Q)
@@ -45,21 +47,21 @@ class OrcaBusBaseManagerTestCase(TestCase):
 
     def test_reduce_multi_values_qor_none_returns_empty_q(self):
         """When values is None, returns empty Q()."""
-        q = OrcaBusBaseManager.reduce_multi_values_qor('subject_id', None)
+        q = OrcaBusBaseManager.reduce_multi_values_qor("subject_id", None)
         self.assertIsNotNone(q)
         self.assertIsInstance(q, Q)
         self.assertEqual(q, Q())
 
     def test_reduce_multi_values_qor_empty_list_returns_empty_q(self):
         """When values is empty list, returns empty Q()."""
-        q = OrcaBusBaseManager.reduce_multi_values_qor('subject_id', [])
+        q = OrcaBusBaseManager.reduce_multi_values_qor("subject_id", [])
         self.assertIsNotNone(q)
         self.assertIsInstance(q, Q)
         self.assertEqual(q, Q())
 
     def test_reduce_multi_values_qor_empty_after_expansion_returns_empty_q(self):
         """When values expand to empty (only comma-separated strings with no valid parts), returns empty Q()."""
-        q = OrcaBusBaseManager.reduce_multi_values_qor('subject_id', ["  ,  ", ","])
+        q = OrcaBusBaseManager.reduce_multi_values_qor("subject_id", ["  ,  ", ","])
         self.assertIsNotNone(q)
         self.assertIsInstance(q, Q)
         self.assertEqual(q, Q())
@@ -71,7 +73,9 @@ class OrcaBusBaseManagerTestCase(TestCase):
         try:
             OrcaBusBaseModel()
         except TypeError as e:
-            logger.exception(f"THIS ERROR EXCEPTION IS INTENTIONAL FOR TEST. NOT ACTUAL ERROR. \n{e}")
+            logger.exception(
+                f"THIS ERROR EXCEPTION IS INTENTIONAL FOR TEST. NOT ACTUAL ERROR. \n{e}"
+            )
         self.assertRaises(TypeError)
 
     def test_get_fields_returns_field_names(self):

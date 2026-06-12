@@ -19,14 +19,22 @@ from workflow_manager.viewsets.utils import (
     version_sort_key,
 )
 
-ALLOWED_ORDER_FIELDS = frozenset([
-    'orcabus_id', '-orcabus_id',
-    'name', '-name',
-    'version', '-version',
-    'code_version', '-code_version',
-    'execution_engine', '-execution_engine',
-    'validation_state', '-validation_state',
-])
+ALLOWED_ORDER_FIELDS = frozenset(
+    [
+        "orcabus_id",
+        "-orcabus_id",
+        "name",
+        "-name",
+        "version",
+        "-version",
+        "code_version",
+        "-code_version",
+        "execution_engine",
+        "-execution_engine",
+        "validation_state",
+        "-validation_state",
+    ]
+)
 
 
 class WorkflowViewSet(PostOnlyViewSet):
@@ -37,7 +45,9 @@ class WorkflowViewSet(PostOnlyViewSet):
     def get_queryset(self):
         result_set = filtered_workflows_queryset(self.request.query_params)
 
-        raw_order = (self.request.query_params.get(api_settings.ORDERING_PARAM) or "").strip()
+        raw_order = (
+            self.request.query_params.get(api_settings.ORDERING_PARAM) or ""
+        ).strip()
         validated = validate_ordering(raw_order, ALLOWED_ORDER_FIELDS)
         ordering = validated if validated else self.ordering[0]
         return result_set.order_by(ordering)
@@ -61,12 +71,13 @@ class WorkflowViewSet(PostOnlyViewSet):
         # Workflow rows in Python and building a large IN (...) clause.
         latest_ids_qs = get_latest_workflow_ids_queryset()
 
-        filtered_latest_qs = (
-            filtered_workflows_queryset(request.query_params)
-            .filter(orcabus_id__in=latest_ids_qs)
+        filtered_latest_qs = filtered_workflows_queryset(request.query_params).filter(
+            orcabus_id__in=latest_ids_qs
         )
 
-        raw_order = (request.query_params.get(api_settings.ORDERING_PARAM) or "").strip()
+        raw_order = (
+            request.query_params.get(api_settings.ORDERING_PARAM) or ""
+        ).strip()
         validated = validate_ordering(raw_order, ALLOWED_ORDER_FIELDS)
         ordering = validated if validated else self.ordering[0]
         filtered_latest_qs = filtered_latest_qs.order_by(ordering)

@@ -29,9 +29,12 @@ class StateTransitionValidationMixin:
         "Resolved" -- https://github.com/umccr/orcabus/issues/593
         "Deprecated" -- https://github.com/umccr/orcabus/issues/695
     """
+
     states_transition_validation_map = {
-        'RESOLVED': ['FAILED'],  # Only FAILED can transition to RESOLVED
-        'DEPRECATED': {'excluded_states': ['FAILED', 'ABORTED', 'RESOLVED', 'DEPRECATED']}  # All states except these can transition to DEPRECATED
+        "RESOLVED": ["FAILED"],  # Only FAILED can transition to RESOLVED
+        "DEPRECATED": {
+            "excluded_states": ["FAILED", "ABORTED", "RESOLVED", "DEPRECATED"]
+        },  # All states except these can transition to DEPRECATED
     }
 
     @staticmethod
@@ -52,7 +55,7 @@ class StateTransitionValidationMixin:
         """
         # Handle case when there's no current state - only allow DEPRECATED
         if current_status is None:
-            return request_status.upper() == 'DEPRECATED'
+            return request_status.upper() == "DEPRECATED"
 
         request_status_upper = request_status.upper()
         current_status_upper = current_status.upper()
@@ -65,13 +68,15 @@ class StateTransitionValidationMixin:
 
         # Handle dict format with 'excluded_states' or 'allowed_states'
         if isinstance(validation_rule, dict):
-            if 'excluded_states' in validation_rule:
+            if "excluded_states" in validation_rule:
                 # Allow all states except the excluded ones
-                excluded_states = [s.upper() for s in validation_rule['excluded_states']]
+                excluded_states = [
+                    s.upper() for s in validation_rule["excluded_states"]
+                ]
                 return current_status_upper not in excluded_states
-            elif 'allowed_states' in validation_rule:
+            elif "allowed_states" in validation_rule:
                 # Only allow states in the allowed_states list
-                allowed_states = [s.upper() for s in validation_rule['allowed_states']]
+                allowed_states = [s.upper() for s in validation_rule["allowed_states"]]
                 return current_status_upper in allowed_states
 
         # Handle list format (backward compatibility and simpler format)
@@ -93,23 +98,35 @@ class StateTransitionValidationMixin:
     partial_update=extend_schema(
         request=StateUpdateRequestSerializer,
         responses={200: StateSerializer},
-        description=(
-            "Update state comment only."
-        ),
-    )
+        description=("Update state comment only."),
+    ),
 )
-class StateViewSet(StateTransitionValidationMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.ListModelMixin,  GenericViewSet):
+class StateViewSet(
+    StateTransitionValidationMixin,
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.ListModelMixin,
+    GenericViewSet,
+):
     serializer_class = StateSerializer
     search_fields = State.get_base_fields()
-    http_method_names = ['get', 'post', 'patch']
+    http_method_names = ["get", "post", "patch"]
     pagination_class = None
-    lookup_value_regex = "[^/]+" # to allow id prefix
+    lookup_value_regex = "[^/]+"  # to allow id prefix
 
     def get_queryset(self):
         return State.objects.filter(workflow_run=self.kwargs["orcabus_id"])
 
-    @extend_schema(responses=OpenApiTypes.OBJECT, description="Get states transition validation map")
-    @action(detail=False, methods=['get'], url_name='get_states_transition_validation_map', url_path='get_states_transition_validation_map')
+    @extend_schema(
+        responses=OpenApiTypes.OBJECT,
+        description="Get states transition validation map",
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_name="get_states_transition_validation_map",
+        url_path="get_states_transition_validation_map",
+    )
     def get_states_transition_validation_map(self, request, **kwargs):
         """
         Returns states transition validation map.
@@ -142,16 +159,28 @@ class StateViewSet(StateTransitionValidationMixin, mixins.CreateModelMixin, mixi
         latest_state = workflow_run.get_latest_state()
         # Handle case when there's no latest state - only allow DEPRECATED
         if not latest_state:
-            if request_status != 'DEPRECATED':
-                return Response({"detail": "No state found for workflow run '{}'. Only DEPRECATED is allowed when there are no states.".format(wfr_orcabus_id)},
-                                status=status.HTTP_400_BAD_REQUEST)
+            if request_status != "DEPRECATED":
+                return Response(
+                    {
+                        "detail": "No state found for workflow run '{}'. Only DEPRECATED is allowed when there are no states.".format(
+                            wfr_orcabus_id
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             latest_status = None
         else:
             latest_status = latest_state.status
             # check if the state status is valid
             if not self.is_valid_next_state(latest_status, request_status):
-                return Response({"detail": "Invalid state request. Can't add state '{}' to '{}'".format(request_status, latest_status)},
-                                status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {
+                        "detail": "Invalid state request. Can't add state '{}' to '{}'".format(
+                            request_status, latest_status
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         instance = State.objects.create(
             workflow_run=workflow_run,
@@ -165,7 +194,7 @@ class StateViewSet(StateTransitionValidationMixin, mixins.CreateModelMixin, mixi
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
+        partial = kwargs.pop("partial", False)
         instance = self.get_object()
 
         required_fields = {"comment"}
@@ -179,8 +208,10 @@ class StateViewSet(StateTransitionValidationMixin, mixins.CreateModelMixin, mixi
 
         # Check if the state being updated is in the validation map
         if instance.status not in self.states_transition_validation_map:
-            return Response({"detail": "Invalid state status to update comment."},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Invalid state status to update comment."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         body = StateUpdateRequestSerializer(data=request.data, partial=partial)
         body.is_valid(raise_exception=True)
@@ -188,7 +219,7 @@ class StateViewSet(StateTransitionValidationMixin, mixins.CreateModelMixin, mixi
         instance.comment = vd["comment"]
         instance.save(update_fields=["comment"])
 
-        if getattr(instance, '_prefetched_objects_cache', None):
+        if getattr(instance, "_prefetched_objects_cache", None):
             # If 'prefetch_related' has been applied to a queryset, we need to
             # forcibly invalidate the prefetch cache on the instance.
             instance._prefetched_objects_cache = {}
@@ -205,11 +236,13 @@ class StateViewSet(StateTransitionValidationMixin, mixins.CreateModelMixin, mixi
         description="Batch transition workflow runs to a target state.",
     )
 )
-class WorkflowRunBatchStateTransitionViewSet(StateTransitionValidationMixin, GenericViewSet):
-    http_method_names = ['post']
+class WorkflowRunBatchStateTransitionViewSet(
+    StateTransitionValidationMixin, GenericViewSet
+):
+    http_method_names = ["post"]
     pagination_class = None
 
-    @action(detail=False, methods=['post'], url_path='batch-state-transition')
+    @action(detail=False, methods=["post"], url_path="batch-state-transition")
     def batch_state_transition(self, request, *args, **kwargs):
         body = StateBatchTransitionRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
@@ -225,7 +258,8 @@ class WorkflowRunBatchStateTransitionViewSet(StateTransitionValidationMixin, Gen
         ]
         workflow_runs = list(WorkflowRun.objects.filter(orcabus_id__in=normalized_ids))
         workflow_runs_by_normalized_id = {
-            self.normalize_workflowrun_orcabus_id(wfr.orcabus_id): wfr for wfr in workflow_runs
+            self.normalize_workflowrun_orcabus_id(wfr.orcabus_id): wfr
+            for wfr in workflow_runs
         }
         missing_ids = [
             raw_id

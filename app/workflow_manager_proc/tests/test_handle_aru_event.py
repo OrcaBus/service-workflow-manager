@@ -2,14 +2,22 @@ import os
 from unittest import mock
 
 
-from workflow_manager.models import WorkflowRun, LibraryAssociation, State, Payload, Status
+from workflow_manager.models import (
+    WorkflowRun,
+    LibraryAssociation,
+    State,
+    Payload,
+    Status,
+)
 from workflow_manager.models import AnalysisRun, AnalysisRunState
 from workflow_manager_proc.lambdas import handle_aru_event
 from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase
 
 
 class AruEventHandlerUnitTests(WorkflowManagerProcUnitTestCase):
-    fixtures = ['./workflow_manager_proc/tests/fixtures/aru_test_fixtures.json', ]
+    fixtures = [
+        "./workflow_manager_proc/tests/fixtures/aru_test_fixtures.json",
+    ]
 
     def setUp(self) -> None:
         self.env_mock = mock.patch.dict(os.environ, {"EVENT_BUS_NAME": "FooBus"})
@@ -19,7 +27,6 @@ class AruEventHandlerUnitTests(WorkflowManagerProcUnitTestCase):
     def tearDown(self) -> None:
         self.env_mock.stop()
         super().tearDown()
-
 
     def test_handle_aru_draft_min_event(self):
         """
@@ -72,7 +79,9 @@ class AruEventHandlerUnitTests(WorkflowManagerProcUnitTestCase):
         self.load_mock_aru_ready_max()
 
         # We expect a failure since there was no DRAFT before the READY event
-        self.assertRaises(AnalysisRun.DoesNotExist, handle_aru_event.handler,self.event, None)
+        self.assertRaises(
+            AnalysisRun.DoesNotExist, handle_aru_event.handler, self.event, None
+        )
 
         # AnalysisRun components should not exist (as the ARU processing failed)
         self.assertEqual(AnalysisRun.objects.count(), 0)
@@ -99,7 +108,7 @@ class AruEventHandlerUnitTests(WorkflowManagerProcUnitTestCase):
         # Then we can test the READY event
         self.load_mock_aru_ready_max()
         # Overwrite the OrcaBus ID to match the DRAFT (see above)
-        self.event['detail']['orcabusId'] = ar_oid
+        self.event["detail"]["orcabusId"] = ar_oid
         handle_aru_event.handler(self.event, None)
 
         # AnalysisRun components should not exist (as the ARU processing failed)
@@ -135,7 +144,7 @@ class AruEventHandlerUnitTests(WorkflowManagerProcUnitTestCase):
         # Then we can test the READY event
         self.load_mock_aru_ready_min()
         # Overwrite the OrcaBus ID to match the DRAFT (see above)
-        self.event['detail']['orcabusId'] = ar_oid
+        self.event["detail"]["orcabusId"] = ar_oid
         handle_aru_event.handler(self.event, None)
 
         # AnalysisRun components should not exist (as the ARU processing failed)

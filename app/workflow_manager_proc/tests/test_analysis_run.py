@@ -5,7 +5,13 @@ from unittest import mock
 
 from django.utils.timezone import make_aware
 
-from workflow_manager.models import Library, Status, AnalysisContext, AnalysisRunState, RunContext
+from workflow_manager.models import (
+    Library,
+    Status,
+    AnalysisContext,
+    AnalysisRunState,
+    RunContext,
+)
 from workflow_manager.models.analysis import Analysis
 from workflow_manager.models.analysis_context import AnalysisContextUseCase
 from workflow_manager.models.analysis_run import AnalysisRun
@@ -14,7 +20,7 @@ from workflow_manager_proc.services.analysis_run import (
     _create_analysis_run,
     _finalise_analysis_run,
     _map_analysis_run_to_arsc,
-    get_arsc_hash
+    get_arsc_hash,
 )
 from workflow_manager_proc.tests.case import WorkflowManagerProcUnitTestCase, logger
 
@@ -23,7 +29,9 @@ ANALYSIS_1_OID = "ana.76J5N2J83RED7387G9374NGDBA"
 
 
 class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
-    fixtures = ['./workflow_manager_proc/tests/fixtures/aru_test_fixtures.json', ]
+    fixtures = [
+        "./workflow_manager_proc/tests/fixtures/aru_test_fixtures.json",
+    ]
 
     def setUp(self) -> None:
         self.env_mock = mock.patch.dict(os.environ, {"EVENT_BUS_NAME": "FooBus"})
@@ -49,7 +57,9 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(db_analysis_run.analysis.analysis_name, "WGS")
         self.assertEqual(db_analysis_run.analysis.analysis_version, "1.0")
         self.assertEqual(db_analysis_run.analysis_run_name, "TestAnalysisRunName_1")
-        self.assertEqual(db_analysis_run.get_latest_state().status, Status.DRAFT.convention)
+        self.assertEqual(
+            db_analysis_run.get_latest_state().status, Status.DRAFT.convention
+        )
         self.assertEqual(db_analysis_run.contexts.count(), 0)
         self.assertEqual(AnalysisRun.objects.count(), 1)
 
@@ -83,7 +93,9 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(db_analysis_run.analysis.analysis_name, "WGS")
         self.assertEqual(db_analysis_run.analysis.analysis_version, "2.0")
         self.assertEqual(db_analysis_run.analysis_run_name, "TestAnalysisRunName_1")
-        self.assertEqual(db_analysis_run.get_latest_state().status, Status.DRAFT.convention)
+        self.assertEqual(
+            db_analysis_run.get_latest_state().status, Status.DRAFT.convention
+        )
         self.assertEqual(db_analysis_run.contexts.count(), 2)
         self.assertEqual(AnalysisRun.objects.count(), 1)
 
@@ -114,7 +126,9 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertIsNotNone(aru_analysis_run)
 
         logger.info("Testing DB record creation from event...")
-        self.assertRaises(AnalysisRun.DoesNotExist, _finalise_analysis_run, aru_analysis_run)
+        self.assertRaises(
+            AnalysisRun.DoesNotExist, _finalise_analysis_run, aru_analysis_run
+        )
 
     def test_aru_draft_to_ready_1(self):
         """
@@ -129,7 +143,9 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertIsNotNone(aru_analysis_run)
         db_analysis_run_draft = _create_analysis_run(aru_analysis_run)
         self.assertEqual(AnalysisRun.objects.count(), 1)
-        self.assertEqual(db_analysis_run_draft.get_latest_state().status, Status.DRAFT.convention)
+        self.assertEqual(
+            db_analysis_run_draft.get_latest_state().status, Status.DRAFT.convention
+        )
         logger.info("DRAFT event handling finished.")
 
         # Now run the READY event
@@ -145,7 +161,9 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertEqual(db_analysis_run.analysis.analysis_name, "WGS")
         self.assertEqual(db_analysis_run.analysis.analysis_version, "2.0")
         self.assertEqual(db_analysis_run.analysis_run_name, "TestAnalysisRunName_1")
-        self.assertEqual(db_analysis_run.get_latest_state().status, Status.READY.convention)
+        self.assertEqual(
+            db_analysis_run.get_latest_state().status, Status.READY.convention
+        )
         self.assertEqual(db_analysis_run.contexts.count(), 2)
         self.assertEqual(AnalysisRun.objects.count(), 1)
 
@@ -167,7 +185,9 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
 
         # run some spot checks
         self.assertEqual(db_analysis_run_draft.analysis, db_analysis_run.analysis)
-        self.assertEqual(db_analysis_run_draft.analysis_run_name, db_analysis_run.analysis_run_name)
+        self.assertEqual(
+            db_analysis_run_draft.analysis_run_name, db_analysis_run.analysis_run_name
+        )
         self.assertEqual(db_analysis_run_draft.orcabus_id, db_analysis_run.orcabus_id)
 
     def test_aru_draft_to_ready_2(self):
@@ -184,7 +204,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         # create the AnalysisRun with the repeated ARU event
         with self.assertRaises(Exception) as err:
             _create_analysis_run(self.mock_aru_draft_max)
-        self.assertEqual(str(err.exception), 'AnalysisRun record already exists!')
+        self.assertEqual(str(err.exception), "AnalysisRun record already exists!")
         logger.info(str(err.exception))
 
     def test_aru_draft_to_ready_3(self):
@@ -204,7 +224,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         # with an event that has a READY status
         with self.assertRaises(Exception) as err:
             _create_analysis_run(self.mock_aru_ready_max)
-        self.assertEqual(str(err.exception), 'AnalysisRunUpdate: Unexpected state!')
+        self.assertEqual(str(err.exception), "AnalysisRunUpdate: Unexpected state!")
         logger.info(str(err.exception))
 
     def test_aru_draft_to_ready_4(self):
@@ -223,7 +243,9 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         # with an event that has a READY status
         with self.assertRaises(Exception) as err:
             _finalise_analysis_run(self.mock_aru_ready_max)
-        self.assertEqual(str(err.exception), 'Cannot finalise record that is not in DRAFT state!')
+        self.assertEqual(
+            str(err.exception), "Cannot finalise record that is not in DRAFT state!"
+        )
         logger.info(str(err.exception))
 
     def test_get_arsc_hash(self):
@@ -248,10 +270,9 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
             status="TESTING",
             libraries=[
                 arsc.Library(
-                    orcabusId="SOME9ARSC9LIBRARY9ID12345",
-                    libraryId="L9900999"
+                    orcabusId="SOME9ARSC9LIBRARY9ID12345", libraryId="L9900999"
                 )
-            ]
+            ],
         )
         hash_0 = get_arsc_hash(test_arsc)
         time.sleep(2)
@@ -299,14 +320,15 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         assert hash_0 != hash_x, "Hash is the same!"
 
         # Change timestamp and expect a different hash
-        test_arsc.timestamp = datetime.datetime.strptime("01/05/2025 6:01", "%m/%d/%Y %H:%M")
+        test_arsc.timestamp = datetime.datetime.strptime(
+            "01/05/2025 6:01", "%m/%d/%Y %H:%M"
+        )
         hash_x = get_arsc_hash(test_arsc)
         assert hash_0 != hash_x, "Hash is the same!"
 
         # add library and expect a different hash
         lib_1 = arsc.Library(
-            orcabusId="SOME9ARSC9LIBRARY9ID12345",
-            libraryId="L9900999"
+            orcabusId="SOME9ARSC9LIBRARY9ID12345", libraryId="L9900999"
         )
         test_arsc.libraries = list()
         test_arsc.libraries.append(lib_1)
@@ -315,8 +337,7 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
 
         # add another library and expect yet another hash
         lib_2 = arsc.Library(
-            orcabusId="SOME9ARSC9LIBRARY9ID12345",
-            libraryId="L9900999"
+            orcabusId="SOME9ARSC9LIBRARY9ID12345", libraryId="L9900999"
         )
         test_arsc.libraries.append(lib_2)
         hash_2 = get_arsc_hash(test_arsc)
@@ -345,19 +366,29 @@ class AnalysisRunUnitTests(WorkflowManagerProcUnitTestCase):
         lib_1.readsets.append(readset_2)
         hash_1_1 = get_arsc_hash(test_arsc)
         assert hash_0 != hash_1_1, "Hash is the same!"  # different to original hash
-        assert hash_1 != hash_1_1, "Hash is the same!"  # different to hash without readsets
+        assert (
+            hash_1 != hash_1_1
+        ), "Hash is the same!"  # different to hash without readsets
         lib_1.readsets = list()
         lib_1.readsets.append(readset_2)
         lib_1.readsets.append(readset_1)
         hash_1_2 = get_arsc_hash(test_arsc)
         assert hash_0 != hash_1_2, "Hash is the same!"  # different to original hash
-        assert hash_1 != hash_1_2, "Hash is the same!"  # different to hash without readsets
-        assert hash_1_1 == hash_1_2, "Hash is not the same!"  # same as hash with readsets (in different order)
+        assert (
+            hash_1 != hash_1_2
+        ), "Hash is the same!"  # different to hash without readsets
+        assert (
+            hash_1_1 == hash_1_2
+        ), "Hash is not the same!"  # same as hash with readsets (in different order)
 
         lib_2.readsets = list()
         lib_2.readsets.append(readset_3)
         hash_2_1 = get_arsc_hash(test_arsc)
-        assert hash_2 != hash_2_1, "Hash is the same!"  # different to hash without readsets
+        assert (
+            hash_2 != hash_2_1
+        ), "Hash is the same!"  # different to hash without readsets
         lib_2.readsets.append(readset_4)
         hash_2_2 = get_arsc_hash(test_arsc)
-        assert hash_2_1 != hash_2_2, "Hash is the same!"  # different to has with less readsets
+        assert (
+            hash_2_1 != hash_2_2
+        ), "Hash is the same!"  # different to has with less readsets

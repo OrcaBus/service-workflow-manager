@@ -13,23 +13,34 @@ from workflow_manager.viewsets.utils import (
     validate_ordering,
 )
 
-ALLOWED_ORDER_FIELDS = frozenset([
-    'orcabus_id', '-orcabus_id',
-    'analysis_run_name', '-analysis_run_name',
-    'comment', '-comment',
-    'timestamp', '-timestamp',
-])
+ALLOWED_ORDER_FIELDS = frozenset(
+    [
+        "orcabus_id",
+        "-orcabus_id",
+        "analysis_run_name",
+        "-analysis_run_name",
+        "comment",
+        "-comment",
+        "timestamp",
+        "-timestamp",
+    ]
+)
 
 
 class AnalysisRunViewSet(BaseViewSet):
     """
     Read-only AnalysisRun API. Create and update are handled automatically by the system (e.g. via events).
     """
+
     serializer_class = AnalysisRunDetailSerializer
     search_fields = AnalysisRun.get_base_fields()
-    queryset = AnalysisRun.objects.prefetch_related(
-        "libraries", "contexts", "readsets", "states"
-    ).select_related("analysis").all()
+    queryset = (
+        AnalysisRun.objects.prefetch_related(
+            "libraries", "contexts", "readsets", "states"
+        )
+        .select_related("analysis")
+        .all()
+    )
     filter_backends = []
 
     def get_serializer_class(self):
@@ -42,7 +53,9 @@ class AnalysisRunViewSet(BaseViewSet):
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
-        raw_order = (self.request.query_params.get(api_settings.ORDERING_PARAM) or "").strip()
+        raw_order = (
+            self.request.query_params.get(api_settings.ORDERING_PARAM) or ""
+        ).strip()
         validated = validate_ordering(raw_order, ALLOWED_ORDER_FIELDS)
         needs_timestamp_order = validated in ("timestamp", "-timestamp")
 

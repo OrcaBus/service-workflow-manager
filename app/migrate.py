@@ -8,5 +8,5 @@ from django.core.management import execute_from_command_line
 
 
 def handler(event, context) -> str:
-    execute_from_command_line(['./manage.py', 'migrate'])
-    return 'Migration complete.'
+    execute_from_command_line(["./manage.py", "migrate"])
+    return "Migration complete."

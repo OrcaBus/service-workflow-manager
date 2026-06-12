@@ -1,9 +1,11 @@
 import re
 from rest_framework import serializers
 
+
 def to_camel_case(snake_str):
     components = re.split(r"[_\-\s]", snake_str)
     return components[0].lower() + "".join(x.title() for x in components[1:])
+
 
 class SerializersBase(serializers.ModelSerializer):
 
@@ -45,6 +47,7 @@ class OrcabusIdSerializerMetaMixin:
         - https://www.django-rest-framework.org/api-guide/fields/#read_only
         - https://github.com/tfranzel/drf-spectacular/issues/1299#issuecomment-2599856679
     """
+
     extra_kwargs = {"orcabus_id": {"read_only": True}}
 
 
@@ -72,7 +75,9 @@ class OrcabusIdListUtils:
                 if not s:
                     continue
                 if "," in s:
-                    expanded.extend([token.strip() for token in s.split(",") if token.strip()])
+                    expanded.extend(
+                        [token.strip() for token in s.split(",") if token.strip()]
+                    )
                 else:
                     expanded.append(s)
             return expanded

@@ -134,8 +134,10 @@ class UpdatableAnalysisSerializerTests(TestCase):
             name="ctx1", usecase=AnalysisContextUseCase.COMPUTE.value
         )
         self.wfl = Workflow.objects.create(
-            name="wfl", version="1.0", execution_engine="ICA",
-            execution_engine_pipeline_id="pipe1"
+            name="wfl",
+            version="1.0",
+            execution_engine="ICA",
+            execution_engine_pipeline_id="pipe1",
         )
         self.analysis = Analysis.objects.create(
             analysis_name="TestAnalysis",
@@ -181,8 +183,10 @@ class UpdatableAnalysisSerializerTests(TestCase):
         from workflow_manager.serializers.analysis import UpdatableAnalysisSerializer
 
         wfl2 = Workflow.objects.create(
-            name="wfl2", version="1.0", execution_engine="ICA",
-            execution_engine_pipeline_id="pipe2"
+            name="wfl2",
+            version="1.0",
+            execution_engine="ICA",
+            execution_engine_pipeline_id="pipe2",
         )
         serializer = UpdatableAnalysisSerializer(
             self.analysis,
@@ -207,7 +211,9 @@ class AnalysisRunSerializerTests(TestCase):
 
     def test_get_states_empty_list_when_no_states(self):
         from workflow_manager.models import AnalysisRun
-        from workflow_manager.serializers.analysis_run import AnalysisRunDetailSerializer
+        from workflow_manager.serializers.analysis_run import (
+            AnalysisRunDetailSerializer,
+        )
 
         ar = AnalysisRun.objects.create(analysis_run_name="TestRun")
         serializer = AnalysisRunDetailSerializer(ar)
@@ -219,7 +225,9 @@ class WorkflowRunSerializerTests(TestCase):
     def test_detail_serializer_includes_nested_contexts_and_readsets(self):
         from workflow_manager.models import Readset, RunContext
         from workflow_manager.models.run_context import RunContextUseCase
-        from workflow_manager.serializers.workflow_run import WorkflowRunDetailSerializer
+        from workflow_manager.serializers.workflow_run import (
+            WorkflowRunDetailSerializer,
+        )
         from workflow_manager.tests.factories import WorkflowRunFactory
 
         workflow_run = WorkflowRunFactory()
@@ -253,7 +261,9 @@ class WorkflowRunSerializerTests(TestCase):
         )
 
     def test_detail_serializer_returns_null_current_state_when_no_states(self):
-        from workflow_manager.serializers.workflow_run import WorkflowRunDetailSerializer
+        from workflow_manager.serializers.workflow_run import (
+            WorkflowRunDetailSerializer,
+        )
         from workflow_manager.tests.factories import WorkflowRunFactory
 
         workflow_run = WorkflowRunFactory()

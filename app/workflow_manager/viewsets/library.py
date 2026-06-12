@@ -9,9 +9,7 @@ class LibraryViewSet(BaseViewSet):
     serializer_class = LibrarySerializer
     search_fields = Library.get_base_fields()
 
-    @extend_schema(parameters=[
-        LibrarySerializer
-    ])
+    @extend_schema(parameters=[LibrarySerializer])
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 

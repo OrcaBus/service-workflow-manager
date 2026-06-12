@@ -16,8 +16,11 @@ class AllowedRerunWorkflowSerializer(serializers.Serializer):
 
 class BaseRerunInputSerializer(serializers.Serializer):
     # Reruns with the same input (duplicate reruns) should not be allowed unless this flag is set to True
-    allow_duplication = serializers.BooleanField(required=False, default=False,
-                                                 help_text='Allow rerun with the same previous input (duplicate rerun)')
+    allow_duplication = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="Allow rerun with the same previous input (duplicate rerun)",
+    )
 
     def update(self, instance, validated_data):
         pass
@@ -34,14 +37,47 @@ class RnasumRerunInputSerializer(BaseRerunInputSerializer):
     # https://github.com/umccr/RNAsum/blob/master/TCGA_projects_summary.md
     allowed_dataset_choice = [
         # PRIMARY_DATASETS_OPTION
-        "BRCA", "THCA", "HNSC", "LGG", "KIRC", "LUSC", "LUAD", "PRAD", "STAD", "LIHC", "COAD", "KIRP",
-        "BLCA", "OV", "SARC", "PCPG", "CESC", "UCEC", "PAAD", "TGCT", "LAML", "ESCA", "GBM", "THYM",
-        "SKCM", "READ", "UVM", "ACC", "MESO", "KICH", "UCS", "DLBC", "CHOL",
+        "BRCA",
+        "THCA",
+        "HNSC",
+        "LGG",
+        "KIRC",
+        "LUSC",
+        "LUAD",
+        "PRAD",
+        "STAD",
+        "LIHC",
+        "COAD",
+        "KIRP",
+        "BLCA",
+        "OV",
+        "SARC",
+        "PCPG",
+        "CESC",
+        "UCEC",
+        "PAAD",
+        "TGCT",
+        "LAML",
+        "ESCA",
+        "GBM",
+        "THYM",
+        "SKCM",
+        "READ",
+        "UVM",
+        "ACC",
+        "MESO",
+        "KICH",
+        "UCS",
+        "DLBC",
+        "CHOL",
         # EXTENDED_DATASETS_OPTION
-        "LUAD-LCNEC", "BLCA-NET",
-        "PAAD-IPMN", "PAAD-NET", "PAAD-ACC",
+        "LUAD-LCNEC",
+        "BLCA-NET",
+        "PAAD-IPMN",
+        "PAAD-NET",
+        "PAAD-ACC",
         # PAN_CANCER_DATASETS_OPTION
-        "PANCAN"
+        "PANCAN",
     ]
 
     dataset = serializers.ChoiceField(choices=allowed_dataset_choice, required=True)

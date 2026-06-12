@@ -3,12 +3,18 @@ from datetime import datetime, timedelta
 from django.utils.timezone import make_aware
 
 from workflow_manager.models import LibraryAssociation
-from workflow_manager.tests.factories import PayloadFactory, LibraryFactory, WorkflowFactory, WorkflowRunFactory, \
-    StateFactory
+from workflow_manager.tests.factories import (
+    PayloadFactory,
+    LibraryFactory,
+    WorkflowFactory,
+    WorkflowRunFactory,
+    StateFactory,
+)
 
 
 class TestData:
     """ImplNote: the class implemented fluent API. Chain each method calls to create the test fixture combo."""
+
     WORKFLOW_NAME = "TestWorkflow"
     STATUS_DRAFT = "DRAFT"
     STATUS_START = "READY"
@@ -20,13 +26,23 @@ class TestData:
     def __init__(self):
 
         # Common components: payload and libraries
-        self.generic_payload = PayloadFactory()  # Payload content is not important for now
+        self.generic_payload = (
+            PayloadFactory()
+        )  # Payload content is not important for now
 
         self.libraries = [
-            LibraryFactory(orcabus_id="01J5M2JFE1JPYV62RYQEG99CP1", library_id="L000001"),
-            LibraryFactory(orcabus_id="02J5M2JFE1JPYV62RYQEG99CP2", library_id="L000002"),
-            LibraryFactory(orcabus_id="03J5M2JFE1JPYV62RYQEG99CP3", library_id="L000003"),
-            LibraryFactory(orcabus_id="04J5M2JFE1JPYV62RYQEG99CP4", library_id="L000004")
+            LibraryFactory(
+                orcabus_id="01J5M2JFE1JPYV62RYQEG99CP1", library_id="L000001"
+            ),
+            LibraryFactory(
+                orcabus_id="02J5M2JFE1JPYV62RYQEG99CP2", library_id="L000002"
+            ),
+            LibraryFactory(
+                orcabus_id="03J5M2JFE1JPYV62RYQEG99CP3", library_id="L000003"
+            ),
+            LibraryFactory(
+                orcabus_id="04J5M2JFE1JPYV62RYQEG99CP4", library_id="L000004"
+            ),
         ]
 
     def create_primary(self):
@@ -41,12 +57,23 @@ class TestData:
         wfr_1 = WorkflowRunFactory(
             workflow_run_name=self.WORKFLOW_NAME + "PrimaryRun1",
             portal_run_id="1234",
-            workflow=wf
+            workflow=wf,
         )
 
-        for i, state in enumerate([self.STATUS_DRAFT, self.STATUS_START, self.STATUS_RUNNING, self.STATUS_FAIL]):
-            StateFactory(workflow_run=wfr_1, status=state, payload=self.generic_payload,
-                         timestamp=make_aware(datetime.now() + timedelta(hours=i)))
+        for i, state in enumerate(
+            [
+                self.STATUS_DRAFT,
+                self.STATUS_START,
+                self.STATUS_RUNNING,
+                self.STATUS_FAIL,
+            ]
+        ):
+            StateFactory(
+                workflow_run=wfr_1,
+                status=state,
+                payload=self.generic_payload,
+                timestamp=make_aware(datetime.now() + timedelta(hours=i)),
+            )
         for i in [0, 1, 2, 3]:
             LibraryAssociation.objects.create(
                 workflow_run=wfr_1,
@@ -59,11 +86,17 @@ class TestData:
         wfr_2 = WorkflowRunFactory(
             workflow_run_name=self.WORKFLOW_NAME + "PrimaryRun2",
             portal_run_id="1235",
-            workflow=wf
+            workflow=wf,
         )
-        for i, state in enumerate([self.STATUS_DRAFT, self.STATUS_START, self.STATUS_RUNNING, self.STATUS_END]):
-            StateFactory(workflow_run=wfr_2, status=state, payload=self.generic_payload,
-                         timestamp=make_aware(datetime.now() + timedelta(hours=i)))
+        for i, state in enumerate(
+            [self.STATUS_DRAFT, self.STATUS_START, self.STATUS_RUNNING, self.STATUS_END]
+        ):
+            StateFactory(
+                workflow_run=wfr_2,
+                status=state,
+                payload=self.generic_payload,
+                timestamp=make_aware(datetime.now() + timedelta(hours=i)),
+            )
         for i in [0, 1, 2, 3]:
             LibraryAssociation.objects.create(
                 workflow_run=wfr_2,
@@ -88,11 +121,17 @@ class TestData:
         wfr_qc_1 = WorkflowRunFactory(
             workflow_run_name=self.WORKFLOW_NAME + "QCRunLib1",
             portal_run_id="2345",
-            workflow=wf_qc
+            workflow=wf_qc,
         )
-        for i, state in enumerate([self.STATUS_DRAFT, self.STATUS_START, self.STATUS_RUNNING, self.STATUS_END]):
-            StateFactory(workflow_run=wfr_qc_1, status=state, payload=self.generic_payload,
-                         timestamp=make_aware(datetime.now() + timedelta(hours=i)))
+        for i, state in enumerate(
+            [self.STATUS_DRAFT, self.STATUS_START, self.STATUS_RUNNING, self.STATUS_END]
+        ):
+            StateFactory(
+                workflow_run=wfr_qc_1,
+                status=state,
+                payload=self.generic_payload,
+                timestamp=make_aware(datetime.now() + timedelta(hours=i)),
+            )
         LibraryAssociation.objects.create(
             workflow_run=wfr_qc_1,
             library=self.libraries[0],
@@ -104,12 +143,23 @@ class TestData:
         wfr_qc_2 = WorkflowRunFactory(
             workflow_run_name=self.WORKFLOW_NAME + "QCRunLib2",
             portal_run_id="2346",
-            workflow=wf_qc
+            workflow=wf_qc,
         )
         for i, state in enumerate(
-                [self.STATUS_DRAFT, self.STATUS_START, self.STATUS_RUNNING, self.STATUS_FAIL, self.STATUS_RESOLVED]):
-            StateFactory(workflow_run=wfr_qc_2, status=state, payload=self.generic_payload,
-                         timestamp=make_aware(datetime.now() + timedelta(hours=i)))
+            [
+                self.STATUS_DRAFT,
+                self.STATUS_START,
+                self.STATUS_RUNNING,
+                self.STATUS_FAIL,
+                self.STATUS_RESOLVED,
+            ]
+        ):
+            StateFactory(
+                workflow_run=wfr_qc_2,
+                status=state,
+                payload=self.generic_payload,
+                timestamp=make_aware(datetime.now() + timedelta(hours=i)),
+            )
         LibraryAssociation.objects.create(
             workflow_run=wfr_qc_2,
             library=self.libraries[1],
@@ -122,11 +172,15 @@ class TestData:
         wfr_a = WorkflowRunFactory(
             workflow_run_name=self.WORKFLOW_NAME + "AlignmentRun",
             portal_run_id="3456",
-            workflow=wf_align
+            workflow=wf_align,
         )
         for i, state in enumerate([self.STATUS_DRAFT, self.STATUS_START]):
-            StateFactory(workflow_run=wfr_a, status=state, payload=self.generic_payload,
-                         timestamp=make_aware(datetime.now() + timedelta(hours=i)))
+            StateFactory(
+                workflow_run=wfr_a,
+                status=state,
+                payload=self.generic_payload,
+                timestamp=make_aware(datetime.now() + timedelta(hours=i)),
+            )
         for i in [0, 1]:
             LibraryAssociation.objects.create(
                 workflow_run=wfr_a,
@@ -140,11 +194,17 @@ class TestData:
         wfr_vc = WorkflowRunFactory(
             workflow_run_name=self.WORKFLOW_NAME + "VariantCallingRun",
             portal_run_id="4567",
-            workflow=wf_vc
+            workflow=wf_vc,
         )
-        for i, state in enumerate([self.STATUS_DRAFT, self.STATUS_START, self.STATUS_RUNNING]):
-            StateFactory(workflow_run=wfr_vc, status=state, payload=self.generic_payload,
-                         timestamp=make_aware(datetime.now() + timedelta(hours=i)))
+        for i, state in enumerate(
+            [self.STATUS_DRAFT, self.STATUS_START, self.STATUS_RUNNING]
+        ):
+            StateFactory(
+                workflow_run=wfr_vc,
+                status=state,
+                payload=self.generic_payload,
+                timestamp=make_aware(datetime.now() + timedelta(hours=i)),
+            )
         for i in [0, 1]:
             LibraryAssociation.objects.create(
                 workflow_run=wfr_vc,

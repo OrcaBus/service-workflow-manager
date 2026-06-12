@@ -11,7 +11,19 @@ from datetime import datetime, timezone as dt_timezone
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import jwt
-from django.db.models import Case, F, Func, IntegerField, OuterRef, Q, QuerySet, Subquery, Value, When, Window
+from django.db.models import (
+    Case,
+    F,
+    Func,
+    IntegerField,
+    OuterRef,
+    Q,
+    QuerySet,
+    Subquery,
+    Value,
+    When,
+    Window,
+)
 from django.db.models.functions import Cast, Coalesce, Lower, RowNumber
 from django.utils.dateparse import parse_datetime
 from rest_framework.exceptions import AuthenticationFailed
@@ -99,7 +111,9 @@ def parse_datetime_safe(value: Optional[str]) -> Optional[datetime]:
     return dt
 
 
-def validate_ordering(ordering: str | None, allowed_fields: frozenset[str]) -> str | None:
+def validate_ordering(
+    ordering: str | None, allowed_fields: frozenset[str]
+) -> str | None:
     """Return *ordering* if it is in *allowed_fields*, otherwise ``None``."""
     if not ordering or not isinstance(ordering, str):
         return None
@@ -137,6 +151,7 @@ def build_keyword_params(query_params) -> dict[str, list[str]]:
 # ---------------------------------------------------------------------------
 # Search Q builders (per model)
 # ---------------------------------------------------------------------------
+
 
 def _workflow_run_search_q(term: str) -> Q:
     return (
@@ -185,6 +200,7 @@ def _workflow_search_q(term: str) -> Q:
 # Filtered queryset builders
 # ---------------------------------------------------------------------------
 
+
 def filtered_workflow_runs_queryset(
     query_params,
     *,
@@ -221,14 +237,8 @@ def filtered_workflow_runs_queryset(
     status = (query_params.get("status") or "").strip()
     is_ongoing = (query_params.get("is_ongoing") or "").strip().lower()
 
-    needs_time_annotation = (
-        annotate_latest_state_time
-        or bool(start_dt or end_dt)
-    )
-    needs_latest_status = (
-        (apply_status_filter and bool(status))
-        or is_ongoing == "true"
-    )
+    needs_time_annotation = annotate_latest_state_time or bool(start_dt or end_dt)
+    needs_latest_status = (apply_status_filter and bool(status)) or is_ongoing == "true"
 
     if needs_time_annotation:
         latest_time_sq = (
@@ -299,14 +309,8 @@ def filtered_analysis_runs_queryset(
     status = (query_params.get("status") or "").strip()
     is_ongoing = (query_params.get("is_ongoing") or "").strip().lower()
 
-    needs_time_annotation = (
-        annotate_latest_state_time
-        or bool(start_dt or end_dt)
-    )
-    needs_latest_status = (
-        (apply_status_filter and bool(status))
-        or is_ongoing == "true"
-    )
+    needs_time_annotation = annotate_latest_state_time or bool(start_dt or end_dt)
+    needs_latest_status = (apply_status_filter and bool(status)) or is_ongoing == "true"
 
     if needs_time_annotation:
         latest_time_sq = (
@@ -416,10 +420,12 @@ def _semver_component(position: int) -> Case:
     """
     return Case(
         When(
-            version__regex=r'^[0-9]+\.[0-9]+\.[0-9]+$',
+            version__regex=r"^[0-9]+\.[0-9]+\.[0-9]+$",
             then=Cast(
                 Func(
-                    F("version"), Value("."), Value(str(position)),
+                    F("version"),
+                    Value("."),
+                    Value(str(position)),
                     function="SPLIT_PART",
                 ),
                 output_field=IntegerField(),

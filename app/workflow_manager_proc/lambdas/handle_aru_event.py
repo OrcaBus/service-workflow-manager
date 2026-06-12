@@ -6,8 +6,10 @@ django.setup()
 import logging
 from workflow_manager.models import Status
 from workflow_manager_proc.domain.event import aru
-from workflow_manager_proc.services.analysis_run import create_analysis_run, finalise_analysis_run
-
+from workflow_manager_proc.services.analysis_run import (
+    create_analysis_run,
+    finalise_analysis_run,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -34,7 +36,9 @@ def handler(event, context):
     input_aru: aru.AnalysisRunUpdate = input_aru_with_envelope.detail
 
     # ensure ARU status are as expected
-    assert input_aru.status.upper() in SUPPORTED_ARU_STATUS, "Unexpected AnalysisRun status!"
+    assert (
+        input_aru.status.upper() in SUPPORTED_ARU_STATUS
+    ), "Unexpected AnalysisRun status!"
 
     match input_aru.status.upper():
         # TODO: This currently assumes that there will be exactly one DRAFT event followed by exactly one READY event.

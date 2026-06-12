@@ -7,7 +7,6 @@ from workflow_manager.models.workflow_run import WorkflowRun
 from workflow_manager.models.common import Status
 
 
-
 class StateManager(OrcaBusBaseManager):
     pass
 
@@ -17,14 +16,20 @@ class State(OrcaBusBaseModel):
         unique_together = ["workflow_run", "status", "timestamp"]
 
     # --- mandatory fields
-    orcabus_id = OrcaBusIdField(primary_key=True, prefix='stt')
-    status = models.CharField(max_length=255)  # TODO: How and where to enforce conventions?
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix="stt")
+    status = models.CharField(
+        max_length=255
+    )  # TODO: How and where to enforce conventions?
     timestamp = models.DateTimeField()
     comment = models.CharField(max_length=255, null=True, blank=True)
 
-    workflow_run = models.ForeignKey(WorkflowRun, related_name='states', on_delete=models.CASCADE)
+    workflow_run = models.ForeignKey(
+        WorkflowRun, related_name="states", on_delete=models.CASCADE
+    )
     # Link to workflow run payload data
-    payload = models.ForeignKey(Payload, null=True, blank=True, on_delete=models.SET_NULL)
+    payload = models.ForeignKey(
+        Payload, null=True, blank=True, on_delete=models.SET_NULL
+    )
 
     objects = StateManager()
 

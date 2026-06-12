@@ -2,7 +2,11 @@ from rest_framework import serializers
 from rest_framework.settings import api_settings
 from drf_spectacular.utils import extend_schema_field
 
-from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin, OrcabusIdSerializerMetaMixin
+from workflow_manager.serializers.base import (
+    SerializersBase,
+    OptionalFieldsMixin,
+    OrcabusIdSerializerMetaMixin,
+)
 from workflow_manager.models import WorkflowRun
 from workflow_manager.serializers.state import StateMinSerializer
 
@@ -21,8 +25,15 @@ class WorkflowRunBaseSerializer(SerializersBase):
 class WorkflowRunListParamSerializer(OptionalFieldsMixin, WorkflowRunBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
         model = WorkflowRun
-        fields = ["orcabus_id", "workflow", "analysis_run", "workflow_run_name", "portal_run_id", "execution_id",
-                  "comment", ]
+        fields = [
+            "orcabus_id",
+            "workflow",
+            "analysis_run",
+            "workflow_run_name",
+            "portal_run_id",
+            "execution_id",
+            "comment",
+        ]
 
 
 class WorkflowRunListQueryParamSerializer(WorkflowRunListParamSerializer):

@@ -8,7 +8,7 @@ from workflow_manager_proc.domain.event import arsc, wrsc
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-client = boto3.client('events', region_name='ap-southeast-2')
+client = boto3.client("events", region_name="ap-southeast-2")
 SOURCE = "orcabus.workflowmanager"
 
 
@@ -37,10 +37,10 @@ def emit_event(event_type: EventType, event_bus: str, event_json):
     response = client.put_events(
         Entries=[
             {
-                'Source': SOURCE,
-                'DetailType': event_type.value,
-                'Detail': event_json,
-                'EventBusName': event_bus,
+                "Source": SOURCE,
+                "DetailType": event_type.value,
+                "Detail": event_json,
+                "EventBusName": event_bus,
             },
         ],
     )

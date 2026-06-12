@@ -11,8 +11,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        TestData() \
-            .assign_analysis() \
-            .prep_workflow_runs()
+        TestData().assign_analysis().prep_workflow_runs()
 
         print("Done")

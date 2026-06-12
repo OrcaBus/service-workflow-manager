@@ -63,9 +63,13 @@ class WorkflowViewSetTestCase(TestCase):
         self.assertIn("other", names)
 
         sash_result = next(r for r in results if r["name"] == "sash")
-        self.assertEqual(sash_result["version"], "0.7.0", "sash should return highest version")
+        self.assertEqual(
+            sash_result["version"], "0.7.0", "sash should return highest version"
+        )
         self.assertIn("history", sash_result)
-        self.assertEqual(len(sash_result["history"]), 3, "sash history should have 3 version records")
+        self.assertEqual(
+            len(sash_result["history"]), 3, "sash history should have 3 version records"
+        )
 
     def test_list_groups_by_name_case_insensitive(self):
         from workflow_manager.models.workflow import ExecutionEngine, ValidationState
@@ -98,6 +102,14 @@ class WorkflowViewSetTestCase(TestCase):
         results = data.get("results", data)
 
         sash_results = [r for r in results if r["name"].lower() == "sash"]
-        self.assertEqual(len(sash_results), 1, "Sash/sash/SASH should merge into one group")
-        self.assertEqual(sash_results[0]["version"], "0.7.0", "Highest version across case variants")
-        self.assertEqual(len(sash_results[0]["history"]), 3, "History should include all 3 case variants")
+        self.assertEqual(
+            len(sash_results), 1, "Sash/sash/SASH should merge into one group"
+        )
+        self.assertEqual(
+            sash_results[0]["version"], "0.7.0", "Highest version across case variants"
+        )
+        self.assertEqual(
+            len(sash_results[0]["history"]),
+            3,
+            "History should include all 3 case variants",
+        )

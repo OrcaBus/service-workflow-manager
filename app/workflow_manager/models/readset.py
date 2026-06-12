@@ -9,7 +9,7 @@ class ReadsetManager(OrcaBusBaseManager):
 
 
 class Readset(OrcaBusBaseModel):
-    orcabus_id = OrcaBusIdField(primary_key=True, prefix='fqr')
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix="fqr")
     rgid = models.CharField(max_length=255)
     library_id = models.CharField(max_length=255)
     library_orcabus_id = models.CharField(max_length=255)

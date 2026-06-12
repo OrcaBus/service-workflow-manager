@@ -1,4 +1,8 @@
-from workflow_manager.serializers.base import SerializersBase, OptionalFieldsMixin, OrcabusIdSerializerMetaMixin
+from workflow_manager.serializers.base import (
+    SerializersBase,
+    OptionalFieldsMixin,
+    OrcabusIdSerializerMetaMixin,
+)
 from workflow_manager.models import Payload
 
 

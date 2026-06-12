@@ -12,19 +12,31 @@ from workflow_manager.models import (
     Library,
     LibraryAssociation,
     State,
-    Status, Payload, Readset,
+    Status,
+    Payload,
+    Readset,
 )
-from workflow_manager.models.run_context import RunContext, RunContextUseCase, RunContextStatus
+from workflow_manager.models.run_context import (
+    RunContext,
+    RunContextUseCase,
+    RunContextStatus,
+)
 from workflow_manager.models.utils import WorkflowRunUtil
 from workflow_manager_proc.domain.event import wrsc, wru
-from workflow_manager_proc.services.event_utils import emit_event, EventType, hash_payload_data
+from workflow_manager_proc.services.event_utils import (
+    emit_event,
+    EventType,
+    hash_payload_data,
+)
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 ASSOCIATION_STATUS = "ACTIVE"
 EVENT_BUS_NAME = os.environ.get("EVENT_BUS_NAME")
-WRSC_SCHEMA_VERSION = "1.0.0"  # TODO: set somewhere more global (and check against schema?)
+WRSC_SCHEMA_VERSION = (
+    "1.0.0"  # TODO: set somewhere more global (and check against schema?)
+)
 
 
 def sanitize_orcabus_id(orcabus_id: str) -> str:
@@ -39,7 +51,11 @@ def create_workflow_run(event: wru.WorkflowRunUpdate):
     if out_wrsc:
         # new state resulted in state transition, we can relay the WRSC
         logger.info("Emitting WRSC.")
-        emit_event(event_type=EventType.WRSC, event_bus=EVENT_BUS_NAME, event_json=out_wrsc.model_dump_json())
+        emit_event(
+            event_type=EventType.WRSC,
+            event_bus=EVENT_BUS_NAME,
+            event_json=out_wrsc.model_dump_json(),
+        )
     else:
         # ignore - state has not been updated
         logger.info(f"WorkflowRun state not updated. No event to emit.")
@@ -47,7 +63,9 @@ def create_workflow_run(event: wru.WorkflowRunUpdate):
     return out_wrsc
 
 
-def _create_workflow_run(event: wru.WorkflowRunUpdate) -> wrsc.WorkflowRunStateChange | None:
+def _create_workflow_run(
+    event: wru.WorkflowRunUpdate,
+) -> wrsc.WorkflowRunStateChange | None:
     """
     Parameters:
         event: JSON event conform to WorkflowRunStateChange
@@ -101,7 +119,9 @@ def get_workflow(event: wru.WorkflowRunUpdate):
         raise e
 
 
-def create_or_get_workflow_run(event: wru.WorkflowRunUpdate, workflow: Workflow) -> WorkflowRun:
+def create_or_get_workflow_run(
+    event: wru.WorkflowRunUpdate, workflow: Workflow
+) -> WorkflowRun:
     try:
         wfr: WorkflowRun = WorkflowRun.objects.get(portal_run_id=event.portalRunId)
     except Exception:
@@ -129,7 +149,9 @@ def create_or_get_workflow_run(event: wru.WorkflowRunUpdate, workflow: Workflow)
     return wfr
 
 
-def establish_workflow_run_libraries(event: wru.WorkflowRunUpdate, wfr: WorkflowRun) -> None:
+def establish_workflow_run_libraries(
+    event: wru.WorkflowRunUpdate, wfr: WorkflowRun
+) -> None:
     if not event.libraries:
         return
 
@@ -143,7 +165,9 @@ def establish_workflow_run_libraries(event: wru.WorkflowRunUpdate, wfr: Workflow
             # The library record should exist - synced with metadata service on LibraryStateChange events
             # However, until that sync is in place we may need to create a record on demand
             # FIXME: remove this once library records are automatically synced
-            db_lib = Library.objects.create(orcabus_id=orca_id, library_id=input_rec.libraryId)
+            db_lib = Library.objects.create(
+                orcabus_id=orca_id, library_id=input_rec.libraryId
+            )
 
         # create the library association
         LibraryAssociation.objects.create(
@@ -154,14 +178,20 @@ def establish_workflow_run_libraries(event: wru.WorkflowRunUpdate, wfr: Workflow
         )
 
 
-def establish_workflow_run_readsets(event: wru.WorkflowRunUpdate, wfr: WorkflowRun) -> None:
+def establish_workflow_run_readsets(
+    event: wru.WorkflowRunUpdate, wfr: WorkflowRun
+) -> None:
     if not event.libraries:
-        logger.warning(f"Event for PortalRunID {event.portalRunId} has no libraries associated with it. "
-                       f"Skipping readset linking.")
+        logger.warning(
+            f"Event for PortalRunID {event.portalRunId} has no libraries associated with it. "
+            f"Skipping readset linking."
+        )
         return
 
     if wfr.libraries.count() == 0:
-        logger.warning(f"Workflow run {wfr.orcabus_id} has no libraries associated with it. Skipping readset linking.")
+        logger.warning(
+            f"Workflow run {wfr.orcabus_id} has no libraries associated with it. Skipping readset linking."
+        )
         return
 
     # Grab all the libraries that is linked to this workflow run
@@ -175,8 +205,10 @@ def establish_workflow_run_readsets(event: wru.WorkflowRunUpdate, wfr: WorkflowR
 
         # Make sure the libraries from incoming event and existing-linked to workflow run is in agreement
         if input_rec.orcabusId not in wfr_associated_library_orcabus_ids:
-            logger.warning(f"Event library {input_rec.orcabusId} is not associated with the workflow run "
-                           f"{wfr.orcabus_id}. Skipping readset linking.")
+            logger.warning(
+                f"Event library {input_rec.orcabusId} is not associated with the workflow run "
+                f"{wfr.orcabus_id}. Skipping readset linking."
+            )
             continue
 
         # if the library is linked to readset record(s), create the association(s)
@@ -186,12 +218,14 @@ def establish_workflow_run_readsets(event: wru.WorkflowRunUpdate, wfr: WorkflowR
                     orcabus_id=rs.orcabusId,
                     rgid=rs.rgid,
                     library_id=input_rec.libraryId,
-                    library_orcabus_id=input_rec.orcabusId
+                    library_orcabus_id=input_rec.orcabusId,
                 )
                 wfr.readsets.add(rs_db)
 
 
-def establish_workflow_run_contexts(event: wru.WorkflowRunUpdate, wfr: WorkflowRun) -> None:
+def establish_workflow_run_contexts(
+    event: wru.WorkflowRunUpdate, wfr: WorkflowRun
+) -> None:
     # process computeEnv
     if event.computeEnv:
         compute_run_ctx, _ = RunContext.objects.get_or_create(
@@ -209,7 +243,9 @@ def establish_workflow_run_contexts(event: wru.WorkflowRunUpdate, wfr: WorkflowR
         wfr.contexts.add(storage_run_ctx)
 
 
-def update_workflow_run_to_new_state(event: wru.WorkflowRunUpdate, wfr: WorkflowRun) -> tuple[bool, State]:
+def update_workflow_run_to_new_state(
+    event: wru.WorkflowRunUpdate, wfr: WorkflowRun
+) -> tuple[bool, State]:
     # Create a new State sub (not persisted)
     new_state = State(
         status=event.status,
@@ -222,13 +258,19 @@ def update_workflow_run_to_new_state(event: wru.WorkflowRunUpdate, wfr: Workflow
     if event.payload:
         # Make sure the provided refId is either not set or matches the expected hash value
         calculated_data_hash = hash_payload_data(event.payload.data)
-        data_hash =  event.payload.refId if event.payload.refId else calculated_data_hash
-        assert calculated_data_hash == data_hash, "Provided Payload data hash does not match expected value"
+        data_hash = event.payload.refId if event.payload.refId else calculated_data_hash
+        assert (
+            calculated_data_hash == data_hash
+        ), "Provided Payload data hash does not match expected value"
         try:
-            pld: Payload = Payload.objects.get(payload_ref_id=data_hash, version=event.payload.version)
+            pld: Payload = Payload.objects.get(
+                payload_ref_id=data_hash, version=event.payload.version
+            )
         except Exception:
             pld = Payload(
-                payload_ref_id=hash_payload_data(event.payload.data),  # use a hash of the payload data as refId
+                payload_ref_id=hash_payload_data(
+                    event.payload.data
+                ),  # use a hash of the payload data as refId
                 version=event.payload.version,
                 data=event.payload.data,
             )
@@ -240,7 +282,9 @@ def update_workflow_run_to_new_state(event: wru.WorkflowRunUpdate, wfr: Workflow
     return success, new_state
 
 
-def map_workflow_run_new_state_to_wrsc(wfr: WorkflowRun, new_state: State) -> wrsc.WorkflowRunStateChange:
+def map_workflow_run_new_state_to_wrsc(
+    wfr: WorkflowRun, new_state: State
+) -> wrsc.WorkflowRunStateChange:
     out_wrsc = wrsc.WorkflowRunStateChange(
         id="",
         version=WRSC_SCHEMA_VERSION,
@@ -279,10 +323,12 @@ def map_workflow_run_new_state_to_wrsc(wfr: WorkflowRun, new_state: State) -> wr
                 if rs_qs.exists():
                     rs_list = []
                     for rs in rs_qs.all():
-                        rs_list.append(wrsc.Readset(
-                            orcabusId=rs.orcabus_id,
-                            rgid=rs.rgid,
-                        ))
+                        rs_list.append(
+                            wrsc.Readset(
+                                orcabusId=rs.orcabus_id,
+                                rgid=rs.rgid,
+                            )
+                        )
                     if rs_list:
                         out_lib.readsets = rs_list
             lib_list.append(out_lib)
@@ -304,7 +350,7 @@ def map_workflow_run_new_state_to_wrsc(wfr: WorkflowRun, new_state: State) -> wr
             orcabusId=new_state.payload.orcabus_id,
             refId=new_state.payload.payload_ref_id,
             version=new_state.payload.version,
-            data=new_state.payload.data
+            data=new_state.payload.data,
         )
 
     # Set RunContext
@@ -312,7 +358,7 @@ def map_workflow_run_new_state_to_wrsc(wfr: WorkflowRun, new_state: State) -> wr
         # search active compute context, get the most recent one if exists
         compute_qs = wfr.contexts.filter(
             usecase=RunContextUseCase.COMPUTE.value,
-            status=RunContextStatus.ACTIVE.value
+            status=RunContextStatus.ACTIVE.value,
         ).order_by("-orcabus_id")
         if compute_qs.exists():
             compute_ctx: RunContext = compute_qs.first()
@@ -321,7 +367,7 @@ def map_workflow_run_new_state_to_wrsc(wfr: WorkflowRun, new_state: State) -> wr
         # search active storage context, get the most recent one if exists
         storage_qs = wfr.contexts.filter(
             usecase=RunContextUseCase.STORAGE.value,
-            status=RunContextStatus.ACTIVE.value
+            status=RunContextStatus.ACTIVE.value,
         ).order_by("-orcabus_id")
         if storage_qs.exists():
             storage_ctx: RunContext = storage_qs.first()
