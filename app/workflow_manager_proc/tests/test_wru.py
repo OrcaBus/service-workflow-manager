@@ -22,7 +22,9 @@ class WruSerdeUnitTests(WorkflowManagerProcUnitTestCase):
         logger.info("-" * 128)
         logger.info(mock_obj_with_envelope.model_dump(by_alias=False))
         logger.info("-" * 128)
-        logger.info(mock_obj_with_envelope.model_dump(by_alias=True))  # by_alias=True make it to `detail-type`
+        logger.info(
+            mock_obj_with_envelope.model_dump(by_alias=True)
+        )  # by_alias=True make it to `detail-type`
         logger.info("-" * 128)
         logger.info(mock_obj_with_envelope.model_dump_json(by_alias=True))
         self.assertIsNotNone(mock_obj_with_envelope)
@@ -31,7 +33,9 @@ class WruSerdeUnitTests(WorkflowManagerProcUnitTestCase):
 
         mock_event = mock_obj.model_dump(by_alias=True)
         logger.info(type(mock_event))
-        self.assertIsInstance(mock_event, dict)  # assert that `mock_event` is some `dict` object
+        self.assertIsInstance(
+            mock_event, dict
+        )  # assert that `mock_event` is some `dict` object
 
         # validate and deserialize from some dict object
         wrsc_envelope1 = wru.WorkflowRunUpdate.model_validate(mock_event)
@@ -50,11 +54,11 @@ class WruSerdeUnitTests(WorkflowManagerProcUnitTestCase):
         self.load_mock_wru_max()
 
         event: dict = self.event
-        del event['detail']['payload']['refId']
+        del event["detail"]["payload"]["refId"]
 
-        logger.info(event['detail']['payload'].keys())
+        logger.info(event["detail"]["payload"].keys())
 
-        self.assertNotIn('refId', event['detail']['payload'].keys())
+        self.assertNotIn("refId", event["detail"]["payload"].keys())
 
         mock_obj_with_envelope: wru.AWSEvent = wru.AWSEvent.model_validate(event)
 

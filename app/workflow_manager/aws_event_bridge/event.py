@@ -24,12 +24,14 @@ def emit_wru_api_event(event: dict):
     detail_json = validated.model_dump_json(exclude_none=True)
 
     logger.info(f"Emitting WRU event to event bus {event_bus_name}: {event}")
-    response = libeb.emit_event({
-        'Source': source,
-        'DetailType': wru.WorkflowRunUpdate.__name__,
-        'Detail': detail_json,
-        'EventBusName': event_bus_name,
-    })
+    response = libeb.emit_event(
+        {
+            "Source": source,
+            "DetailType": wru.WorkflowRunUpdate.__name__,
+            "Detail": detail_json,
+            "EventBusName": event_bus_name,
+        }
+    )
 
     logger.info(f"{__name__} done.")
     return response

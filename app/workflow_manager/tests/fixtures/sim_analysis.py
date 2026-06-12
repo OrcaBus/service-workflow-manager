@@ -6,8 +6,18 @@ from typing import List
 
 from django.db.models import QuerySet
 
-from workflow_manager.models import Workflow, WorkflowRun, Analysis, AnalysisContext, AnalysisRun, \
-    Library, LibraryAssociation, State, Status, RunContext
+from workflow_manager.models import (
+    Workflow,
+    WorkflowRun,
+    Analysis,
+    AnalysisContext,
+    AnalysisRun,
+    Library,
+    LibraryAssociation,
+    State,
+    Status,
+    RunContext,
+)
 from workflow_manager.models.analysis_context import AnalysisContextUseCase
 from workflow_manager.models.utils import create_portal_run_id
 from workflow_manager.tests.factories import PayloadFactory, LibraryFactory
@@ -46,7 +56,7 @@ class TestData:
                 "assay": "TsqNano",
                 "type": "WGS",
                 "subject": "SBJ00001",
-                "workflow": "clinical"
+                "workflow": "clinical",
             },
             {
                 "phenotype": "normal",
@@ -54,7 +64,7 @@ class TestData:
                 "assay": "TsqNano",
                 "type": "WGS",
                 "subject": "SBJ00001",
-                "workflow": "clinical"
+                "workflow": "clinical",
             },
             {
                 "phenotype": "tumor",
@@ -62,7 +72,7 @@ class TestData:
                 "assay": "TsqNano",
                 "type": "WGS",
                 "subject": "SBJ00002",
-                "workflow": "research"
+                "workflow": "research",
             },
             {
                 "phenotype": "normal",
@@ -70,7 +80,7 @@ class TestData:
                 "assay": "TsqNano",
                 "type": "WGS",
                 "subject": "SBJ00002",
-                "workflow": "research"
+                "workflow": "research",
             },
             {
                 "phenotype": "tumor",
@@ -78,7 +88,7 @@ class TestData:
                 "assay": "ctTSOv2",
                 "type": "ctDNA",
                 "subject": "SBJ00003",
-                "workflow": "clinical"
+                "workflow": "clinical",
             },
             {
                 "phenotype": "tumor",
@@ -86,7 +96,7 @@ class TestData:
                 "assay": "ctTSOv2",
                 "type": "ctDNA",
                 "subject": "SBJ00003",
-                "workflow": "research"
+                "workflow": "research",
             },
         ]
 
@@ -289,11 +299,11 @@ class TestData:
         # this is meant to only generate temporary results, we assign it with a temp storage context
         # and it does not have to run on a controlled compute env, so we run it on the research compute
         research_compute_context = AnalysisContext.objects.get_by_keyword(
-            name="research",
-            usecase="COMPUTE").first()
+            name="research", usecase="COMPUTE"
+        ).first()
         temp_storage_context = AnalysisContext.objects.get_by_keyword(
-            name="temp",
-            usecase="STORAGE").first()
+            name="temp", usecase="STORAGE"
+        ).first()
 
         # convert anx to rnx when putting into run context
         research_compute_context_rnx, _ = RunContext.objects.get_or_create(
@@ -309,19 +319,21 @@ class TestData:
             status=temp_storage_context.status,
         )
 
-        analysis_qc_qs = Analysis.objects.get_by_keyword(analysis_name='QC_Assessment')
-        analysis_qc = analysis_qc_qs.first()  # FIXME: assume there are more than one and select by latest version, etc
+        analysis_qc_qs = Analysis.objects.get_by_keyword(analysis_name="QC_Assessment")
+        analysis_qc = (
+            analysis_qc_qs.first()
+        )  # FIXME: assume there are more than one and select by latest version, etc
 
         for lib in self.libraries:
-            lib_record: Library = Library.objects.get(library_id=lib['library_id'])
+            lib_record: Library = Library.objects.get(library_id=lib["library_id"])
 
             # handle QC
-            if lib['type'] in ['WGS', 'WTS']:
+            if lib["type"] in ["WGS", "WTS"]:
                 # Create QC analysis
                 analysis_run = AnalysisRun(
                     analysis_run_name=f"automated__{analysis_qc.analysis_name}__{lib_record.library_id}",
                     # status="DRAFT", FIXME to AnalysisRunState
-                    analysis=analysis_qc
+                    analysis=analysis_qc,
                 )
                 analysis_run.save()
                 analysis_run.libraries.add(lib_record)
@@ -334,56 +346,72 @@ class TestData:
     def create_wgs_analysis(self):
         # prepare the available compute and storage contexts, to be chosen depending on the actual workload
         clinical_compute_context = AnalysisContext.objects.get_by_keyword(
-            name="clinical",
-            usecase="COMPUTE").first()
+            name="clinical", usecase="COMPUTE"
+        ).first()
         clinical_storage_context = AnalysisContext.objects.get_by_keyword(
-            name="clinical",
-            usecase="STORAGE").first()
+            name="clinical", usecase="STORAGE"
+        ).first()
         research_compute_context = AnalysisContext.objects.get_by_keyword(
-            name="research",
-            usecase="COMPUTE").first()
+            name="research", usecase="COMPUTE"
+        ).first()
         research_storage_context = AnalysisContext.objects.get_by_keyword(
-            name="research",
-            usecase="STORAGE").first()
+            name="research", usecase="STORAGE"
+        ).first()
         clinical_context = AnalysisContext.objects.get_by_keyword(
-            name="clinical",
-            usecase="COMPUTE").first()  # FIXME approval context
+            name="clinical", usecase="COMPUTE"
+        ).first()  # FIXME approval context
 
         # Find the approved analysis for a wgs workload
         # NOTE: for clinical workloads the analysis has to be approved for clinical use,
         #       for research all are allowed and we choose the "latest" version
         analysis_wgs_clinical: Analysis = Analysis.objects.filter(
-            analysis_name='WGS',
-            contexts=clinical_context).first()
+            analysis_name="WGS", contexts=clinical_context
+        ).first()
         analysis_wgs_research: Analysis = Analysis.objects.filter(
-            analysis_name='WGS',
-            analysis_version='2.0').first()
+            analysis_name="WGS", analysis_version="2.0"
+        ).first()
 
         # FIXME: better pairing algorithm!
         pairing = defaultdict(lambda: defaultdict(list))
         for lib in self.libraries:
-            pairing[lib['subject']][lib['phenotype']].append(lib)
+            pairing[lib["subject"]][lib["phenotype"]].append(lib)
 
         for sbj in pairing:
-            if pairing[sbj]['tumor'] and pairing[sbj]['normal']:
+            if pairing[sbj]["tumor"] and pairing[sbj]["normal"]:
                 # noinspection PyTypeChecker
                 tumor_lib_record = None
                 # noinspection PyTypeChecker
                 normal_lib_record = None
-                if len(pairing[sbj]['tumor']) == 1:
-                    tumor_lib_record: Library = Library.objects.get(library_id=pairing[sbj]['tumor'][0]['library_id'])
-                if len(pairing[sbj]['normal']) == 1:
-                    normal_lib_record: Library = Library.objects.get(library_id=pairing[sbj]['normal'][0]['library_id'])
+                if len(pairing[sbj]["tumor"]) == 1:
+                    tumor_lib_record: Library = Library.objects.get(
+                        library_id=pairing[sbj]["tumor"][0]["library_id"]
+                    )
+                if len(pairing[sbj]["normal"]) == 1:
+                    normal_lib_record: Library = Library.objects.get(
+                        library_id=pairing[sbj]["normal"][0]["library_id"]
+                    )
 
                 if not tumor_lib_record or not normal_lib_record:
                     print("Not a valid pairing.")
                     break
 
                 # assign the compute and storage contexts based on the metadata annotation ('workflow') for now
-                workflow = pairing[sbj]['tumor'][0]['workflow']
-                compute_context = clinical_compute_context if workflow == 'clinical' else research_compute_context
-                storage_context = clinical_storage_context if workflow == 'clinical' else research_storage_context
-                analysis = analysis_wgs_clinical if workflow == 'clinical' else analysis_wgs_research
+                workflow = pairing[sbj]["tumor"][0]["workflow"]
+                compute_context = (
+                    clinical_compute_context
+                    if workflow == "clinical"
+                    else research_compute_context
+                )
+                storage_context = (
+                    clinical_storage_context
+                    if workflow == "clinical"
+                    else research_storage_context
+                )
+                analysis = (
+                    analysis_wgs_clinical
+                    if workflow == "clinical"
+                    else analysis_wgs_research
+                )
 
                 # convert anx to rnx when putting into run context
                 compute_context_rnx, _ = RunContext.objects.get_or_create(
@@ -399,12 +427,14 @@ class TestData:
                     status=storage_context.status,
                 )
 
-                analysis_run_name = f"automated__{analysis.analysis_name}__{workflow}__" + \
-                                    f"{tumor_lib_record.library_id}__{normal_lib_record.library_id} "
+                analysis_run_name = (
+                    f"automated__{analysis.analysis_name}__{workflow}__"
+                    + f"{tumor_lib_record.library_id}__{normal_lib_record.library_id} "
+                )
                 ar_wgs = AnalysisRun(
                     analysis_run_name=analysis_run_name,
                     # status="DRAFT",  FIXME to AnalysisRunState
-                    analysis=analysis
+                    analysis=analysis,
                 )
                 ar_wgs.save()
                 ar_wgs.libraries.add(tumor_lib_record)
@@ -420,30 +450,40 @@ class TestData:
     def create_cttso_analysis(self):
         # prepare the available compute and storage contexts, to be chosen depending on the actual workload
         clinical_compute_context = AnalysisContext.objects.get_by_keyword(
-            name="clinical",
-            usecase="COMPUTE").first()
+            name="clinical", usecase="COMPUTE"
+        ).first()
         clinical_storage_context = AnalysisContext.objects.get_by_keyword(
-            name="clinical",
-            usecase="STORAGE").first()
+            name="clinical", usecase="STORAGE"
+        ).first()
         research_compute_context = AnalysisContext.objects.get_by_keyword(
-            name="research",
-            usecase="COMPUTE").first()
+            name="research", usecase="COMPUTE"
+        ).first()
         research_storage_context = AnalysisContext.objects.get_by_keyword(
-            name="research",
-            usecase="STORAGE").first()
+            name="research", usecase="STORAGE"
+        ).first()
 
         # Find the approved analysis for a ctTSO workload
         # NOTE: for now we only have one ctTSO analysis
-        analysis_cttso_qs = Analysis.objects.get_by_keyword(analysis_name='ctTSO').first()
+        analysis_cttso_qs = Analysis.objects.get_by_keyword(
+            analysis_name="ctTSO"
+        ).first()
 
         for lib in self.libraries:
-            lib_record: Library = Library.objects.get(library_id=lib['library_id'])
+            lib_record: Library = Library.objects.get(library_id=lib["library_id"])
 
             # handle QC
-            if lib['type'] in ['ctDNA'] and lib['assay'] in ['ctTSOv2']:
-                workflow = lib['workflow']
-                compute_context = clinical_compute_context if workflow == 'clinical' else research_compute_context
-                storage_context = clinical_storage_context if workflow == 'clinical' else research_storage_context
+            if lib["type"] in ["ctDNA"] and lib["assay"] in ["ctTSOv2"]:
+                workflow = lib["workflow"]
+                compute_context = (
+                    clinical_compute_context
+                    if workflow == "clinical"
+                    else research_compute_context
+                )
+                storage_context = (
+                    clinical_storage_context
+                    if workflow == "clinical"
+                    else research_storage_context
+                )
                 analysis_run_name = f"automated__{analysis_cttso_qs.analysis_name}__{workflow}__{lib_record.library_id}"
 
                 # convert anx to rnx when putting into run context
@@ -463,7 +503,7 @@ class TestData:
                 analysis_run = AnalysisRun(
                     analysis_run_name=analysis_run_name,
                     # status="DRAFT",  FIXME to AnalysisRunState
-                    analysis=analysis_cttso_qs
+                    analysis=analysis_cttso_qs,
                 )
                 analysis_run.save()
                 analysis_run.libraries.add(lib_record)
@@ -477,7 +517,7 @@ class TestData:
         # Find AnalysisRuns for the given libraries (all libs of AnalysisRun must match)
         lids = set()
         for lib in self.libraries:
-            lids.add(lib['library_id'])
+            lids.add(lib["library_id"])
 
         # Querying "valid" AnalysisRuns for libraries
         # The AnalysisRun linked libraries need to be both in the input list
@@ -543,14 +583,15 @@ class TestData:
                                 "GRCh38_umccr": {
                                     "fai": "s3://reference-data/refdata/genomes/GRCh38_umccr/foo/bar/GRCh38.fa.fai"
                                 }
-                            }
+                            },
                         },
                         "engineParameters": {
                             "logsUri": "s3://reference-data/refdata/logs/",
                             "logs_uri": "s3://underscore-data/refdata/logs/",
-                        }
-                    }),
-                comment="Initial State"
+                        },
+                    },
+                ),
+                comment="Initial State",
             )
             initial_state.save()
             # add randomly additional states to simulate a state history
@@ -562,8 +603,11 @@ class TestData:
                     timestamp=datetime.now(timezone.utc),
                     payload=PayloadFactory(
                         payload_ref_id=str(uuid.uuid4()),
-                        data={"comment": f"Payload for READY state of wfr.{wr.orcabus_id}"}),
-                    comment="READY State"
+                        data={
+                            "comment": f"Payload for READY state of wfr.{wr.orcabus_id}"
+                        },
+                    ),
+                    comment="READY State",
                 )
                 ready_state.save()
                 # randomly create another state
@@ -575,8 +619,11 @@ class TestData:
                         timestamp=datetime.now(timezone.utc),
                         payload=PayloadFactory(
                             payload_ref_id=str(uuid.uuid4()),
-                            data={"comment": f"Payload for RUNNING state of wfr.{wr.orcabus_id}"}),
-                        comment="RUNNING State"
+                            data={
+                                "comment": f"Payload for RUNNING state of wfr.{wr.orcabus_id}"
+                            },
+                        ),
+                        comment="RUNNING State",
                     )
                     ready_state.save()
                     # randomly create another state
@@ -584,11 +631,16 @@ class TestData:
                         # create a terminal state
                         ready_state = State(
                             workflow_run=wr,
-                            status=random.choice([Status.SUCCEEDED.convention, Status.FAILED.convention]),
+                            status=random.choice(
+                                [Status.SUCCEEDED.convention, Status.FAILED.convention]
+                            ),
                             timestamp=datetime.now(timezone.utc),
                             payload=PayloadFactory(
                                 payload_ref_id=str(uuid.uuid4()),
-                                data={"comment": f"Payload for terminal state of wfr.{wr.orcabus_id}"}),
-                            comment="Terminal State"
+                                data={
+                                    "comment": f"Payload for terminal state of wfr.{wr.orcabus_id}"
+                                },
+                            ),
+                            comment="Terminal State",
                         )
                         ready_state.save()

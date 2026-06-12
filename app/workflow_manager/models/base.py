@@ -5,8 +5,18 @@ from typing import List
 
 from django.core.exceptions import FieldError
 from django.db import models
-from django.db.models import Q, ManyToManyField, ForeignKey, ForeignObject, OneToOneField, ForeignObjectRel, \
-    ManyToOneRel, ManyToManyRel, OneToOneRel, QuerySet
+from django.db.models import (
+    Q,
+    ManyToManyField,
+    ForeignKey,
+    ForeignObject,
+    OneToOneField,
+    ForeignObjectRel,
+    ManyToOneRel,
+    ManyToManyRel,
+    OneToOneRel,
+    QuerySet,
+)
 from rest_framework.settings import api_settings
 from workflow_manager.pagination import PaginationConstant
 
@@ -43,7 +53,8 @@ class OrcaBusBaseManager(models.Manager):
         return reduce(
             # Apparently the `get_prep_value` from the custom fields.py is not called prior hitting the Db but,
             # the regular `__exact` still execute that function.
-            operator.or_, (Q(**{"%s__exact" % key: value}) for value in values)
+            operator.or_,
+            (Q(**{"%s__exact" % key: value}) for value in values),
         )
 
     def get_model_fields_query(self, qs: QuerySet, **kwargs) -> QuerySet:
@@ -102,8 +113,19 @@ class OrcaBusBaseModel(models.Model):
     def get_base_fields(cls):
         base_fields = set()
         for f in cls._meta.get_fields():
-            if isinstance(f, (ForeignKey, ForeignObject, OneToOneField, ManyToManyField,
-                              ForeignObjectRel, ManyToOneRel, ManyToManyRel, OneToOneRel,)):
+            if isinstance(
+                f,
+                (
+                    ForeignKey,
+                    ForeignObject,
+                    OneToOneField,
+                    ManyToManyField,
+                    ForeignObjectRel,
+                    ManyToOneRel,
+                    ManyToManyRel,
+                    OneToOneRel,
+                ),
+            ):
                 continue
             base_fields.add(f.name)
         return list(base_fields)

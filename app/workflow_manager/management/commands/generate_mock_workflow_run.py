@@ -18,8 +18,6 @@ class Command(BaseCommand):
 
         # First case: a primary workflow with two executions linked to 4 libraries
         # The first execution failed and led to a repetition that succeeded
-        TestData() \
-            .create_primary() \
-            .create_secondary()
+        TestData().create_primary().create_secondary()
 
         print("Done")

@@ -6,21 +6,27 @@ from zoneinfo import ZoneInfo
 import factory
 from django.utils.timezone import make_aware
 
-from workflow_manager.models import Workflow, WorkflowRun, Payload, Library, State, AnalysisRun
+from workflow_manager.models import (
+    Workflow,
+    WorkflowRun,
+    Payload,
+    Library,
+    State,
+    AnalysisRun,
+)
 
 
 class TestConstant(Enum):
     workflow_name = "TestWorkflow1"
-    payload = {
-        "key": "value",
-        "foo": uuid.uuid4(),
-        "bar": datetime.now().astimezone(ZoneInfo('Australia/Sydney')),
-        "sub": {"my": "sub"}
-    },
-    library = {
-        "library_id": "L000001",
-        "orcabus_id": "01J5M2J44HFJ9424G7074NKTGN"
-    }
+    payload = (
+        {
+            "key": "value",
+            "foo": uuid.uuid4(),
+            "bar": datetime.now().astimezone(ZoneInfo("Australia/Sydney")),
+            "sub": {"my": "sub"},
+        },
+    )
+    library = {"library_id": "L000001", "orcabus_id": "01J5M2J44HFJ9424G7074NKTGN"}
 
 
 class WorkflowFactory(factory.django.DjangoModelFactory):

@@ -58,7 +58,9 @@ class WorkflowRunViewSetTestCase(TestCase):
 
     def test_list_with_keyword_params(self):
         wfr = WorkflowRun.objects.first()
-        response = self.client.get(f"{self.endpoint}/", {"workflow__orcabus_id": wfr.workflow.orcabus_id})
+        response = self.client.get(
+            f"{self.endpoint}/", {"workflow__orcabus_id": wfr.workflow.orcabus_id}
+        )
         self.assertEqual(response.status_code, 200)
 
     def test_ongoing_action_returns_200(self):

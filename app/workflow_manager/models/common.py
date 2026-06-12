@@ -3,13 +3,13 @@ from typing import List
 
 
 class Status(Enum):
-    DRAFT = "DRAFT", ['DRAFT', 'INITIAL', 'CREATED']
-    READY = "READY", ['READY']
-    RUNNING = "RUNNING", ['RUNNING', 'IN_PROGRESS']
-    SUCCEEDED = "SUCCEEDED", ['SUCCEEDED', 'SUCCESS']
-    FAILED = "FAILED", ['FAILED', 'FAILURE', 'FAIL']
-    ABORTED = "ABORTED", ['ABORTED', 'CANCELLED', 'CANCELED']
-    RESOLVED = "RESOLVED", ['RESOLVED']
+    DRAFT = "DRAFT", ["DRAFT", "INITIAL", "CREATED"]
+    READY = "READY", ["READY"]
+    RUNNING = "RUNNING", ["RUNNING", "IN_PROGRESS"]
+    SUCCEEDED = "SUCCEEDED", ["SUCCEEDED", "SUCCESS"]
+    FAILED = "FAILED", ["FAILED", "FAILURE", "FAIL"]
+    ABORTED = "ABORTED", ["ABORTED", "CANCELLED", "CANCELED"]
+    RESOLVED = "RESOLVED", ["RESOLVED"]
 
     def __init__(self, convention: str, aliases: List[str]):
         self.convention = convention

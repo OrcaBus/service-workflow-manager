@@ -11,25 +11,39 @@ from workflow_manager.serializers.workflow_run import (
     WorkflowRunSerializer,
 )
 from workflow_manager.viewsets.base import BaseViewSet
-from workflow_manager.viewsets.utils import filtered_workflow_runs_queryset, validate_ordering
+from workflow_manager.viewsets.utils import (
+    filtered_workflow_runs_queryset,
+    validate_ordering,
+)
 
-ALLOWED_ORDER_FIELDS = frozenset([
-    'orcabus_id', '-orcabus_id', 'portal_run_id', '-portal_run_id',
-    'workflow_run_name', '-workflow_run_name', 'execution_id', '-execution_id',
-    'comment', '-comment',
-    'timestamp', '-timestamp',
-])
+ALLOWED_ORDER_FIELDS = frozenset(
+    [
+        "orcabus_id",
+        "-orcabus_id",
+        "portal_run_id",
+        "-portal_run_id",
+        "workflow_run_name",
+        "-workflow_run_name",
+        "execution_id",
+        "-execution_id",
+        "comment",
+        "-comment",
+        "timestamp",
+        "-timestamp",
+    ]
+)
 
 
 class WorkflowRunViewSet(BaseViewSet):
     """
     Read-only WorkflowRun API. Analysis_run linkage is updated automatically by the system.
     """
+
     serializer_class = WorkflowRunDetailSerializer
     search_fields = WorkflowRun.get_base_fields()
     queryset = WorkflowRun.objects.all()
     termination_statuses = ["FAILED", "ABORTED", "SUCCEEDED", "RESOLVED", "DEPRECATED"]
-    http_method_names = ['get', 'head', 'options', 'trace']
+    http_method_names = ["get", "head", "options", "trace"]
     # Ordering and search are handled in get_queryset / filtered_workflow_runs_queryset;
     # DRF filter_backends are disabled to avoid double-filtering.
     filter_backends = []
@@ -50,7 +64,9 @@ class WorkflowRunViewSet(BaseViewSet):
         in the allow-list; falls back to ``-orcabus_id`` when absent or invalid.
         ``timestamp`` / ``-timestamp`` sort by latest state time.
         """
-        raw_order = (self.request.query_params.get(api_settings.ORDERING_PARAM) or "").strip()
+        raw_order = (
+            self.request.query_params.get(api_settings.ORDERING_PARAM) or ""
+        ).strip()
         validated = validate_ordering(raw_order, ALLOWED_ORDER_FIELDS)
         needs_timestamp_order = validated in ("timestamp", "-timestamp")
 
@@ -77,14 +93,14 @@ class WorkflowRunViewSet(BaseViewSet):
         summary="List ongoing workflow runs",
         description="Returns workflow runs whose latest state is not in a terminal status (FAILED, ABORTED, SUCCEEDED, RESOLVED, DEPRECATED).",
     )
-    @action(detail=False, methods=['GET'])
+    @action(detail=False, methods=["GET"])
     def ongoing(self, request):
         self.serializer_class = WorkflowRunSerializer
         validated = validate_ordering(
-            request.query_params.get(api_settings.ORDERING_PARAM, ''),
+            request.query_params.get(api_settings.ORDERING_PARAM, ""),
             ALLOWED_ORDER_FIELDS,
         )
-        ordering = validated if validated else '-orcabus_id'
+        ordering = validated if validated else "-orcabus_id"
 
         extra_keyword: dict[str, list[str]] = {}
         if "status" in request.query_params:
@@ -92,14 +108,18 @@ class WorkflowRunViewSet(BaseViewSet):
             if st and str(st).strip():
                 extra_keyword["states__status"] = [str(st).strip()]
 
-        latest_ts_subq = State.objects.filter(
-            workflow_run=OuterRef('pk'),
-        ).order_by('-timestamp').values('timestamp')[:1]
+        latest_ts_subq = (
+            State.objects.filter(
+                workflow_run=OuterRef("pk"),
+            )
+            .order_by("-timestamp")
+            .values("timestamp")[:1]
+        )
 
         has_terminal_latest = Exists(
             State.objects.filter(
-                workflow_run=OuterRef('pk'),
-                timestamp=OuterRef('latest_state_time'),
+                workflow_run=OuterRef("pk"),
+                timestamp=OuterRef("latest_state_time"),
                 status__in=self.termination_statuses,
             )
         )
@@ -122,24 +142,28 @@ class WorkflowRunViewSet(BaseViewSet):
         summary="List unresolved workflow runs",
         description="Returns workflow runs whose latest state is FAILED (failed runs not yet resolved).",
     )
-    @action(detail=False, methods=['GET'])
+    @action(detail=False, methods=["GET"])
     def unresolved(self, request):
         self.serializer_class = WorkflowRunSerializer
         validated = validate_ordering(
-            request.query_params.get(api_settings.ORDERING_PARAM, ''),
+            request.query_params.get(api_settings.ORDERING_PARAM, ""),
             ALLOWED_ORDER_FIELDS,
         )
-        ordering = validated if validated else '-orcabus_id'
+        ordering = validated if validated else "-orcabus_id"
 
-        latest_ts_subq = State.objects.filter(
-            workflow_run=OuterRef('pk'),
-        ).order_by('-timestamp').values('timestamp')[:1]
+        latest_ts_subq = (
+            State.objects.filter(
+                workflow_run=OuterRef("pk"),
+            )
+            .order_by("-timestamp")
+            .values("timestamp")[:1]
+        )
 
         has_failed_latest = Exists(
             State.objects.filter(
-                workflow_run=OuterRef('pk'),
-                timestamp=OuterRef('latest_state_time'),
-                status='FAILED',
+                workflow_run=OuterRef("pk"),
+                timestamp=OuterRef("latest_state_time"),
+                status="FAILED",
             )
         )
 

@@ -8,12 +8,12 @@ Usage:
 from .base import *  # noqa
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'workflow_manager',
-        'USER': 'orcabus',
-        'PASSWORD': 'orcabus',  # pragma: allowlist-secret
-        'HOST': os.getenv('DB_HOSTNAME', 'localhost'),
-        'PORT': os.getenv('DB_PORT', 5435),
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "workflow_manager",
+        "USER": "orcabus",
+        "PASSWORD": "orcabus",  # pragma: allowlist-secret
+        "HOST": os.getenv("DB_HOSTNAME", "localhost"),
+        "PORT": os.getenv("DB_PORT", 5435),
     }
 }

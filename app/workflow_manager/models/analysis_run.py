@@ -13,11 +13,13 @@ class AnalysisRunManager(OrcaBusBaseManager):
 
 
 class AnalysisRun(OrcaBusBaseModel):
-    orcabus_id = OrcaBusIdField(primary_key=True, prefix='anr')
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix="anr")
     analysis_run_name = models.CharField(max_length=255)
     comment = models.CharField(max_length=255, null=True, blank=True)
 
-    analysis = models.ForeignKey(Analysis, null=True, blank=True, on_delete=models.SET_NULL)
+    analysis = models.ForeignKey(
+        Analysis, null=True, blank=True, on_delete=models.SET_NULL
+    )
     libraries = models.ManyToManyField(Library)
     contexts = models.ManyToManyField(RunContext)
     readsets = models.ManyToManyField(Readset)
@@ -33,4 +35,4 @@ class AnalysisRun(OrcaBusBaseModel):
 
     def get_latest_state(self):
         # retrieve all related states and get the latest one
-        return self.states.order_by('-timestamp', '-orcabus_id').first()
+        return self.states.order_by("-timestamp", "-orcabus_id").first()

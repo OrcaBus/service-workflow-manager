@@ -67,10 +67,14 @@ class CommentViewSetTestCase(TestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn("createdBy and text fields are required", response.json()["detail"])
+        self.assertIn(
+            "createdBy and text fields are required", response.json()["detail"]
+        )
 
     def test_update_comment_success(self):
-        c = Comment.objects.create(workflow_run=self.wfr, text="original", created_by="tester")
+        c = Comment.objects.create(
+            workflow_run=self.wfr, text="original", created_by="tester"
+        )
         url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/"
         response = self.client.patch(
             url,
@@ -82,7 +86,9 @@ class CommentViewSetTestCase(TestCase):
         self.assertEqual(c.text, "updated")
 
     def test_update_comment_permission_denied(self):
-        c = Comment.objects.create(workflow_run=self.wfr, text="original", created_by="creator")
+        c = Comment.objects.create(
+            workflow_run=self.wfr, text="original", created_by="creator"
+        )
         url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/"
         response = self.client.patch(
             url,
@@ -92,7 +98,9 @@ class CommentViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_update_comment_extra_fields_ignored(self):
-        c = Comment.objects.create(workflow_run=self.wfr, text="original", created_by="tester")
+        c = Comment.objects.create(
+            workflow_run=self.wfr, text="original", created_by="tester"
+        )
         url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/"
         response = self.client.patch(
             url,
@@ -158,7 +166,9 @@ class CommentViewSetTestCase(TestCase):
         return_value={"email": "tester"},
     )
     def test_update_comment_uses_bearer_when_created_by_omitted(self, _mock_decode):
-        c = Comment.objects.create(workflow_run=self.wfr, text="original", created_by="tester")
+        c = Comment.objects.create(
+            workflow_run=self.wfr, text="original", created_by="tester"
+        )
         url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/"
         response = self.client.patch(
             url,
@@ -171,7 +181,9 @@ class CommentViewSetTestCase(TestCase):
         self.assertEqual(c.text, "via jwt")
 
     def test_update_comment_requires_bearer_when_created_by_omitted(self):
-        c = Comment.objects.create(workflow_run=self.wfr, text="original", created_by="tester")
+        c = Comment.objects.create(
+            workflow_run=self.wfr, text="original", created_by="tester"
+        )
         url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/"
         response = self.client.patch(
             url,
@@ -206,7 +218,9 @@ class CommentViewSetTestCase(TestCase):
         return_value={"email": "other_user"},
     )
     def test_soft_delete_permission_denied(self, _mock_decode):
-        c = Comment.objects.create(workflow_run=self.wfr, text="x", created_by="creator")
+        c = Comment.objects.create(
+            workflow_run=self.wfr, text="x", created_by="creator"
+        )
         url = f"{self.endpoint}/{self.wfr.orcabus_id}/comment/{c.orcabus_id}/"
         response = self.client.delete(
             url,

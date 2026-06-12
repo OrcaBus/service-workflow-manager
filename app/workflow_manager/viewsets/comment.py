@@ -41,13 +41,14 @@ from workflow_manager.viewsets.auth_utils import get_email_from_bearer_authoriza
 )
 class BaseCommentViewSet(PatchOnlyViewSet, mixins.DestroyModelMixin):
     """Shared logic for comment CRUD, parameterized by parent model/field."""
+
     serializer_class = CommentSerializer
     search_fields = Comment.get_base_fields()
     pagination_class = None
     lookup_url_kwarg = "comment_orcabus_id"
     lookup_value_regex = "[^/]+"
     # PatchOnlyViewSet excludes PUT; we extend it with DELETE for soft-delete.
-    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options', 'trace']
+    http_method_names = ["get", "post", "patch", "delete", "head", "options", "trace"]
 
     parent_model = None
     parent_field = None
@@ -55,8 +56,7 @@ class BaseCommentViewSet(PatchOnlyViewSet, mixins.DestroyModelMixin):
 
     def get_queryset(self):
         return Comment.objects.filter(
-            **{self.parent_field: self.kwargs["orcabus_id"]},
-            is_deleted=False
+            **{self.parent_field: self.kwargs["orcabus_id"]}, is_deleted=False
         )
 
     def create(self, request, *args, **kwargs):
@@ -65,13 +65,18 @@ class BaseCommentViewSet(PatchOnlyViewSet, mixins.DestroyModelMixin):
         try:
             parent = self.parent_model.objects.get(orcabus_id=parent_orcabus_id)
         except self.parent_model.DoesNotExist:
-            return Response({"detail": self.parent_not_found_msg}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": self.parent_not_found_msg}, status=status.HTTP_404_NOT_FOUND
+            )
 
         required_fields = {"text", "created_by"}
         provided_fields = set(request.data.keys())
 
         if required_fields - provided_fields:
-            return Response({"detail": "createdBy and text fields are required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "createdBy and text fields are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         body = CommentCreateRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
@@ -88,7 +93,7 @@ class BaseCommentViewSet(PatchOnlyViewSet, mixins.DestroyModelMixin):
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
+        partial = kwargs.pop("partial", False)
         instance = self.get_object()
         allowed_fields = {"text", "created_by", "severity"}
         filtered_data = {
@@ -135,6 +140,7 @@ class BaseCommentViewSet(PatchOnlyViewSet, mixins.DestroyModelMixin):
 
 class WorkflowRunCommentViewSet(BaseCommentViewSet):
     """Comments nested under WorkflowRun."""
+
     parent_model = WorkflowRun
     parent_field = "workflow_run"
     parent_not_found_msg = "WorkflowRun not found."
@@ -142,6 +148,7 @@ class WorkflowRunCommentViewSet(BaseCommentViewSet):
 
 class AnalysisRunCommentViewSet(BaseCommentViewSet):
     """Comments nested under AnalysisRun."""
+
     parent_model = AnalysisRun
     parent_field = "analysis_run"
     parent_not_found_msg = "AnalysisRun not found."

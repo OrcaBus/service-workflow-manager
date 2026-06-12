@@ -14,7 +14,9 @@ from rest_framework.exceptions import AuthenticationFailed
 logger = logging.getLogger(__name__)
 
 
-def parse_bearer_raw_token_from_request(request, keyword: str = "Bearer") -> Optional[str]:
+def parse_bearer_raw_token_from_request(
+    request, keyword: str = "Bearer"
+) -> Optional[str]:
     """
     Extract the JWT string from ``Authorization: Bearer <token>``.
 

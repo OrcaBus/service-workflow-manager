@@ -11,7 +11,7 @@ class LibraryManager(OrcaBusBaseManager):
 
 class Library(OrcaBusBaseModel):
 
-    orcabus_id = OrcaBusIdField(primary_key=True, prefix='lib')
+    orcabus_id = OrcaBusIdField(primary_key=True, prefix="lib")
     library_id = models.CharField(max_length=255)
 
     objects = LibraryManager()

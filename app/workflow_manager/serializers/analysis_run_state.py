@@ -1,4 +1,7 @@
-from workflow_manager.serializers.base import SerializersBase, OrcabusIdSerializerMetaMixin
+from workflow_manager.serializers.base import (
+    SerializersBase,
+    OrcabusIdSerializerMetaMixin,
+)
 from workflow_manager.models import AnalysisRunState
 
 

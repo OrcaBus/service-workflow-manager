@@ -3,6 +3,7 @@
 
 See README https://github.com/logandk/serverless-wsgi
 """
+
 import logging
 
 import serverless_wsgi
@@ -19,7 +20,9 @@ def _get_request_details(event):
         return None, None
 
     request_context = event.get("requestContext")
-    http_context = request_context.get("http") if isinstance(request_context, dict) else None
+    http_context = (
+        request_context.get("http") if isinstance(request_context, dict) else None
+    )
 
     http_method = None
     path = None

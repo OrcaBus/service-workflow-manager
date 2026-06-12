@@ -22,11 +22,15 @@ class ApiHandlerTests(SimpleTestCase):
     def test_handler_passes_successful_response_through(self):
         expected_response = {"statusCode": 200, "body": "{}"}
 
-        with patch("api.serverless_wsgi.handle_request", return_value=expected_response) as mock_handle_request:
+        with patch(
+            "api.serverless_wsgi.handle_request", return_value=expected_response
+        ) as mock_handle_request:
             response = api.handler(self.event, self.context)
 
         self.assertEqual(response, expected_response)
-        mock_handle_request.assert_called_once_with(api.application, self.event, self.context)
+        mock_handle_request.assert_called_once_with(
+            api.application, self.event, self.context
+        )
 
     def test_handler_logs_context_when_wsgi_handler_raises(self):
         error = RuntimeError("gateway timeout")

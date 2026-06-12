@@ -11,7 +11,9 @@ from workflow_manager.models.analysis import Analysis, AnalysisStatus
 from workflow_manager.models.analysis_run import AnalysisRun
 from workflow_manager.models.workflow import Workflow, ValidationState
 from workflow_manager.serializers.analysis import AnalysisListQueryParamSerializer
-from workflow_manager.serializers.analysis_run import AnalysisRunListQueryParamSerializer
+from workflow_manager.serializers.analysis_run import (
+    AnalysisRunListQueryParamSerializer,
+)
 from workflow_manager.serializers.stats import (
     WorkflowRunStatusCountSerializer,
     AnalysisRunStatusCountSerializer,
@@ -19,7 +21,9 @@ from workflow_manager.serializers.stats import (
     AnalysisStatusCountSerializer,
 )
 from workflow_manager.serializers.workflow import WorkflowListQueryParamSerializer
-from workflow_manager.serializers.workflow_run import WorkflowRunListQueryParamSerializer
+from workflow_manager.serializers.workflow_run import (
+    WorkflowRunListQueryParamSerializer,
+)
 from workflow_manager.viewsets.utils import (
     WORKFLOW_RUN_TERMINATION_STATUSES,
     get_latest_workflow_ids_queryset,
@@ -102,7 +106,14 @@ class StatsViewSet(GenericViewSet):
             WorkflowRun,
             State,
             state_fk_field="workflow_run",
-            count_statuses=["SUCCEEDED", "ABORTED", "FAILED", "RESOLVED", "DEPRECATED", "DRAFT"],
+            count_statuses=[
+                "SUCCEEDED",
+                "ABORTED",
+                "FAILED",
+                "RESOLVED",
+                "DEPRECATED",
+                "DRAFT",
+            ],
             termination_statuses=RUN_LATEST_STATE_TERMINATION_STATUSES,
             base_queryset=base,
         )
@@ -118,7 +129,9 @@ class StatsViewSet(GenericViewSet):
     )
     @action(detail=False, methods=["GET"], url_path="workflow_run/status_counts")
     def workflow_run_status_counts(self, request):
-        return Response(self._workflow_run_status_counts(request.query_params), status=200)
+        return Response(
+            self._workflow_run_status_counts(request.query_params), status=200
+        )
 
     # --- analysis run ---
 
@@ -147,7 +160,9 @@ class StatsViewSet(GenericViewSet):
     )
     @action(detail=False, methods=["GET"], url_path="analysis_run/status_counts")
     def analysis_run_status_counts(self, request):
-        return Response(self._analysis_run_status_counts(request.query_params), status=200)
+        return Response(
+            self._analysis_run_status_counts(request.query_params), status=200
+        )
 
     # --- workflow ---
 
@@ -230,9 +245,8 @@ class StatsViewSet(GenericViewSet):
         # generating a large IN (...) clause.
         latest_ids_qs = get_latest_workflow_ids_queryset()
 
-        filtered_latest_qs = (
-            filtered_workflows_queryset(request.query_params)
-            .filter(orcabus_id__in=latest_ids_qs)
+        filtered_latest_qs = filtered_workflows_queryset(request.query_params).filter(
+            orcabus_id__in=latest_ids_qs
         )
 
         counts = (
