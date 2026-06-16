@@ -24,6 +24,7 @@ import {
 } from '@orcabus/platform-cdk-constructs/shared-config/database';
 import { WorkflowManagerSchemaRegistry } from './schema';
 import { AutoTriggerBackupMigration } from './lambda-migration';
+import { GitStack } from '@orcabus/platform-cdk-constructs/deployment-stack-pipeline';
 
 export interface WorkflowManagerStackProps extends StackProps {
   lambdaSecurityGroupName: string;
@@ -32,7 +33,7 @@ export interface WorkflowManagerStackProps extends StackProps {
   apiGatewayCognitoProps: OrcaBusApiGatewayProps;
 }
 
-export class WorkflowManagerStack extends Stack {
+export class WorkflowManagerStack extends GitStack {
   private props: WorkflowManagerStackProps;
   private baseLayer: PythonLayerVersion;
   private readonly lambdaEnv;
