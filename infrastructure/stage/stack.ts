@@ -3,7 +3,7 @@ import { Construct } from 'constructs';
 import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import { ISecurityGroup, IVpc, SecurityGroup, Vpc, VpcLookupOptions } from 'aws-cdk-lib/aws-ec2';
 import { EventBus, IEventBus, Rule } from 'aws-cdk-lib/aws-events';
-import { aws_events_targets, aws_lambda, Duration, Stack, StackProps } from 'aws-cdk-lib';
+import { aws_events_targets, aws_lambda, Duration, StackProps } from 'aws-cdk-lib';
 import { PythonFunction, PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import {
