@@ -144,11 +144,19 @@ class StateTransitionValidationMixin:
 
     @staticmethod
     def _failure_response_status(failures: list[dict]) -> int:
-        """Choose the most helpful HTTP status when no batch item succeeds."""
+        """Choose the most helpful HTTP status when no batch item succeeds.
+
+        - All client-side reasons (NOT_FOUND, INVALID_TRANSITION) → 400
+        - Any upstream/WRSC emission failure → 502
+        - Any database failure (no WRSC failure) → 500
+        """
         client_failure_reasons = {"NOT_FOUND", "INVALID_TRANSITION"}
-        if all(failure.get("reason") in client_failure_reasons for failure in failures):
+        reasons = {failure.get("reason") for failure in failures}
+        if reasons <= client_failure_reasons:
             return status.HTTP_400_BAD_REQUEST
-        return status.HTTP_502_BAD_GATEWAY
+        if "WRSC_EMIT_FAILED" in reasons:
+            return status.HTTP_502_BAD_GATEWAY
+        return status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
 @extend_schema_view(
@@ -280,7 +288,7 @@ class StateViewSet(
             return Response(
                 {
                     "detail": "Failed to create workflow-run state. The operation was rolled back.",
-                    "error": str(exc),
+                    "correlation_id": f"{wfr_orcabus_id}:{request_status}",
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
@@ -293,7 +301,7 @@ class StateViewSet(
             return Response(
                 {
                     "detail": "Failed to create workflow-run state and emit WRSC event. The operation was rolled back.",
-                    "error": str(exc),
+                    "correlation_id": f"{wfr_orcabus_id}:{request_status}",
                 },
                 status=status.HTTP_502_BAD_GATEWAY,
             )
@@ -443,7 +451,6 @@ class WorkflowRunBatchStateTransitionViewSet(
                         "workflowrun_orcabus_id": wfr.orcabus_id,
                         "reason": "STATE_CREATION_FAILED",
                         "detail": "Failed to create workflow-run state. The operation was rolled back.",
-                        "error": str(exc),
                     }
                 )
                 continue
@@ -458,7 +465,6 @@ class WorkflowRunBatchStateTransitionViewSet(
                         "workflowrun_orcabus_id": wfr.orcabus_id,
                         "reason": "WRSC_EMIT_FAILED",
                         "detail": "Failed to create workflow-run state and emit WRSC event. The operation was rolled back.",
-                        "error": str(exc),
                     }
                 )
                 continue
