@@ -131,7 +131,7 @@ class StateViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, 500)
         data = response.json()
         self.assertIn("rolled back", data["detail"])
-        self.assertIn("correlation_id", data)
+        self.assertIn("correlationId", data)
         self.assertFalse(
             State.objects.filter(
                 workflow_run=self.wfr_failed,
