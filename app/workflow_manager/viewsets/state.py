@@ -28,14 +28,15 @@ class StateTransitionValidationMixin:
     refer:
         "Resolved" -- https://github.com/umccr/orcabus/issues/593
         "Deprecated" -- https://github.com/umccr/orcabus/issues/695
+        "Canceled" -- https://github.com/OrcaBus/service-workflow-manager/pull/169
     """
 
     states_transition_validation_map = {
-        "RESOLVED": ["FAILED"],  # Only FAILED can transition to RESOLVED
-        # 'DEPRECATED': {'excluded_states': ['FAILED', 'ABORTED', 'RESOLVED', 'DEPRECATED']}  # All states except these can transition to DEPRECATED
-        # Temporarily only allow SUCCEEDED to transition to DEPRECATED, refer https://github.com/OrcaBus/service-workflow-manager/issues/163.
-        # Since it may prevent downstream state updates from being applied correctly. We can relax this in the future if needed.
-        "DEPRECATED": ["SUCCEEDED"],  # Only these states can transition to DEPRECATED
+        "RESOLVED": ["FAILED"],  # Only FAILED can transition to RESOLVED, refer: https://github.com/umccr/orcabus/issues/593.
+        "DEPRECATED": ["SUCCEEDED"],  # Only SUCCEEDED to transition to DEPRECATED, refer https://github.com/OrcaBus/service-workflow-manager/issues/163.
+        # Ongoing states can transition to CANCELED, but not terminal states or RESOLVED/DEPRECATED. This is to prevent accidentally canceling completed workflow runs or those that have already been marked as resolved/deprecated.
+        # refer https://github.com/OrcaBus/service-workflow-manager/pull/169.
+        "CANCELED": {'excluded_states': ["SUCCEEDED", "FAILED", "ABORTED", "RESOLVED", "DEPRECATED"]},
     }
 
     @staticmethod

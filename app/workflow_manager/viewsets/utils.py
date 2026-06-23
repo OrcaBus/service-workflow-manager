@@ -99,6 +99,7 @@ WORKFLOW_RUN_TERMINATION_STATUSES: Tuple[str, ...] = (
     "SUCCEEDED",
     "RESOLVED",
     "DEPRECATED",
+    "CANCELED",
 )
 
 
