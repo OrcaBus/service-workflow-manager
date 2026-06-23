@@ -42,7 +42,7 @@ class WorkflowRunViewSet(BaseViewSet):
     serializer_class = WorkflowRunDetailSerializer
     search_fields = WorkflowRun.get_base_fields()
     queryset = WorkflowRun.objects.all()
-    termination_statuses = ["FAILED", "ABORTED", "SUCCEEDED", "RESOLVED", "DEPRECATED", "CANCELED"]
+    termination_statuses = ["FAILED", "ABORTED", "SUCCEEDED", "RESOLVED", "DEPRECATED", "CANCELLED"]
     http_method_names = ["get", "head", "options", "trace"]
     # Ordering and search are handled in get_queryset / filtered_workflow_runs_queryset;
     # DRF filter_backends are disabled to avoid double-filtering.
