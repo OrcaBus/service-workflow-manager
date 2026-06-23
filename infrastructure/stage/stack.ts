@@ -183,7 +183,8 @@ export class WorkflowManagerStack extends GitStack {
       routeKey: HttpRouteKey.with('/{proxy+}', HttpMethod.DELETE),
     });
 
-    // Route and permission for rerun cases where it needs to put event to mainBus
+    // Route and permission for API cases where it needs to put events to mainBus
+    // (e.g. rerun WRU and manual state-transition WRSC events).
     this.mainBus.grantPutEventsTo(apiFn);
     new HttpRoute(this, 'PostRerunHttpRoute', {
       httpApi: httpApi,
