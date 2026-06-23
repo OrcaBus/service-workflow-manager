@@ -131,7 +131,7 @@ class StateViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, 500)
         data = response.json()
         self.assertIn("rolled back", data["detail"])
-        self.assertIn("database unavailable", data["error"])
+        self.assertIn("correlation_id", data)
         self.assertFalse(
             State.objects.filter(
                 workflow_run=self.wfr_failed,
@@ -415,7 +415,7 @@ class StateViewSetTestCase(TestCase):
             content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, 502)
+        self.assertEqual(response.status_code, 500)
         data = response.json()
         self.assertEqual(data["createdCount"], 0)
         self.assertEqual(data["failedCount"], 1)
@@ -424,7 +424,7 @@ class StateViewSetTestCase(TestCase):
             self.wfr_succeeded.orcabus_id,
         )
         self.assertEqual(data["failures"][0]["reason"], "STATE_CREATION_FAILED")
-        self.assertIn("database unavailable", data["failures"][0]["error"])
+        self.assertNotIn("error", data["failures"][0])
         self.assertFalse(
             State.objects.filter(
                 workflow_run=self.wfr_succeeded,
