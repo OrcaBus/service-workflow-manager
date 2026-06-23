@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
+from django.db import DatabaseError
 from django.utils.timezone import make_aware
 
 from workflow_manager.models import (
@@ -111,6 +112,33 @@ class StateViewSetTestCase(TestCase):
             ).exists()
         )
         mock_emit_wrsc.assert_called_once()
+
+    @patch(
+        "workflow_manager.viewsets.state.StateViewSet.create_state_and_emit_wrsc",
+        side_effect=DatabaseError("database unavailable"),
+    )
+    def test_create_state_database_failure_returns_error_and_rolls_back_state(
+        self, mock_create_state_and_emit_wrsc
+    ):
+        url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/"
+
+        response = self.client.post(
+            url,
+            data={"status": "RESOLVED", "comment": "resolved ok"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 500)
+        data = response.json()
+        self.assertIn("rolled back", data["detail"])
+        self.assertIn("database unavailable", data["error"])
+        self.assertFalse(
+            State.objects.filter(
+                workflow_run=self.wfr_failed,
+                status="RESOLVED",
+            ).exists()
+        )
+        mock_create_state_and_emit_wrsc.assert_called_once()
 
     @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
     def test_create_state_rejects_invalid_transition_failed_to_deprecated(
@@ -247,6 +275,38 @@ class StateViewSetTestCase(TestCase):
         state_deprecated.refresh_from_db()
         self.assertEqual(state_deprecated.comment, "new")
 
+    def test_update_prefetched_objects_cache_invalidation_runs_with_patched_get_object(
+        self,
+    ):
+        """
+        Keep direct coverage on the cache invalidation assignment itself.
+        This branch only runs when get_object() returns an instance that was
+        previously fetched with prefetch_related().
+        """
+        from workflow_manager.viewsets.state import StateViewSet
+
+        viewset = StateViewSet()
+        request = MagicMock()
+        request.data = {"comment": "new patched"}
+        viewset.get_success_headers = MagicMock(return_value={})
+
+        state_deprecated = StateFactory(
+            workflow_run=self.wfr_failed,
+            status="DEPRECATED",
+            timestamp=make_aware(datetime.now() + timedelta(hours=21)),
+            comment="old",
+        )
+        state_deprecated._prefetched_objects_cache = {"states": [self.state_ready]}
+        state_deprecated.save = MagicMock()
+
+        with patch.object(viewset, "get_object", return_value=state_deprecated):
+            response = viewset.update(request, partial=True)
+
+        self.assertEqual(response.status_code, 200)
+        state_deprecated.save.assert_called_once_with(update_fields=["comment"])
+        self.assertEqual(state_deprecated._prefetched_objects_cache, {})
+        self.assertEqual(state_deprecated.comment, "new patched")
+
     @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
     def test_batch_state_transition_success_returns_summary(self, mock_emit_wrsc):
         response = self.client.post(
@@ -337,6 +397,42 @@ class StateViewSetTestCase(TestCase):
             ).exists()
         )
         self.assertEqual(mock_emit_wrsc.call_count, 2)
+
+    @patch(
+        "workflow_manager.viewsets.state.WorkflowRunBatchStateTransitionViewSet.create_state_and_emit_wrsc",
+        side_effect=DatabaseError("database unavailable"),
+    )
+    def test_batch_state_transition_database_failure_returns_failure_response(
+        self, mock_create_state_and_emit_wrsc
+    ):
+        response = self.client.post(
+            self.batch_endpoint,
+            data={
+                "workflowrun_orcabus_ids": [self.wfr_succeeded.orcabus_id],
+                "status": "DEPRECATED",
+                "comment": "bulk deprecated",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 502)
+        data = response.json()
+        self.assertEqual(data["createdCount"], 0)
+        self.assertEqual(data["failedCount"], 1)
+        self.assertEqual(
+            data["failures"][0]["workflowrunOrcabusId"],
+            self.wfr_succeeded.orcabus_id,
+        )
+        self.assertEqual(data["failures"][0]["reason"], "STATE_CREATION_FAILED")
+        self.assertIn("database unavailable", data["failures"][0]["error"])
+        self.assertFalse(
+            State.objects.filter(
+                workflow_run=self.wfr_succeeded,
+                status="DEPRECATED",
+                comment="bulk deprecated",
+            ).exists()
+        )
+        mock_create_state_and_emit_wrsc.assert_called_once()
 
     @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
     def test_batch_state_transition_returns_partial_success_for_invalid_item(
