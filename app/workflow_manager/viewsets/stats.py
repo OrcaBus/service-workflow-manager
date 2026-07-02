@@ -112,6 +112,7 @@ class StatsViewSet(GenericViewSet):
                 "FAILED",
                 "RESOLVED",
                 "DEPRECATED",
+                "CANCELLED",
                 "DRAFT",
             ],
             termination_statuses=RUN_LATEST_STATE_TERMINATION_STATUSES,
