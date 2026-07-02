@@ -1,10 +1,15 @@
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
+from django.db import DatabaseError
 from django.utils.timezone import make_aware
 
-from workflow_manager.models import State, Workflow, WorkflowRun
+from workflow_manager.models import (
+    State,
+    Workflow,
+    WorkflowRun,
+)
 from workflow_manager.tests.factories import StateFactory, WorkflowRunFactory
 from workflow_manager.tests.fixtures.sim_workflow import TestData
 from workflow_manager.urls.base import api_base
@@ -53,7 +58,8 @@ class StateViewSetTestCase(TestCase):
             "status and comment fields are required", response.json()["detail"]
         )
 
-    def test_create_state_valid_transition_failed_to_resolved(self):
+    @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
+    def test_create_state_valid_transition_failed_to_resolved(self, mock_emit_wrsc):
         url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/"
         response = self.client.post(
             url,
@@ -64,8 +70,80 @@ class StateViewSetTestCase(TestCase):
         data = response.json()
         self.assertEqual(data["status"], "RESOLVED")
         self.assertEqual(data["comment"], "resolved ok")
+        mock_emit_wrsc.assert_called_once()
+        wrsc_event = mock_emit_wrsc.call_args.args[0]
+        self.assertEqual(wrsc_event["status"], "RESOLVED")
+        self.assertEqual(wrsc_event["orcabusId"], self.wfr_failed.orcabus_id)
+        self.assertEqual(wrsc_event["workflow"]["orcabusId"], self.wf.orcabus_id)
+        self.assertNotIn("payload", wrsc_event)
 
-    def test_create_state_rejects_invalid_transition_failed_to_deprecated(self):
+    @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
+    def test_create_state_emits_wrsc_inside_api_transaction(self, mock_emit_wrsc):
+        url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/"
+
+        response = self.client.post(
+            url,
+            data={"status": "RESOLVED", "comment": "resolved ok"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(mock_emit_wrsc.call_count, 1)
+
+    @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
+    def test_create_state_publish_failure_returns_error_and_rolls_back_state(
+        self, mock_emit_wrsc
+    ):
+        mock_emit_wrsc.side_effect = RuntimeError("event bus unavailable")
+        url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/"
+
+        response = self.client.post(
+            url,
+            data={"status": "RESOLVED", "comment": "resolved ok"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 502)
+        self.assertIn("rolled back", response.json()["detail"])
+        self.assertFalse(
+            State.objects.filter(
+                workflow_run=self.wfr_failed,
+                status="RESOLVED",
+            ).exists()
+        )
+        mock_emit_wrsc.assert_called_once()
+
+    @patch(
+        "workflow_manager.viewsets.state.StateViewSet.create_state_and_emit_wrsc",
+        side_effect=DatabaseError("database unavailable"),
+    )
+    def test_create_state_database_failure_returns_error_and_rolls_back_state(
+        self, mock_create_state_and_emit_wrsc
+    ):
+        url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/"
+
+        response = self.client.post(
+            url,
+            data={"status": "RESOLVED", "comment": "resolved ok"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 500)
+        data = response.json()
+        self.assertIn("rolled back", data["detail"])
+        self.assertIn("correlationId", data)
+        self.assertFalse(
+            State.objects.filter(
+                workflow_run=self.wfr_failed,
+                status="RESOLVED",
+            ).exists()
+        )
+        mock_create_state_and_emit_wrsc.assert_called_once()
+
+    @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
+    def test_create_state_rejects_invalid_transition_failed_to_deprecated(
+        self, mock_emit_wrsc
+    ):
         url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/"
         response = self.client.post(
             url,
@@ -74,6 +152,7 @@ class StateViewSetTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("Invalid state request", response.json()["detail"])
+        mock_emit_wrsc.assert_not_called()
 
     def test_create_state_rejects_non_deprecated_when_no_latest_state(self):
         url = f"{self.endpoint}/{self.wfr_empty.orcabus_id}/state/"
@@ -88,7 +167,8 @@ class StateViewSetTestCase(TestCase):
             response.json()["detail"],
         )
 
-    def test_create_state_allows_deprecated_when_no_latest_state(self):
+    @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
+    def test_create_state_allows_deprecated_when_no_latest_state(self, mock_emit_wrsc):
         url = f"{self.endpoint}/{self.wfr_empty.orcabus_id}/state/"
         response = self.client.post(
             url,
@@ -98,6 +178,7 @@ class StateViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, 201)
         data = response.json()
         self.assertEqual(data["status"], "DEPRECATED")
+        mock_emit_wrsc.assert_called_once()
 
     def test_update_state_comment_requires_comment_field(self):
         url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/{self.state_ready.orcabus_id}/"
@@ -117,7 +198,8 @@ class StateViewSetTestCase(TestCase):
             "Invalid state status to update comment.", response.json()["detail"]
         )
 
-    def test_update_state_comment_success(self):
+    @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
+    def test_update_state_comment_success(self, mock_emit_wrsc):
         state_deprecated = StateFactory(
             workflow_run=self.wfr_failed,
             status="DEPRECATED",
@@ -133,6 +215,7 @@ class StateViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["comment"], "updated")
+        mock_emit_wrsc.assert_not_called()
 
     def test_is_valid_next_state_current_status_none_only_allows_deprecated(self):
         from workflow_manager.viewsets.state import StateViewSet
@@ -192,7 +275,40 @@ class StateViewSetTestCase(TestCase):
         state_deprecated.refresh_from_db()
         self.assertEqual(state_deprecated.comment, "new")
 
-    def test_batch_state_transition_success_returns_summary(self):
+    def test_update_prefetched_objects_cache_invalidation_runs_with_patched_get_object(
+        self,
+    ):
+        """
+        Keep direct coverage on the cache invalidation assignment itself.
+        This branch only runs when get_object() returns an instance that was
+        previously fetched with prefetch_related().
+        """
+        from workflow_manager.viewsets.state import StateViewSet
+
+        viewset = StateViewSet()
+        request = MagicMock()
+        request.data = {"comment": "new patched"}
+        viewset.get_success_headers = MagicMock(return_value={})
+
+        state_deprecated = StateFactory(
+            workflow_run=self.wfr_failed,
+            status="DEPRECATED",
+            timestamp=make_aware(datetime.now() + timedelta(hours=21)),
+            comment="old",
+        )
+        state_deprecated._prefetched_objects_cache = {"states": [self.state_ready]}
+        state_deprecated.save = MagicMock()
+
+        with patch.object(viewset, "get_object", return_value=state_deprecated):
+            response = viewset.update(request, partial=True)
+
+        self.assertEqual(response.status_code, 200)
+        state_deprecated.save.assert_called_once_with(update_fields=["comment"])
+        self.assertEqual(state_deprecated._prefetched_objects_cache, {})
+        self.assertEqual(state_deprecated.comment, "new patched")
+
+    @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
+    def test_batch_state_transition_success_returns_summary(self, mock_emit_wrsc):
         response = self.client.post(
             self.batch_endpoint,
             data={
@@ -208,6 +324,7 @@ class StateViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, 201)
         data = response.json()
         self.assertEqual(data["createdCount"], 2)
+        self.assertEqual(data["failedCount"], 0)
         self.assertCountEqual(
             data["workflowrunOrcabusIds"],
             [self.wfr_succeeded.orcabus_id, self.wfr_empty.orcabus_id],
@@ -219,6 +336,13 @@ class StateViewSetTestCase(TestCase):
                 comment="bulk deprecated",
             ).exists()
         )
+        self.assertEqual(mock_emit_wrsc.call_count, 2)
+        wrsc_events = [call.args[0] for call in mock_emit_wrsc.call_args_list]
+        self.assertTrue(all("payload" not in event for event in wrsc_events))
+        self.assertCountEqual(
+            [event["orcabusId"] for event in wrsc_events],
+            [self.wfr_succeeded.orcabus_id, self.wfr_empty.orcabus_id],
+        )
         self.assertTrue(
             State.objects.filter(
                 workflow_run=self.wfr_empty,
@@ -227,7 +351,93 @@ class StateViewSetTestCase(TestCase):
             ).exists()
         )
 
-    def test_batch_state_transition_rejects_when_any_transition_invalid(self):
+    @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
+    def test_batch_state_transition_rolls_back_only_failed_emit_item(
+        self, mock_emit_wrsc
+    ):
+        mock_emit_wrsc.side_effect = [
+            {"FailedEntryCount": 0, "Entries": [{}]},
+            RuntimeError("event bus unavailable"),
+        ]
+        response = self.client.post(
+            self.batch_endpoint,
+            data={
+                "workflowrun_orcabus_ids": [
+                    self.wfr_succeeded.orcabus_id,
+                    self.wfr_empty.orcabus_id,
+                ],
+                "status": "DEPRECATED",
+                "comment": "bulk deprecated",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 207)
+        data = response.json()
+        self.assertEqual(data["createdCount"], 1)
+        self.assertEqual(data["failedCount"], 1)
+        self.assertEqual(data["workflowrunOrcabusIds"], [self.wfr_succeeded.orcabus_id])
+        self.assertEqual(
+            data["failures"][0]["workflowrunOrcabusId"],
+            self.wfr_empty.orcabus_id,
+        )
+        self.assertEqual(data["failures"][0]["reason"], "WRSC_EMIT_FAILED")
+        self.assertTrue(
+            State.objects.filter(
+                workflow_run=self.wfr_succeeded,
+                status="DEPRECATED",
+                comment="bulk deprecated",
+            ).exists()
+        )
+        self.assertFalse(
+            State.objects.filter(
+                workflow_run=self.wfr_empty,
+                status="DEPRECATED",
+                comment="bulk deprecated",
+            ).exists()
+        )
+        self.assertEqual(mock_emit_wrsc.call_count, 2)
+
+    @patch(
+        "workflow_manager.viewsets.state.WorkflowRunBatchStateTransitionViewSet.create_state_and_emit_wrsc",
+        side_effect=DatabaseError("database unavailable"),
+    )
+    def test_batch_state_transition_database_failure_returns_failure_response(
+        self, mock_create_state_and_emit_wrsc
+    ):
+        response = self.client.post(
+            self.batch_endpoint,
+            data={
+                "workflowrun_orcabus_ids": [self.wfr_succeeded.orcabus_id],
+                "status": "DEPRECATED",
+                "comment": "bulk deprecated",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 500)
+        data = response.json()
+        self.assertEqual(data["createdCount"], 0)
+        self.assertEqual(data["failedCount"], 1)
+        self.assertEqual(
+            data["failures"][0]["workflowrunOrcabusId"],
+            self.wfr_succeeded.orcabus_id,
+        )
+        self.assertEqual(data["failures"][0]["reason"], "STATE_CREATION_FAILED")
+        self.assertNotIn("error", data["failures"][0])
+        self.assertFalse(
+            State.objects.filter(
+                workflow_run=self.wfr_succeeded,
+                status="DEPRECATED",
+                comment="bulk deprecated",
+            ).exists()
+        )
+        mock_create_state_and_emit_wrsc.assert_called_once()
+
+    @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
+    def test_batch_state_transition_returns_partial_success_for_invalid_item(
+        self, mock_emit_wrsc
+    ):
         response = self.client.post(
             self.batch_endpoint,
             data={
@@ -240,9 +450,17 @@ class StateViewSetTestCase(TestCase):
             },
             content_type="application/json",
         )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("Invalid state request", response.json()["detail"])
-        self.assertFalse(
+        self.assertEqual(response.status_code, 207)
+        data = response.json()
+        self.assertEqual(data["createdCount"], 1)
+        self.assertEqual(data["failedCount"], 1)
+        self.assertEqual(data["workflowrunOrcabusIds"], [self.wfr_failed.orcabus_id])
+        self.assertEqual(
+            data["failures"][0]["workflowrunOrcabusId"],
+            self.wfr_succeeded.orcabus_id,
+        )
+        self.assertEqual(data["failures"][0]["reason"], "INVALID_TRANSITION")
+        self.assertTrue(
             State.objects.filter(
                 workflow_run=self.wfr_failed,
                 status="RESOLVED",
@@ -256,6 +474,7 @@ class StateViewSetTestCase(TestCase):
                 comment="bulk resolve",
             ).exists()
         )
+        mock_emit_wrsc.assert_called_once()
 
     def test_batch_state_transition_requires_fields(self):
         response = self.client.post(
@@ -274,10 +493,17 @@ class StateViewSetTestCase(TestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn("not found", response.json()["detail"].lower())
+        data = response.json()
+        self.assertEqual(data["createdCount"], 0)
+        self.assertEqual(data["failedCount"], 1)
+        self.assertEqual(
+            data["failures"][0]["workflowrunOrcabusId"], "wfr.non-existing-id"
+        )
+        self.assertEqual(data["failures"][0]["reason"], "NOT_FOUND")
 
+    @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
     def test_batch_state_transition_accepts_ids_without_prefix_and_returns_prefixed_ids(
-        self,
+        self, mock_emit_wrsc
     ):
         response = self.client.post(
             self.batch_endpoint,
@@ -297,8 +523,10 @@ class StateViewSetTestCase(TestCase):
             data["workflowrunOrcabusIds"],
             [self.wfr_succeeded.orcabus_id, self.wfr_empty.orcabus_id],
         )
+        self.assertEqual(mock_emit_wrsc.call_count, 2)
 
-    def test_batch_state_transition_accepts_csv_orcabus_ids(self):
+    @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
+    def test_batch_state_transition_accepts_csv_orcabus_ids(self, mock_emit_wrsc):
         response = self.client.post(
             self.batch_endpoint,
             data={
@@ -318,9 +546,11 @@ class StateViewSetTestCase(TestCase):
             data["workflowrunOrcabusIds"],
             [self.wfr_succeeded.orcabus_id, self.wfr_empty.orcabus_id],
         )
+        self.assertEqual(mock_emit_wrsc.call_count, 2)
 
+    @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
     def test_batch_state_transition_accepts_form_urlencoded_camelcase_csv_orcabus_ids(
-        self,
+        self, mock_emit_wrsc
     ):
         response = self.client.post(
             self.batch_endpoint,
@@ -339,3 +569,4 @@ class StateViewSetTestCase(TestCase):
             data["workflowrunOrcabusIds"],
             [self.wfr_succeeded.orcabus_id, self.wfr_empty.orcabus_id],
         )
+        self.assertEqual(mock_emit_wrsc.call_count, 2)

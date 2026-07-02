@@ -57,14 +57,26 @@ class StateBatchTransitionRequestSerializer(serializers.Serializer):
     comment = serializers.CharField(required=True, allow_blank=False)
 
 
+class StateBatchTransitionFailureSerializer(serializers.Serializer):
+    workflowrun_orcabus_id = serializers.CharField()
+    reason = serializers.CharField()
+    detail = serializers.CharField()
+    error = serializers.CharField(required=False)
+
+
 class StateBatchTransitionResponseSerializer(serializers.Serializer):
     """
-    Schema contract for 201 response from batch-state-transition.
-    JSON responses use camelCase (createdCount, workflowrunOrcabusIds).
+    Schema contract for batch-state-transition responses.
+    JSON responses use camelCase (createdCount, workflowrunOrcabusIds, failedCount).
     """
 
     created_count = serializers.IntegerField()
     workflowrun_orcabus_ids = serializers.ListField(
         child=serializers.CharField(),
         allow_empty=True,
+    )
+    failed_count = serializers.IntegerField(default=0)
+    failures = StateBatchTransitionFailureSerializer(
+        many=True,
+        required=False,
     )
