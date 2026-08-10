@@ -1,5 +1,0 @@
-allowBuilds:
-  unrs-resolver: false
-
-onlyBuiltDependencies:
-  - unrs-resolver
