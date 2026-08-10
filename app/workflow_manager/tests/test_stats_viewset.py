@@ -36,6 +36,7 @@ class StatsViewSetTestCase(TestCase):
                 "failed",
                 "resolved",
                 "deprecated",
+                "cancelled",
                 "draft",
                 "ongoing",
             },
