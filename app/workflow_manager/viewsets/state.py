@@ -1,6 +1,11 @@
 import logging
 
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    PolymorphicProxySerializer,
+    extend_schema,
+    extend_schema_view,
+)
 from drf_spectacular.types import OpenApiTypes
 from rest_framework.decorators import action
 from rest_framework import mixins, status
@@ -19,9 +24,51 @@ from workflow_manager.serializers.state import (
     StateUpdateRequestSerializer,
     StateTransitionRequestSerializer,
     StateTransitionResponseSerializer,
+    StateTransitionValidationErrorSerializer,
 )
 
 logger = logging.getLogger(__name__)
+
+
+STATE_TRANSITION_RESPONSES = {
+    status.HTTP_201_CREATED: OpenApiResponse(
+        response=StateTransitionResponseSerializer,
+        description="Every requested workflow run was transitioned successfully.",
+    ),
+    status.HTTP_207_MULTI_STATUS: OpenApiResponse(
+        response=StateTransitionResponseSerializer,
+        description="Some workflow runs were transitioned and some failed.",
+    ),
+    status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+        response=PolymorphicProxySerializer(
+            component_name="StateTransitionBadRequest",
+            serializers=[
+                StateTransitionValidationErrorSerializer,
+                StateTransitionResponseSerializer,
+            ],
+            resource_type_field_name=None,
+        ),
+        description=(
+            "The request body failed serializer validation, or every requested "
+            "transition failed because a workflow run was not found or the "
+            "transition was invalid."
+        ),
+    ),
+    status.HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(
+        response=StateTransitionResponseSerializer,
+        description=(
+            "No requested transition succeeded, and at least one failed during "
+            "state creation."
+        ),
+    ),
+    status.HTTP_502_BAD_GATEWAY: OpenApiResponse(
+        response=StateTransitionResponseSerializer,
+        description=(
+            "No requested transition succeeded, and at least one failed while "
+            "emitting a WRSC event."
+        ),
+    ),
+}
 
 
 class StateTransitionValidationMixin:
@@ -54,6 +101,7 @@ class StateTransitionValidationMixin:
                 "ABORTED",
                 "RESOLVED",
                 "DEPRECATED",
+                "CANCELLED",
             ]
         },
     }
@@ -388,7 +436,7 @@ class WorkflowRunStateTransitionViewSet(StateTransitionValidationMixin, GenericV
 
     @extend_schema(
         request=StateTransitionRequestSerializer,
-        responses={201: StateTransitionResponseSerializer},
+        responses=STATE_TRANSITION_RESPONSES,
         summary="Mark workflow runs as deprecated",
         description="Transition workflow runs from SUCCEEDED to DEPRECATED.",
     )
@@ -398,7 +446,7 @@ class WorkflowRunStateTransitionViewSet(StateTransitionValidationMixin, GenericV
 
     @extend_schema(
         request=StateTransitionRequestSerializer,
-        responses={201: StateTransitionResponseSerializer},
+        responses=STATE_TRANSITION_RESPONSES,
         summary="Mark workflow runs as resolved",
         description="Transition workflow runs from FAILED to RESOLVED.",
     )
@@ -408,7 +456,7 @@ class WorkflowRunStateTransitionViewSet(StateTransitionValidationMixin, GenericV
 
     @extend_schema(
         request=StateTransitionRequestSerializer,
-        responses={201: StateTransitionResponseSerializer},
+        responses=STATE_TRANSITION_RESPONSES,
         summary="Cancel workflow runs",
         description="Transition non-terminal workflow runs to CANCELLED.",
     )

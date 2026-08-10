@@ -47,6 +47,23 @@ class StateTransitionRequestSerializer(serializers.Serializer):
     comment = serializers.CharField(required=True, allow_blank=False)
 
 
+class StateTransitionValidationErrorSerializer(serializers.Serializer):
+    """Field-level validation errors returned for an invalid transition request."""
+
+    workflowrun_orcabus_ids = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+    )
+    comment = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+    )
+    non_field_errors = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+    )
+
+
 class StateTransitionFailureSerializer(serializers.Serializer):
     workflowrun_orcabus_id = serializers.CharField()
     reason = serializers.CharField()

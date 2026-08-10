@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
@@ -51,6 +52,41 @@ class StateViewSetTestCase(TestCase):
         data = response.json()
         self.assertIn("RESOLVED", data)
         self.assertIn("DEPRECATED", data)
+        self.assertIn("CANCELLED", data["CANCELLED"]["excludedStates"])
+
+    def test_state_transition_openapi_documents_all_response_shapes(self):
+        response = self.client.get(
+            "/schema/openapi.json",
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        schema = json.loads(response.content)
+
+        expected_statuses = {"201", "207", "400", "500", "502"}
+        transition_paths = (
+            self.deprecate_endpoint,
+            self.resolve_endpoint,
+            self.cancel_endpoint,
+        )
+        for transition_path in transition_paths:
+            with self.subTest(transition_path=transition_path):
+                responses = schema["paths"][transition_path]["post"]["responses"]
+                self.assertTrue(expected_statuses.issubset(responses))
+                self.assertEqual(
+                    responses["400"]["content"]["application/json"]["schema"],
+                    {"$ref": "#/components/schemas/StateTransitionBadRequest"},
+                )
+
+        bad_request_variants = schema["components"]["schemas"][
+            "StateTransitionBadRequest"
+        ]["oneOf"]
+        self.assertCountEqual(
+            [variant["$ref"] for variant in bad_request_variants],
+            [
+                "#/components/schemas/StateTransitionValidationError",
+                "#/components/schemas/StateTransitionResponse",
+            ],
+        )
 
     def test_nested_states_transition_validation_map_route_is_not_available(self):
         url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/get_states_transition_validation_map/"
@@ -176,7 +212,6 @@ class StateViewSetTestCase(TestCase):
             "STARTING",
             "RUNNING",
             "PAUSED",
-            "CANCELLED",
         ]
         workflow_runs = []
         for index, source_status in enumerate(source_statuses):
@@ -228,6 +263,7 @@ class StateViewSetTestCase(TestCase):
             "ABORTED",
             "RESOLVED",
             "DEPRECATED",
+            "CANCELLED",
         ]
         workflow_runs = []
         for index, source_status in enumerate(source_statuses):
@@ -262,6 +298,16 @@ class StateViewSetTestCase(TestCase):
                 failure["reason"] == "INVALID_TRANSITION"
                 for failure in data["failures"]
             )
+        )
+        already_cancelled_workflow_run = workflow_runs[
+            source_statuses.index("CANCELLED")
+        ]
+        self.assertEqual(
+            State.objects.filter(
+                workflow_run=already_cancelled_workflow_run,
+                status="CANCELLED",
+            ).count(),
+            1,
         )
         mock_emit_wrsc.assert_not_called()
 
