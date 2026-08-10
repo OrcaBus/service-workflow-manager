@@ -1,5 +1,4 @@
 from django.urls import path, include
-from django.urls import path
 from drf_spectacular.views import SpectacularJSONAPIView, SpectacularSwaggerView
 
 from workflow_manager.routers import OptionalSlashDefaultRouter
@@ -12,7 +11,7 @@ from workflow_manager.viewsets.payload import PayloadViewSet
 from workflow_manager.viewsets.analysis_context import AnalysisContextViewSet
 from workflow_manager.viewsets.state import (
     StateViewSet,
-    WorkflowRunBatchStateTransitionViewSet,
+    WorkflowRunStateTransitionViewSet,
 )
 from workflow_manager.viewsets.workflow_run_action import WorkflowRunActionViewSet
 from workflow_manager.viewsets.library import LibraryViewSet
@@ -48,8 +47,8 @@ router.register(
 
 router.register(
     "workflowrun/state",
-    WorkflowRunBatchStateTransitionViewSet,
-    basename="workflowrun-state-batch-transition",
+    WorkflowRunStateTransitionViewSet,
+    basename="workflowrun-state-transition",
 )
 
 # router.register(

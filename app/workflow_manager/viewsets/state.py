@@ -16,10 +16,9 @@ from workflow_manager_proc.services.workflow_run import (
 )
 from workflow_manager.serializers.state import (
     StateSerializer,
-    StateCreateRequestSerializer,
     StateUpdateRequestSerializer,
-    StateBatchTransitionRequestSerializer,
-    StateBatchTransitionResponseSerializer,
+    StateTransitionRequestSerializer,
+    StateTransitionResponseSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,11 +39,23 @@ class StateTransitionValidationMixin:
     """
 
     states_transition_validation_map = {
-        "RESOLVED": ["FAILED"],  # Only FAILED can transition to RESOLVED, refer: https://github.com/umccr/orcabus/issues/593.
-        "DEPRECATED": ["SUCCEEDED"],  # Only SUCCEEDED to transition to DEPRECATED, refer https://github.com/OrcaBus/service-workflow-manager/issues/163.
+        "RESOLVED": [
+            "FAILED"
+        ],  # Only FAILED can transition to RESOLVED, refer: https://github.com/umccr/orcabus/issues/593.
+        "DEPRECATED": [
+            "SUCCEEDED"
+        ],  # Only SUCCEEDED to transition to DEPRECATED, refer https://github.com/OrcaBus/service-workflow-manager/issues/163.
         # Ongoing states can transition to CANCELLED, but not terminal states or RESOLVED/DEPRECATED. This is to prevent accidentally canceling completed workflow runs or those that have already been marked as resolved/deprecated.
         # refer https://github.com/OrcaBus/service-workflow-manager/pull/169.
-        "CANCELLED": {'excluded_states': ["SUCCEEDED", "FAILED", "ABORTED", "RESOLVED", "DEPRECATED"]},
+        "CANCELLED": {
+            "excluded_states": [
+                "SUCCEEDED",
+                "FAILED",
+                "ABORTED",
+                "RESOLVED",
+                "DEPRECATED",
+            ]
+        },
     }
 
     @staticmethod
@@ -146,7 +157,7 @@ class StateTransitionValidationMixin:
 
     @staticmethod
     def _failure_response_status(failures: list[dict]) -> int:
-        """Choose the most helpful HTTP status when no batch item succeeds.
+        """Choose the most helpful HTTP status when no transition succeeds.
 
         - All client-side reasons (NOT_FOUND, INVALID_TRANSITION) → 400
         - Any upstream/WRSC emission failure → 502
@@ -162,13 +173,6 @@ class StateTransitionValidationMixin:
 
 
 @extend_schema_view(
-    create=extend_schema(
-        request=StateCreateRequestSerializer,
-        responses={201: StateSerializer},
-        description=(
-            "Create a state (body: status, comment; JSON uses camelCase per API settings)."
-        ),
-    ),
     partial_update=extend_schema(
         request=StateUpdateRequestSerializer,
         responses={200: StateSerializer},
@@ -177,146 +181,19 @@ class StateTransitionValidationMixin:
 )
 class StateViewSet(
     StateTransitionValidationMixin,
-    mixins.CreateModelMixin,
     mixins.UpdateModelMixin,
     mixins.ListModelMixin,
     GenericViewSet,
 ):
+    get_success_headers = mixins.CreateModelMixin.get_success_headers
     serializer_class = StateSerializer
     search_fields = State.get_base_fields()
-    http_method_names = ["get", "post", "patch"]
+    http_method_names = ["get", "patch"]
     pagination_class = None
     lookup_value_regex = "[^/]+"  # to allow id prefix
 
     def get_queryset(self):
         return State.objects.filter(workflow_run=self.kwargs["orcabus_id"])
-
-    @extend_schema(
-        responses=OpenApiTypes.OBJECT,
-        description="Get states transition validation map",
-    )
-    @action(
-        detail=False,
-        methods=["get"],
-        url_name="get_states_transition_validation_map",
-        url_path="get_states_transition_validation_map",
-    )
-    def get_states_transition_validation_map(self, request, **kwargs):
-        """
-        Returns states transition validation map.
-        """
-        return Response(self.states_transition_validation_map)
-
-    def create(self, request, *args, **kwargs):
-        """
-        Create a custom new state for a workflow run.
-        Currently we support "Resolved", "Deprecated"
-        """
-        required_fields = {"status", "comment"}
-        provided_fields = set(request.data.keys())
-
-        if required_fields - provided_fields:
-            return Response(
-                {"detail": "status and comment fields are required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        wfr_orcabus_id = self.kwargs.get("orcabus_id")
-        workflow_run = WorkflowRun.objects.get(orcabus_id=wfr_orcabus_id)
-
-        body = StateCreateRequestSerializer(data=request.data)
-        body.is_valid(raise_exception=True)
-        vd = body.validated_data
-        request_status = vd["status"].upper()
-        request_comment = vd["comment"]
-
-        latest_state = workflow_run.get_latest_state()
-        # Handle case when there's no latest state - only allow DEPRECATED
-        if not latest_state:
-            if request_status != "DEPRECATED":
-                logger.warning(
-                    "Manual state transition validation failed: workflow_run_id=%s requested_status=%s latest_status=None",
-                    wfr_orcabus_id,
-                    request_status,
-                )
-                return Response(
-                    {
-                        "detail": "No state found for workflow run '{}'. Only DEPRECATED is allowed when there are no states.".format(
-                            wfr_orcabus_id
-                        )
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            latest_status = None
-        else:
-            latest_status = latest_state.status
-            # check if the state status is valid
-            if not self.is_valid_next_state(latest_status, request_status):
-                logger.warning(
-                    "Manual state transition validation failed: workflow_run_id=%s requested_status=%s latest_status=%s",
-                    wfr_orcabus_id,
-                    request_status,
-                    latest_status,
-                )
-                return Response(
-                    {
-                        "detail": "Invalid state request. Can't add state '{}' to '{}'".format(
-                            request_status, latest_status
-                        )
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-        logger.info(
-            "Manual state transition validated: workflow_run_id=%s requested_status=%s latest_status=%s",
-            wfr_orcabus_id,
-            request_status,
-            latest_status,
-        )
-
-        try:
-            with transaction.atomic():
-                instance, _ = self.create_state_and_emit_wrsc(
-                    workflow_run,
-                    request_status,
-                    request_comment,
-                )
-        except DatabaseError as exc:
-            logger.exception(
-                "Manual state transition failed during database operation and was rolled back: workflow_run_id=%s requested_status=%s",
-                wfr_orcabus_id,
-                request_status,
-            )
-            return Response(
-                {
-                    "detail": "Failed to create workflow-run state. The operation was rolled back.",
-                    "correlation_id": f"{wfr_orcabus_id}:{request_status}",
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-        except Exception as exc:
-            logger.exception(
-                "Manual state transition failed while emitting WRSC event and was rolled back: workflow_run_id=%s requested_status=%s",
-                wfr_orcabus_id,
-                request_status,
-            )
-            return Response(
-                {
-                    "detail": "Failed to create workflow-run state and emit WRSC event. The operation was rolled back.",
-                    "correlation_id": f"{wfr_orcabus_id}:{request_status}",
-                },
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-
-        data = StateSerializer(instance).data
-        headers = self.get_success_headers(data)
-        logger.info(
-            "Manual state transition completed: workflow_run_id=%s state_id=%s status=%s",
-            wfr_orcabus_id,
-            instance.orcabus_id,
-            request_status,
-        )
-        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
@@ -354,27 +231,32 @@ class StateViewSet(
         return Response(data, status=status.HTTP_200_OK, headers=headers)
 
 
-@extend_schema_view(
-    batch_state_transition=extend_schema(
-        request=StateBatchTransitionRequestSerializer,
-        responses={201: StateBatchTransitionResponseSerializer},
-        description="Batch transition workflow runs to a target state.",
-    )
-)
-class WorkflowRunBatchStateTransitionViewSet(
-    StateTransitionValidationMixin, GenericViewSet
-):
-    http_method_names = ["post"]
+class WorkflowRunStateTransitionViewSet(StateTransitionValidationMixin, GenericViewSet):
+    """User-initiated workflow run state transitions for one or more runs."""
+
+    http_method_names = ["get", "post"]
     pagination_class = None
 
-    @action(detail=False, methods=["post"], url_path="batch-state-transition")
-    def batch_state_transition(self, request, *args, **kwargs):
-        body = StateBatchTransitionRequestSerializer(data=request.data)
+    @extend_schema(
+        responses=OpenApiTypes.OBJECT,
+        description="Get states transition validation map.",
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_name="get_states_transition_validation_map",
+        url_path="get_states_transition_validation_map",
+    )
+    def get_states_transition_validation_map(self, request, **kwargs):
+        """Return the state transition validation map."""
+        return Response(self.states_transition_validation_map)
+
+    def _state_transition(self, request, request_status: str):
+        body = StateTransitionRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         vd = body.validated_data
 
         workflowrun_orcabus_ids = vd["workflowrun_orcabus_ids"]
-        request_status = vd["status"].upper()
         request_comment = vd["comment"]
 
         normalized_ids = [
@@ -394,7 +276,7 @@ class WorkflowRunBatchStateTransitionViewSet(
             wfr = workflow_runs_by_normalized_id.get(normalized_id)
             if not wfr:
                 logger.warning(
-                    "Batch manual state transition skipped missing workflow run: workflow_run_id=%s requested_status=%s",
+                    "Manual state transition skipped missing workflow run: workflow_run_id=%s requested_status=%s",
                     raw_id,
                     request_status,
                 )
@@ -411,7 +293,7 @@ class WorkflowRunBatchStateTransitionViewSet(
             latest_status = latest_state.status if latest_state else None
             if not self.is_valid_next_state(latest_status, request_status):
                 logger.warning(
-                    "Batch manual state transition validation failed: workflow_run_id=%s requested_status=%s latest_status=%s",
+                    "Manual state transition validation failed: workflow_run_id=%s requested_status=%s latest_status=%s",
                     wfr.orcabus_id,
                     request_status,
                     latest_status,
@@ -430,7 +312,7 @@ class WorkflowRunBatchStateTransitionViewSet(
                 continue
 
             logger.info(
-                "Batch manual state transition validated: workflow_run_id=%s requested_status=%s latest_status=%s",
+                "Manual state transition validated: workflow_run_id=%s requested_status=%s latest_status=%s",
                 wfr.orcabus_id,
                 request_status,
                 latest_status,
@@ -442,9 +324,9 @@ class WorkflowRunBatchStateTransitionViewSet(
                         request_status,
                         request_comment,
                     )
-            except DatabaseError as exc:
+            except DatabaseError:
                 logger.exception(
-                    "Batch manual state transition failed during database operation and was rolled back: workflow_run_id=%s requested_status=%s",
+                    "Manual state transition failed during database operation and was rolled back: workflow_run_id=%s requested_status=%s",
                     wfr.orcabus_id,
                     request_status,
                 )
@@ -456,9 +338,9 @@ class WorkflowRunBatchStateTransitionViewSet(
                     }
                 )
                 continue
-            except Exception as exc:
+            except Exception:
                 logger.exception(
-                    "Batch manual state transition failed while emitting WRSC event and was rolled back: workflow_run_id=%s requested_status=%s",
+                    "Manual state transition failed while emitting WRSC event and was rolled back: workflow_run_id=%s requested_status=%s",
                     wfr.orcabus_id,
                     request_status,
                 )
@@ -473,7 +355,7 @@ class WorkflowRunBatchStateTransitionViewSet(
 
             created_workflowrun_ids.append(wfr.orcabus_id)
             logger.info(
-                "Batch manual state transition completed: workflow_run_id=%s state_id=%s status=%s",
+                "Manual state transition completed: workflow_run_id=%s state_id=%s status=%s",
                 wfr.orcabus_id,
                 state_instance.orcabus_id,
                 request_status,
@@ -487,7 +369,7 @@ class WorkflowRunBatchStateTransitionViewSet(
                 else self._failure_response_status(failures)
             )
 
-        summary = StateBatchTransitionResponseSerializer(
+        summary = StateTransitionResponseSerializer(
             instance={
                 "created_count": len(created_workflowrun_ids),
                 "workflowrun_orcabus_ids": created_workflowrun_ids,
@@ -496,10 +378,40 @@ class WorkflowRunBatchStateTransitionViewSet(
             }
         )
         logger.info(
-            "Batch manual state transition finished: requested_status=%s created_count=%s failed_count=%s response_status=%s",
+            "Manual state transition finished: requested_status=%s created_count=%s failed_count=%s response_status=%s",
             request_status,
             len(created_workflowrun_ids),
             len(failures),
             response_status,
         )
         return Response(summary.data, status=response_status)
+
+    @extend_schema(
+        request=StateTransitionRequestSerializer,
+        responses={201: StateTransitionResponseSerializer},
+        summary="Mark workflow runs as deprecated",
+        description="Transition workflow runs from SUCCEEDED to DEPRECATED.",
+    )
+    @action(detail=False, methods=["post"], url_path="deprecate")
+    def deprecate(self, request, *args, **kwargs):
+        return self._state_transition(request, "DEPRECATED")
+
+    @extend_schema(
+        request=StateTransitionRequestSerializer,
+        responses={201: StateTransitionResponseSerializer},
+        summary="Mark workflow runs as resolved",
+        description="Transition workflow runs from FAILED to RESOLVED.",
+    )
+    @action(detail=False, methods=["post"], url_path="resolve")
+    def resolve(self, request, *args, **kwargs):
+        return self._state_transition(request, "RESOLVED")
+
+    @extend_schema(
+        request=StateTransitionRequestSerializer,
+        responses={201: StateTransitionResponseSerializer},
+        summary="Cancel workflow runs",
+        description="Transition non-terminal workflow runs to CANCELLED.",
+    )
+    @action(detail=False, methods=["post"], url_path="cancel")
+    def cancel(self, request, *args, **kwargs):
+        return self._state_transition(request, "CANCELLED")
