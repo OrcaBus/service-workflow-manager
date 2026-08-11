@@ -200,7 +200,7 @@ export class WorkflowManagerStack extends GitStack {
       integration: apiIntegration,
       authorizer: wfmApi.authStackHttpLambdaAuthorizer,
       routeKey: HttpRouteKey.with(
-        `/api/${API_VERSION}/workflowrun/state/deprecate`,
+        `/api/${API_VERSION}/workflowrun/state/deprecate/`,
         HttpMethod.POST
       ),
     });
@@ -208,7 +208,10 @@ export class WorkflowManagerStack extends GitStack {
       httpApi: httpApi,
       integration: apiIntegration,
       authorizer: wfmApi.authStackHttpLambdaAuthorizer,
-      routeKey: HttpRouteKey.with(`/api/${API_VERSION}/workflowrun/state/resolve`, HttpMethod.POST),
+      routeKey: HttpRouteKey.with(
+        `/api/${API_VERSION}/workflowrun/state/resolve/`,
+        HttpMethod.POST
+      ),
     });
   }
 
