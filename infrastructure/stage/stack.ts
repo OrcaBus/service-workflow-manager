@@ -195,6 +195,21 @@ export class WorkflowManagerStack extends GitStack {
         HttpMethod.POST
       ),
     });
+    new HttpRoute(this, 'PostManualStateTransitionHttpRoute', {
+      httpApi: httpApi,
+      integration: apiIntegration,
+      authorizer: wfmApi.authStackHttpLambdaAuthorizer,
+      routeKey: HttpRouteKey.with(
+        `/api/${API_VERSION}/workflowrun/state/deprecate`,
+        HttpMethod.POST
+      ),
+    });
+    new HttpRoute(this, 'PostManualStateTransitionHttpRoute2', {
+      httpApi: httpApi,
+      integration: apiIntegration,
+      authorizer: wfmApi.authStackHttpLambdaAuthorizer,
+      routeKey: HttpRouteKey.with(`/api/${API_VERSION}/workflowrun/state/resolve`, HttpMethod.POST),
+    });
   }
 
   private createWruEventHandler() {
