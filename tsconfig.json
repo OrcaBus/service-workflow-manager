@@ -6,6 +6,10 @@
     "lib": [
       "es2020"
     ],
+    "types": [
+      "node",
+      "jest"
+    ],
     "declaration": true,
     "esModuleInterop": true,
     "strict": true,
@@ -22,9 +26,6 @@
     "experimentalDecorators": true,
     "resolveJsonModule": true,
     "strictPropertyInitialization": false,
-    "typeRoots": [
-      "./node_modules/@types"
-    ],
     "skipLibCheck": true
   },
   "exclude": [
