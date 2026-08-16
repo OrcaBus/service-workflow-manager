@@ -146,7 +146,14 @@ class StatsViewSet(GenericViewSet):
             AnalysisRun,
             AnalysisRunState,
             state_fk_field="analysis_run",
-            count_statuses=["SUCCEEDED", "ABORTED", "FAILED", "RESOLVED", "DEPRECATED"],
+            count_statuses=[
+                "SUCCEEDED",
+                "ABORTED",
+                "CANCELLED",
+                "FAILED",
+                "RESOLVED",
+                "DEPRECATED",
+            ],
             termination_statuses=RUN_LATEST_STATE_TERMINATION_STATUSES,
             base_queryset=base,
         )

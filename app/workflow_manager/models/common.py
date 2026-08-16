@@ -3,13 +3,15 @@ from typing import List
 
 
 class Status(Enum):
-    DRAFT = "DRAFT", ["DRAFT", "INITIAL", "CREATED"]
+    DRAFT = "DRAFT", ["DRAFT"]
     READY = "READY", ["READY"]
     RUNNING = "RUNNING", ["RUNNING", "IN_PROGRESS"]
     SUCCEEDED = "SUCCEEDED", ["SUCCEEDED", "SUCCESS"]
     FAILED = "FAILED", ["FAILED", "FAILURE", "FAIL"]
-    ABORTED = "ABORTED", ["ABORTED", "CANCELLED", "CANCELED"]
+    ABORTED = "ABORTED", ["ABORTED"]
+    CANCELLED = "CANCELLED", ["CANCELLED", "CANCELED"]
     RESOLVED = "RESOLVED", ["RESOLVED"]
+    DEPRECATED = "DEPRECATED", ["DEPRECATED"]
 
     def __init__(self, convention: str, aliases: List[str]):
         self.convention = convention
@@ -41,13 +43,20 @@ class Status(Enum):
         return False
 
     @staticmethod
+    def terminal_conventions() -> tuple[str, ...]:
+        return (
+            Status.SUCCEEDED.convention,
+            Status.FAILED.convention,
+            Status.ABORTED.convention,
+            Status.CANCELLED.convention,
+            Status.RESOLVED.convention,
+            Status.DEPRECATED.convention,
+        )
+
+    @staticmethod
     def is_terminal(status: str) -> bool:
-        # enforce upper case convention
-        status = status.upper()
-        for s in [Status.SUCCEEDED, Status.FAILED, Status.ABORTED]:
-            if status in s.aliases:
-                return True
-        return False
+        status = Status.get_convention(status)
+        return status in Status.terminal_conventions()
 
     @staticmethod
     def is_draft(status: str) -> bool:

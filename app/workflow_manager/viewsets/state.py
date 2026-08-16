@@ -15,7 +15,7 @@ from django.db import DatabaseError, transaction
 from django.utils import timezone
 
 from workflow_manager.aws_event_bridge.event import emit_wrsc_api_event
-from workflow_manager.models import State, WorkflowRun
+from workflow_manager.models import State, Status, WorkflowRun
 from workflow_manager_proc.services.workflow_run import (
     map_workflow_run_new_state_to_wrsc,
 )
@@ -94,16 +94,7 @@ class StateTransitionValidationMixin:
         ],  # Only SUCCEEDED to transition to DEPRECATED, refer https://github.com/OrcaBus/service-workflow-manager/issues/163.
         # Ongoing states can transition to CANCELLED, but not terminal states or RESOLVED/DEPRECATED. This is to prevent accidentally canceling completed workflow runs or those that have already been marked as resolved/deprecated.
         # refer https://github.com/OrcaBus/service-workflow-manager/pull/169.
-        "CANCELLED": {
-            "excluded_states": [
-                "SUCCEEDED",
-                "FAILED",
-                "ABORTED",
-                "RESOLVED",
-                "DEPRECATED",
-                "CANCELLED",
-            ]
-        },
+        "CANCELLED": {"excluded_states": list(Status.terminal_conventions())},
     }
 
     @staticmethod
