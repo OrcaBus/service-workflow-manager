@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
+import jwt
 from django.test import TestCase
 from django.db import DatabaseError
 from django.utils.timezone import make_aware
@@ -21,8 +22,16 @@ class StateViewSetTestCase(TestCase):
     deprecate_endpoint = f"/{api_base}workflowrun/state/deprecate/"
     resolve_endpoint = f"/{api_base}workflowrun/state/resolve/"
     cancel_endpoint = f"/{api_base}workflowrun/state/cancel/"
+    jwt_test_secret = "state-test-secret-that-is-longer-than-32-bytes"#pragma: allowlist secret
 
     def setUp(self):
+        self.user_email = "state.creator@example.com"
+        token = jwt.encode(
+            {"email": self.user_email}, self.jwt_test_secret, algorithm="HS256"
+        )
+        self.auth_header = f"Bearer {token}"
+        self.client.defaults["HTTP_AUTHORIZATION"] = self.auth_header
+
         TestData().create_primary()
         self.wf = Workflow.objects.first()
         self.wfr_failed = WorkflowRun.objects.get(portal_run_id="1234")
@@ -44,6 +53,21 @@ class StateViewSetTestCase(TestCase):
         data = response.json()
         self.assertIsInstance(data, list)
         self.assertGreaterEqual(len(data), 1)
+        self.assertIn("createdBy", data[0])
+        self.assertIsNone(data[0]["createdBy"])
+
+    def test_workflow_run_current_state_exposes_created_by(self):
+        StateFactory(
+            workflow_run=self.wfr_failed,
+            status="DEPRECATED",
+            timestamp=make_aware(datetime.now() + timedelta(days=1)),
+            created_by=self.user_email,
+        )
+
+        response = self.client.get(f"{self.endpoint}/{self.wfr_failed.orcabus_id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["currentState"]["createdBy"], self.user_email)
 
     def test_get_states_transition_validation_map_returns_200(self):
         url = f"{self.endpoint}/state/get_states_transition_validation_map/"
@@ -62,7 +86,7 @@ class StateViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         schema = json.loads(response.content)
 
-        expected_statuses = {"201", "207", "400", "500", "502"}
+        expected_statuses = {"201", "207", "400", "401", "500", "502"}
         transition_paths = (
             self.deprecate_endpoint,
             self.resolve_endpoint,
@@ -118,6 +142,7 @@ class StateViewSetTestCase(TestCase):
             data={
                 "workflowrunOrcabusIds": [self.wfr_failed.orcabus_id],
                 "comment": "resolved ok",
+                "createdBy": "spoofed.creator@example.com",
             },
             content_type="application/json",
         )
@@ -131,6 +156,7 @@ class StateViewSetTestCase(TestCase):
                 workflow_run=self.wfr_failed,
                 status="RESOLVED",
                 comment="resolved ok",
+                created_by=self.user_email,
             ).exists()
         )
         mock_emit_wrsc.assert_called_once()
@@ -138,6 +164,8 @@ class StateViewSetTestCase(TestCase):
         self.assertEqual(wrsc_event["status"], "RESOLVED")
         self.assertEqual(wrsc_event["orcabusId"], self.wfr_failed.orcabus_id)
         self.assertEqual(wrsc_event["workflow"]["orcabusId"], self.wf.orcabus_id)
+        self.assertEqual(wrsc_event["createdBy"], self.user_email)
+        self.assertEqual(wrsc_event["version"], "1.1.0")
         self.assertNotIn("payload", wrsc_event)
 
     @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
@@ -159,10 +187,12 @@ class StateViewSetTestCase(TestCase):
                 workflow_run=self.wfr_succeeded,
                 status="DEPRECATED",
                 comment="no longer needed",
+                created_by=self.user_email,
             ).exists()
         )
         mock_emit_wrsc.assert_called_once()
         self.assertEqual(mock_emit_wrsc.call_args.args[0]["status"], "DEPRECATED")
+        self.assertEqual(mock_emit_wrsc.call_args.args[0]["createdBy"], self.user_email)
 
     @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
     def test_deprecate_rejects_failed_workflow_run(self, mock_emit_wrsc):
@@ -245,6 +275,7 @@ class StateViewSetTestCase(TestCase):
                     workflow_run=workflow_run,
                     status="CANCELLED",
                     comment="cancel transient runs",
+                    created_by=self.user_email,
                 ).exists()
             )
         self.assertEqual(mock_emit_wrsc.call_count, len(source_statuses))
@@ -254,6 +285,53 @@ class StateViewSetTestCase(TestCase):
                 for call in mock_emit_wrsc.call_args_list
             )
         )
+        self.assertTrue(
+            all(
+                call.args[0]["createdBy"] == self.user_email
+                for call in mock_emit_wrsc.call_args_list
+            )
+        )
+
+    @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
+    def test_state_transition_requires_valid_bearer_email(self, mock_emit_wrsc):
+        request_data = {
+            "workflowrunOrcabusIds": [self.wfr_succeeded.orcabus_id],
+            "comment": "no auth",
+        }
+
+        response = self.client.post(
+            self.deprecate_endpoint,
+            data=request_data,
+            content_type="application/json",
+            HTTP_AUTHORIZATION="",
+        )
+        self.assertEqual(response.status_code, 401)
+
+        response = self.client.post(
+            self.deprecate_endpoint,
+            data=request_data,
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Bearer not.a.valid.jwt",
+        )
+        self.assertEqual(response.status_code, 401)
+
+        token_without_email = jwt.encode(
+            {"sub": "state-user"}, self.jwt_test_secret, algorithm="HS256"
+        )
+        response = self.client.post(
+            self.deprecate_endpoint,
+            data=request_data,
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {token_without_email}",
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertFalse(
+            State.objects.filter(
+                workflow_run=self.wfr_succeeded,
+                status="DEPRECATED",
+            ).exists()
+        )
+        mock_emit_wrsc.assert_not_called()
 
     @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
     def test_cancel_rejects_existing_excluded_states(self, mock_emit_wrsc):
@@ -411,7 +489,9 @@ class StateViewSetTestCase(TestCase):
         )
 
     @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
-    def test_update_state_comment_success(self, mock_emit_wrsc):
+    def test_update_legacy_state_comment_allows_any_authenticated_user(
+        self, mock_emit_wrsc
+    ):
         state_deprecated = StateFactory(
             workflow_run=self.wfr_failed,
             status="DEPRECATED",
@@ -427,7 +507,72 @@ class StateViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["comment"], "updated")
+        self.assertIsNone(data["createdBy"])
+        state_deprecated.refresh_from_db()
+        self.assertIsNone(state_deprecated.created_by)
         mock_emit_wrsc.assert_not_called()
+
+    @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
+    def test_update_state_comment_allows_creator_only(self, mock_emit_wrsc):
+        state_deprecated = StateFactory(
+            workflow_run=self.wfr_failed,
+            status="DEPRECATED",
+            timestamp=make_aware(datetime.now() + timedelta(hours=11)),
+            comment="old",
+            created_by=self.user_email,
+        )
+        url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/{state_deprecated.orcabus_id}/"
+
+        response = self.client.patch(
+            url,
+            data={
+                "comment": "updated by creator",
+                "createdBy": "spoofed.creator@example.com",
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["createdBy"], self.user_email)
+        state_deprecated.refresh_from_db()
+        self.assertEqual(state_deprecated.comment, "updated by creator")
+        self.assertEqual(state_deprecated.created_by, self.user_email)
+
+        other_token = jwt.encode(
+            {"email": "other.user@example.com"},
+            self.jwt_test_secret,
+            algorithm="HS256",
+        )
+        response = self.client.patch(
+            url,
+            data={"comment": "unauthorized update"},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {other_token}",
+        )
+        self.assertEqual(response.status_code, 403)
+        state_deprecated.refresh_from_db()
+        self.assertEqual(state_deprecated.comment, "updated by creator")
+        self.assertEqual(state_deprecated.created_by, self.user_email)
+        mock_emit_wrsc.assert_not_called()
+
+    def test_update_legacy_state_comment_requires_bearer(self):
+        state_deprecated = StateFactory(
+            workflow_run=self.wfr_failed,
+            status="DEPRECATED",
+            timestamp=make_aware(datetime.now() + timedelta(hours=12)),
+            comment="old",
+            created_by=None,
+        )
+        url = f"{self.endpoint}/{self.wfr_failed.orcabus_id}/state/{state_deprecated.orcabus_id}/"
+        response = self.client.patch(
+            url,
+            data={"comment": "unauthenticated update"},
+            content_type="application/json",
+            HTTP_AUTHORIZATION="",
+        )
+        self.assertEqual(response.status_code, 401)
+        state_deprecated.refresh_from_db()
+        self.assertEqual(state_deprecated.comment, "old")
+        self.assertIsNone(state_deprecated.created_by)
 
     def test_is_valid_next_state_current_status_none_only_allows_deprecated(self):
         from workflow_manager.viewsets.state import StateViewSet
@@ -469,6 +614,7 @@ class StateViewSetTestCase(TestCase):
         viewset = StateViewSet()
         request = MagicMock()
         request.data = {"comment": "new"}
+        request.META = {"HTTP_AUTHORIZATION": self.auth_header}
 
         state_deprecated = StateFactory(
             workflow_run=self.wfr_failed,
@@ -499,6 +645,7 @@ class StateViewSetTestCase(TestCase):
         viewset = StateViewSet()
         request = MagicMock()
         request.data = {"comment": "new patched"}
+        request.META = {"HTTP_AUTHORIZATION": self.auth_header}
         viewset.get_success_headers = MagicMock(return_value={})
 
         state_deprecated = StateFactory(

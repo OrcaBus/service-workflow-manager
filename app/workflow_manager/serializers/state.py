@@ -8,13 +8,13 @@ from rest_framework import serializers
 
 
 class StateBaseSerializer(SerializersBase):
-    pass
+    created_by = serializers.CharField(read_only=True, allow_null=True)
 
 
 class StateMinSerializer(StateBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
         model = State
-        fields = ["orcabus_id", "status", "timestamp"]
+        fields = ["orcabus_id", "status", "timestamp", "created_by"]
 
 
 class StateSerializer(StateBaseSerializer):

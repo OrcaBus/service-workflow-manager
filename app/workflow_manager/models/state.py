@@ -22,6 +22,7 @@ class State(OrcaBusBaseModel):
     )  # TODO: How and where to enforce conventions?
     timestamp = models.DateTimeField()
     comment = models.CharField(max_length=255, null=True, blank=True)
+    created_by = models.CharField(max_length=255, null=True, blank=True)
 
     workflow_run = models.ForeignKey(
         WorkflowRun, related_name="states", on_delete=models.CASCADE

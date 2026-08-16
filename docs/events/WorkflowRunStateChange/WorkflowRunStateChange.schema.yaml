@@ -92,6 +92,9 @@ definitions:
         # the current/new state of the WorkflowRun that the event announces
         # Note: not every event necessarily announces a new status
         type: string
+      createdBy:
+        # normalized email of the user who created a manual workflow-run state
+        type: string
       payload:
         '$ref': '#/definitions/Payload'
   Library:
