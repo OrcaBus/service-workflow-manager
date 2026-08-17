@@ -35,6 +35,7 @@ from workflow_manager.models.analysis_run_state import AnalysisRunState
 from workflow_manager.models.state import State
 from workflow_manager.models.workflow import Workflow
 from workflow_manager.models.workflow_run import WorkflowRun
+from workflow_manager.models.common import Status
 from workflow_manager.pagination import PaginationConstant
 
 logger = logging.getLogger(__name__)
@@ -93,14 +94,7 @@ NON_KEYWORD_QUERY_PARAMS = frozenset(
 )
 
 # Terminal latest-state statuses (matches list / stats "ongoing" definition).
-WORKFLOW_RUN_TERMINATION_STATUSES: Tuple[str, ...] = (
-    "FAILED",
-    "ABORTED",
-    "SUCCEEDED",
-    "RESOLVED",
-    "DEPRECATED",
-    "CANCELLED",
-)
+WORKFLOW_RUN_TERMINATION_STATUSES: Tuple[str, ...] = Status.terminal_conventions()
 
 
 def parse_datetime_safe(value: Optional[str]) -> Optional[datetime]:

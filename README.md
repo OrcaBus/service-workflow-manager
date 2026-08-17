@@ -80,8 +80,10 @@ Supported `WorkflowRun` states
 | READY         | The indication that the requirement for execution are fulfilled and execution can proceed. Should include all the data needed to make the "ready-ness" decision and required for actual workflow execution. |
 | RUNNING       | Indicating that the workflow is running / progressing. |
 | ABORTED       | Indicating that a `WorkflowRun` was aborted (usually due to manual intervention). |
+| CANCELLED     | Indicating that a `WorkflowRun` was cancelled. The `CANCELED` spelling is normalized to this value. |
 | FAILED        | Emitted when a `WorkflowRun` execution has failed. |
-| SUCCEDED      | Emitted when a `WorkflowRun` execution was successful. Usually taken as the signal for further dependent processes to be activated. |
+| SUCCEEDED     | Emitted when a `WorkflowRun` execution was successful. Usually taken as the signal for further dependent processes to be activated. |
+| RESOLVED      | Signalling that a failed `WorkflowRun` has been reviewed and resolved. |
 | DEPRECATED    | Signalling that a successful `WorkflowRun` has been deemed no longer valid / needed and been deprecated. Also, see Workflow deprecation [SOP](https://github.com/OrcaBus/wiki/blob/main/operational/SOPs/workflow-run-deprecation.md). |
 
 Supported `AnalysisRun` states
