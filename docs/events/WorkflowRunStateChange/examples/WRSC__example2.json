@@ -24,6 +24,6 @@
       "validationState": "UNVALIDATED"
     },
     "status": "DEPRECATED",
-    "createdBy": "user@example.com"
+    "stateCreatedBy": "user@example.com"
   }
 }

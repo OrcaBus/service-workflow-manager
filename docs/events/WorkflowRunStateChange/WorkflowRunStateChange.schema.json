@@ -60,7 +60,7 @@
         "status": {
           "type": "string"
         },
-        "createdBy": {
+        "stateCreatedBy": {
           "type": "string"
         },
         "payload": {

@@ -164,7 +164,7 @@ class StateViewSetTestCase(TestCase):
         self.assertEqual(wrsc_event["status"], "RESOLVED")
         self.assertEqual(wrsc_event["orcabusId"], self.wfr_failed.orcabus_id)
         self.assertEqual(wrsc_event["workflow"]["orcabusId"], self.wf.orcabus_id)
-        self.assertEqual(wrsc_event["createdBy"], self.user_email)
+        self.assertEqual(wrsc_event["stateCreatedBy"], self.user_email)
         self.assertEqual(wrsc_event["version"], "1.1.0")
         self.assertNotIn("payload", wrsc_event)
 
@@ -192,7 +192,9 @@ class StateViewSetTestCase(TestCase):
         )
         mock_emit_wrsc.assert_called_once()
         self.assertEqual(mock_emit_wrsc.call_args.args[0]["status"], "DEPRECATED")
-        self.assertEqual(mock_emit_wrsc.call_args.args[0]["createdBy"], self.user_email)
+        self.assertEqual(
+            mock_emit_wrsc.call_args.args[0]["stateCreatedBy"], self.user_email
+        )
 
     @patch("workflow_manager.viewsets.state.emit_wrsc_api_event")
     def test_deprecate_rejects_failed_workflow_run(self, mock_emit_wrsc):
@@ -287,7 +289,7 @@ class StateViewSetTestCase(TestCase):
         )
         self.assertTrue(
             all(
-                call.args[0]["createdBy"] == self.user_email
+                call.args[0]["stateCreatedBy"] == self.user_email
                 for call in mock_emit_wrsc.call_args_list
             )
         )

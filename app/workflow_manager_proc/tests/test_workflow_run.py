@@ -52,6 +52,7 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
             self.mock_boto3.put_events.call_args.kwargs["Entries"][0]["Detail"]
         )
         self.assertNotIn("createdBy", emitted_detail)
+        self.assertNotIn("stateCreatedBy", emitted_detail)
 
     def test_create_workflow_run_with_multiple_drafts(self):
         """
@@ -180,9 +181,9 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertIsNotNone(out_wrsc)
         self.assertEqual(out_wrsc.executionId, self.mock_wru_max.executionId)
 
-    def test_get_wrsc_hash_differs_by_execution_id_and_created_by(self):
+    def test_get_wrsc_hash_differs_by_execution_id_and_state_created_by(self):
         """
-        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_get_wrsc_hash_differs_by_execution_id_and_created_by
+        python manage.py test workflow_manager_proc.tests.test_workflow_run.WorkflowRunSrvUnitTests.test_get_wrsc_hash_differs_by_execution_id_and_state_created_by
         """
         self.load_mock_wru_max()
 
@@ -214,10 +215,10 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
         self.assertNotEqual(hash_a, hash_b)
 
         wrsc_c = wrsc.WorkflowRunStateChange(
-            **base_kwargs, createdBy="first.user@example.com"
+            **base_kwargs, stateCreatedBy="first.user@example.com"
         )
         wrsc_d = wrsc.WorkflowRunStateChange(
-            **base_kwargs, createdBy="second.user@example.com"
+            **base_kwargs, stateCreatedBy="second.user@example.com"
         )
 
         hash_c = workflow_run.get_wrsc_hash(wrsc_c)
@@ -656,7 +657,7 @@ class WorkflowRunSrvUnitTests(WorkflowManagerProcUnitTestCase):
 
         self.assertIsNotNone(validated_out_wrsc)
         self.assertEqual(validated_out_wrsc.version, "1.1.0")
-        self.assertIsNone(validated_out_wrsc.createdBy)
+        self.assertIsNone(validated_out_wrsc.stateCreatedBy)
 
     def test_get_wrsc_hash(self):
         """

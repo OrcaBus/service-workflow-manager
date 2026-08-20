@@ -56,7 +56,7 @@ class WorkflowRunStateChange(BaseModel):
     computeEnv: str | None = None
     storageEnv: str | None = None
     status: str
-    createdBy: str | None = None
+    stateCreatedBy: str | None = None
     payload: Payload | None = None
 
 

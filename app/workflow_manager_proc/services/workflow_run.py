@@ -55,7 +55,9 @@ def create_workflow_run(event: wru.WorkflowRunUpdate):
             event_type=EventType.WRSC,
             event_bus=EVENT_BUS_NAME,
             event_json=out_wrsc.model_dump_json(
-                exclude={"createdBy"} if out_wrsc.createdBy is None else None
+                exclude={"stateCreatedBy"}
+                if out_wrsc.stateCreatedBy is None
+                else None
             ),
         )
     else:
@@ -305,7 +307,7 @@ def map_workflow_run_new_state_to_wrsc(
             validationState=wfr.workflow.validation_state,
         ),
         status=Status.get_convention(new_state.status),  # ensure we follow conventions
-        createdBy=new_state.created_by,
+        stateCreatedBy=new_state.created_by,
     )
 
     # Set libraries
@@ -402,8 +404,8 @@ def get_wrsc_hash(out_wrsc: wrsc.WorkflowRunStateChange) -> str:
     if out_wrsc.executionId:
         keywords.append(out_wrsc.executionId)
     keywords.append(out_wrsc.status)
-    if out_wrsc.createdBy:
-        keywords.append(out_wrsc.createdBy)
+    if out_wrsc.stateCreatedBy:
+        keywords.append(out_wrsc.stateCreatedBy)
     keywords.append(out_wrsc.workflow.orcabusId)
 
     if out_wrsc.payload:

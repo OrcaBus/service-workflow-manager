@@ -47,21 +47,23 @@ class WrscApiEventTestCase(SimpleTestCase):
         detail = json.loads(entry["Detail"])
         self.assertNotIn("payload", detail)
         self.assertNotIn("createdBy", detail)
+        self.assertNotIn("stateCreatedBy", detail)
         self.assertEqual(detail["status"], "RESOLVED")
 
     @patch.dict(os.environ, {"EVENT_BUS_NAME": "test-event-bus"})
     @patch("workflow_manager.aws_event_bridge.event.libeb.emit_event")
-    def test_emit_wrsc_api_event_includes_created_by(self, mock_emit_event):
+    def test_emit_wrsc_api_event_includes_state_created_by(self, mock_emit_event):
         mock_emit_event.return_value = {"FailedEntryCount": 0, "Entries": [{}]}
         event = self.build_event()
-        event["createdBy"] = "state.creator@example.com"
+        event["stateCreatedBy"] = "state.creator@example.com"
 
         emit_wrsc_api_event(event)
 
         entry = mock_emit_event.call_args.args[0]
         detail = json.loads(entry["Detail"])
         self.assertEqual(detail["version"], "1.1.0")
-        self.assertEqual(detail["createdBy"], "state.creator@example.com")
+        self.assertNotIn("createdBy", detail)
+        self.assertEqual(detail["stateCreatedBy"], "state.creator@example.com")
 
     @patch.dict(os.environ, {"EVENT_BUS_NAME": "test-event-bus"})
     @patch("workflow_manager.aws_event_bridge.event.libeb.emit_event")
