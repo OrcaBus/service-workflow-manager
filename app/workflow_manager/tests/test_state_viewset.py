@@ -283,7 +283,7 @@ class StateViewSetTestCase(TestCase):
         self.assertEqual(mock_emit_wrsc.call_count, len(source_statuses))
         self.assertTrue(
             all(
-                call.args[0]["status"] == "ABORTED"
+                call.args[0]["status"] == "CANCELLED"
                 for call in mock_emit_wrsc.call_args_list
             )
         )

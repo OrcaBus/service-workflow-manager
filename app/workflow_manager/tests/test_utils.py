@@ -2,10 +2,10 @@ import time
 from datetime import datetime, timedelta, timezone as dt_timezone
 from typing import List
 
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.utils.timezone import make_aware
 
-from workflow_manager.models import WorkflowRun, State, Payload
+from workflow_manager.models import WorkflowRun, State, Status
 from workflow_manager.models.utils import (
     WorkflowRunUtil,
     StateUtil,
@@ -13,6 +13,7 @@ from workflow_manager.models.utils import (
 )
 
 from workflow_manager.viewsets.utils import (
+    WORKFLOW_RUN_TERMINATION_STATUSES,
     parse_version,
     version_sort_key,
     compare_versions,
@@ -22,6 +23,35 @@ from workflow_manager.viewsets.utils import (
     get_latest_workflow_ids_queryset,
 )
 from workflow_manager.tests.factories import WorkflowRunFactory, PayloadFactory
+
+
+class StatusConventionTests(SimpleTestCase):
+    def test_cancelled_and_deprecated_are_supported_conventions(self):
+        self.assertEqual(Status.get_convention("CANCELLED"), "CANCELLED")
+        self.assertEqual(Status.get_convention("CANCELED"), "CANCELLED")
+        self.assertEqual(Status.get_convention("DEPRECATED"), "DEPRECATED")
+        self.assertTrue(Status.is_supported("CANCELLED"))
+        self.assertTrue(Status.is_supported("DEPRECATED"))
+
+    def test_terminal_conventions(self):
+        expected = (
+            "SUCCEEDED",
+            "FAILED",
+            "ABORTED",
+            "CANCELLED",
+            "RESOLVED",
+            "DEPRECATED",
+        )
+        self.assertEqual(Status.terminal_conventions(), expected)
+        self.assertEqual(WORKFLOW_RUN_TERMINATION_STATUSES, expected)
+
+        for terminal_status in (*expected, "CANCELED"):
+            with self.subTest(status=terminal_status):
+                self.assertTrue(Status.is_terminal(terminal_status))
+
+        for ongoing_status in ("DRAFT", "READY", "RUNNING", "IN_PROGRESS"):
+            with self.subTest(status=ongoing_status):
+                self.assertFalse(Status.is_terminal(ongoing_status))
 
 
 class VersionUtilsTests(TestCase):
@@ -55,7 +85,6 @@ class VersionUtilsTests(TestCase):
 
 
 class UtilsTests(TestCase):
-
     def test_create_portal_run_id(self):
         """
         python manage.py test workflow_manager.tests.test_utils.UtilsTests.test_create_portal_run_id

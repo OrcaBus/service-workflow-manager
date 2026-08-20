@@ -12,6 +12,7 @@ from workflow_manager.serializers.workflow_run import (
 )
 from workflow_manager.viewsets.base import BaseViewSet
 from workflow_manager.viewsets.utils import (
+    WORKFLOW_RUN_TERMINATION_STATUSES,
     filtered_workflow_runs_queryset,
     validate_ordering,
 )
@@ -42,7 +43,7 @@ class WorkflowRunViewSet(BaseViewSet):
     serializer_class = WorkflowRunDetailSerializer
     search_fields = WorkflowRun.get_base_fields()
     queryset = WorkflowRun.objects.all()
-    termination_statuses = ["FAILED", "ABORTED", "SUCCEEDED", "RESOLVED", "DEPRECATED", "CANCELLED"]
+    termination_statuses = WORKFLOW_RUN_TERMINATION_STATUSES
     http_method_names = ["get", "head", "options", "trace"]
     # Ordering and search are handled in get_queryset / filtered_workflow_runs_queryset;
     # DRF filter_backends are disabled to avoid double-filtering.
@@ -91,7 +92,10 @@ class WorkflowRunViewSet(BaseViewSet):
     @extend_schema(
         responses=WorkflowRunSerializer(many=True),
         summary="List ongoing workflow runs",
-        description="Returns workflow runs whose latest state is not in a terminal status (FAILED, ABORTED, SUCCEEDED, RESOLVED, DEPRECATED).",
+        description=(
+            "Returns workflow runs whose latest state is not terminal "
+            "(SUCCEEDED, FAILED, ABORTED, CANCELLED, RESOLVED, DEPRECATED)."
+        ),
     )
     @action(detail=False, methods=["GET"])
     def ongoing(self, request):
