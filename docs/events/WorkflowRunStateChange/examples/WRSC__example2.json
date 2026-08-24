@@ -9,7 +9,7 @@
   "resources": [],
   "detail": {
     "id": "<hash(values)> e.g. 97534601940f17ebcfee02e9df998244",
-    "version": "<semver> e.g. 1.0.0",
+    "version": "1.1.0",
     "timestamp": "2025-05-01T09:25:44Z",
     "orcabusId": "wfr.<ULID> e.g. wfr.01J5M2J44HFJ9424G7074HHHHH",
     "portalRunId": "202405012397gatc",
@@ -23,6 +23,7 @@
       "executionEnginePipelineId": "<fill-by-workflow-manager> e.g. 123.456.789",
       "validationState": "UNVALIDATED"
     },
-    "status": "RUNNING"
+    "status": "DEPRECATED",
+    "stateCreatedBy": "user@example.com"
   }
 }

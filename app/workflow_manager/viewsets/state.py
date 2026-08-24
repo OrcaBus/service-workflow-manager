@@ -9,6 +9,7 @@ from drf_spectacular.utils import (
 from drf_spectacular.types import OpenApiTypes
 from rest_framework.decorators import action
 from rest_framework import mixins, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from django.db import DatabaseError, transaction
@@ -26,6 +27,7 @@ from workflow_manager.serializers.state import (
     StateTransitionResponseSerializer,
     StateTransitionValidationErrorSerializer,
 )
+from workflow_manager.viewsets.auth_utils import get_email_from_bearer_authorization
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +55,9 @@ STATE_TRANSITION_RESPONSES = {
             "transition failed because a workflow run was not found or the "
             "transition was invalid."
         ),
+    ),
+    status.HTTP_401_UNAUTHORIZED: OpenApiResponse(
+        description="A valid Bearer JWT with an email claim is required.",
     ),
     status.HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(
         response=StateTransitionResponseSerializer,
@@ -151,6 +156,7 @@ class StateTransitionValidationMixin:
         workflow_run: WorkflowRun,
         request_status: str,
         request_comment: str,
+        created_by: str,
     ) -> tuple[State, dict]:
         """Create a manual state and emit its WRSC event in the caller's transaction."""
         logger.info(
@@ -163,6 +169,7 @@ class StateTransitionValidationMixin:
             status=request_status,
             timestamp=timezone.now(),
             comment=request_comment,
+            created_by=created_by,
         )
         logger.info(
             "Manual workflow-run state created: workflow_run_id=%s state_id=%s status=%s",
@@ -214,8 +221,19 @@ class StateTransitionValidationMixin:
 @extend_schema_view(
     partial_update=extend_schema(
         request=StateUpdateRequestSerializer,
-        responses={200: StateSerializer},
-        description=("Update state comment only."),
+        responses={
+            200: StateSerializer,
+            401: OpenApiResponse(
+                description="A valid Bearer JWT with an email claim is required."
+            ),
+            403: OpenApiResponse(
+                description="The authenticated user did not create this state."
+            ),
+        },
+        description=(
+            "Update the state comment only. Bearer authentication is required; "
+            "states with a recorded creator may only be updated by that creator."
+        ),
     ),
 )
 class StateViewSet(
@@ -236,6 +254,7 @@ class StateViewSet(
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
+        actor = get_email_from_bearer_authorization(request)
         instance = self.get_object()
 
         required_fields = {"comment"}
@@ -252,6 +271,12 @@ class StateViewSet(
             return Response(
                 {"detail": "Invalid state status to update comment."},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        creator = (instance.created_by or "").strip().lower()
+        if creator and creator != actor:
+            raise PermissionDenied(
+                "You don't have permission to update this state comment."
             )
 
         body = StateUpdateRequestSerializer(data=request.data, partial=partial)
@@ -291,6 +316,7 @@ class WorkflowRunStateTransitionViewSet(StateTransitionValidationMixin, GenericV
         return Response(self.states_transition_validation_map)
 
     def _state_transition(self, request, request_status: str):
+        created_by = get_email_from_bearer_authorization(request)
         body = StateTransitionRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         vd = body.validated_data
@@ -362,6 +388,7 @@ class WorkflowRunStateTransitionViewSet(StateTransitionValidationMixin, GenericV
                         wfr,
                         request_status,
                         request_comment,
+                        created_by,
                     )
             except DatabaseError:
                 logger.exception(
@@ -429,7 +456,10 @@ class WorkflowRunStateTransitionViewSet(StateTransitionValidationMixin, GenericV
         request=StateTransitionRequestSerializer,
         responses=STATE_TRANSITION_RESPONSES,
         summary="Mark workflow runs as deprecated",
-        description="Transition workflow runs from SUCCEEDED to DEPRECATED.",
+        description=(
+            "Transition workflow runs from SUCCEEDED to DEPRECATED and record the "
+            "Bearer JWT email as the state creator."
+        ),
     )
     @action(detail=False, methods=["post"], url_path="deprecate")
     def deprecate(self, request, *args, **kwargs):
@@ -439,7 +469,10 @@ class WorkflowRunStateTransitionViewSet(StateTransitionValidationMixin, GenericV
         request=StateTransitionRequestSerializer,
         responses=STATE_TRANSITION_RESPONSES,
         summary="Mark workflow runs as resolved",
-        description="Transition workflow runs from FAILED to RESOLVED.",
+        description=(
+            "Transition workflow runs from FAILED to RESOLVED and record the Bearer "
+            "JWT email as the state creator."
+        ),
     )
     @action(detail=False, methods=["post"], url_path="resolve")
     def resolve(self, request, *args, **kwargs):
@@ -449,7 +482,10 @@ class WorkflowRunStateTransitionViewSet(StateTransitionValidationMixin, GenericV
         request=StateTransitionRequestSerializer,
         responses=STATE_TRANSITION_RESPONSES,
         summary="Cancel workflow runs",
-        description="Transition non-terminal workflow runs to CANCELLED.",
+        description=(
+            "Transition non-terminal workflow runs to CANCELLED and record the Bearer "
+            "JWT email as the state creator."
+        ),
     )
     @action(detail=False, methods=["post"], url_path="cancel")
     def cancel(self, request, *args, **kwargs):
