@@ -22,7 +22,9 @@ class StateViewSetTestCase(TestCase):
     deprecate_endpoint = f"/{api_base}workflowrun/state/deprecate/"
     resolve_endpoint = f"/{api_base}workflowrun/state/resolve/"
     cancel_endpoint = f"/{api_base}workflowrun/state/cancel/"
-    jwt_test_secret = "state-test-secret-that-is-longer-than-32-bytes"#pragma: allowlist secret
+    jwt_test_secret = (
+        "state-test-secret-that-is-longer-than-32-bytes"  # pragma: allowlist secret
+    )
 
     def setUp(self):
         self.user_email = "state.creator@example.com"
