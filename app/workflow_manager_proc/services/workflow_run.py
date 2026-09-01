@@ -55,9 +55,7 @@ def create_workflow_run(event: wru.WorkflowRunUpdate):
             event_type=EventType.WRSC,
             event_bus=EVENT_BUS_NAME,
             event_json=out_wrsc.model_dump_json(
-                exclude={"stateCreatedBy"}
-                if out_wrsc.stateCreatedBy is None
-                else None
+                exclude={"stateCreatedBy"} if out_wrsc.stateCreatedBy is None else None
             ),
         )
     else:
